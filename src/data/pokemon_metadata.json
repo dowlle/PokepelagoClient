@@ -1,0 +1,7703 @@
+{
+    "1": {
+        "name": "bulbasaur",
+        "types": [
+            "grass",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "2": {
+        "name": "ivysaur",
+        "types": [
+            "grass",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "3": {
+        "name": "venusaur",
+        "types": [
+            "grass",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "4": {
+        "name": "charmander",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "5": {
+        "name": "charmeleon",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "6": {
+        "name": "charizard",
+        "types": [
+            "fire",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "7": {
+        "name": "squirtle",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "8": {
+        "name": "wartortle",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "9": {
+        "name": "blastoise",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "10": {
+        "name": "caterpie",
+        "types": [
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "11": {
+        "name": "metapod",
+        "types": [
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "12": {
+        "name": "butterfree",
+        "types": [
+            "bug",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "13": {
+        "name": "weedle",
+        "types": [
+            "bug",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "14": {
+        "name": "kakuna",
+        "types": [
+            "bug",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "15": {
+        "name": "beedrill",
+        "types": [
+            "bug",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "16": {
+        "name": "pidgey",
+        "types": [
+            "normal",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "17": {
+        "name": "pidgeotto",
+        "types": [
+            "normal",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "18": {
+        "name": "pidgeot",
+        "types": [
+            "normal",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "19": {
+        "name": "rattata",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "20": {
+        "name": "raticate",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "21": {
+        "name": "spearow",
+        "types": [
+            "normal",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "22": {
+        "name": "fearow",
+        "types": [
+            "normal",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "23": {
+        "name": "ekans",
+        "types": [
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "24": {
+        "name": "arbok",
+        "types": [
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "25": {
+        "name": "pikachu",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "26": {
+        "name": "raichu",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "27": {
+        "name": "sandshrew",
+        "types": [
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "28": {
+        "name": "sandslash",
+        "types": [
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "29": {
+        "name": "nidoran-f",
+        "types": [
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "30": {
+        "name": "nidorina",
+        "types": [
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "31": {
+        "name": "nidoqueen",
+        "types": [
+            "poison",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "32": {
+        "name": "nidoran-m",
+        "types": [
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "33": {
+        "name": "nidorino",
+        "types": [
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "34": {
+        "name": "nidoking",
+        "types": [
+            "poison",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "35": {
+        "name": "clefairy",
+        "types": [
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "36": {
+        "name": "clefable",
+        "types": [
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "37": {
+        "name": "vulpix",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "38": {
+        "name": "ninetales",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "39": {
+        "name": "jigglypuff",
+        "types": [
+            "normal",
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "40": {
+        "name": "wigglytuff",
+        "types": [
+            "normal",
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "41": {
+        "name": "zubat",
+        "types": [
+            "poison",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "42": {
+        "name": "golbat",
+        "types": [
+            "poison",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "43": {
+        "name": "oddish",
+        "types": [
+            "grass",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "44": {
+        "name": "gloom",
+        "types": [
+            "grass",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "45": {
+        "name": "vileplume",
+        "types": [
+            "grass",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "46": {
+        "name": "paras",
+        "types": [
+            "bug",
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "47": {
+        "name": "parasect",
+        "types": [
+            "bug",
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "48": {
+        "name": "venonat",
+        "types": [
+            "bug",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "49": {
+        "name": "venomoth",
+        "types": [
+            "bug",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "50": {
+        "name": "diglett",
+        "types": [
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "51": {
+        "name": "dugtrio",
+        "types": [
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "52": {
+        "name": "meowth",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "53": {
+        "name": "persian",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "54": {
+        "name": "psyduck",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "55": {
+        "name": "golduck",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "56": {
+        "name": "mankey",
+        "types": [
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "57": {
+        "name": "primeape",
+        "types": [
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "58": {
+        "name": "growlithe",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "59": {
+        "name": "arcanine",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "60": {
+        "name": "poliwag",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "61": {
+        "name": "poliwhirl",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "62": {
+        "name": "poliwrath",
+        "types": [
+            "water",
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "63": {
+        "name": "abra",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "64": {
+        "name": "kadabra",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "65": {
+        "name": "alakazam",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "66": {
+        "name": "machop",
+        "types": [
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "67": {
+        "name": "machoke",
+        "types": [
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "68": {
+        "name": "machamp",
+        "types": [
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "69": {
+        "name": "bellsprout",
+        "types": [
+            "grass",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "70": {
+        "name": "weepinbell",
+        "types": [
+            "grass",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "71": {
+        "name": "victreebel",
+        "types": [
+            "grass",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "72": {
+        "name": "tentacool",
+        "types": [
+            "water",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "73": {
+        "name": "tentacruel",
+        "types": [
+            "water",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "74": {
+        "name": "geodude",
+        "types": [
+            "rock",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "75": {
+        "name": "graveler",
+        "types": [
+            "rock",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "76": {
+        "name": "golem",
+        "types": [
+            "rock",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "77": {
+        "name": "ponyta",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "78": {
+        "name": "rapidash",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "79": {
+        "name": "slowpoke",
+        "types": [
+            "water",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "80": {
+        "name": "slowbro",
+        "types": [
+            "water",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "81": {
+        "name": "magnemite",
+        "types": [
+            "electric",
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "82": {
+        "name": "magneton",
+        "types": [
+            "electric",
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "83": {
+        "name": "farfetchd",
+        "types": [
+            "normal",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "84": {
+        "name": "doduo",
+        "types": [
+            "normal",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "85": {
+        "name": "dodrio",
+        "types": [
+            "normal",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "86": {
+        "name": "seel",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "87": {
+        "name": "dewgong",
+        "types": [
+            "water",
+            "ice"
+        ],
+        "is_legendary": false
+    },
+    "88": {
+        "name": "grimer",
+        "types": [
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "89": {
+        "name": "muk",
+        "types": [
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "90": {
+        "name": "shellder",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "91": {
+        "name": "cloyster",
+        "types": [
+            "water",
+            "ice"
+        ],
+        "is_legendary": false
+    },
+    "92": {
+        "name": "gastly",
+        "types": [
+            "ghost",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "93": {
+        "name": "haunter",
+        "types": [
+            "ghost",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "94": {
+        "name": "gengar",
+        "types": [
+            "ghost",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "95": {
+        "name": "onix",
+        "types": [
+            "rock",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "96": {
+        "name": "drowzee",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "97": {
+        "name": "hypno",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "98": {
+        "name": "krabby",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "99": {
+        "name": "kingler",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "100": {
+        "name": "voltorb",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "101": {
+        "name": "electrode",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "102": {
+        "name": "exeggcute",
+        "types": [
+            "grass",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "103": {
+        "name": "exeggutor",
+        "types": [
+            "grass",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "104": {
+        "name": "cubone",
+        "types": [
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "105": {
+        "name": "marowak",
+        "types": [
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "106": {
+        "name": "hitmonlee",
+        "types": [
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "107": {
+        "name": "hitmonchan",
+        "types": [
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "108": {
+        "name": "lickitung",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "109": {
+        "name": "koffing",
+        "types": [
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "110": {
+        "name": "weezing",
+        "types": [
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "111": {
+        "name": "rhyhorn",
+        "types": [
+            "ground",
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "112": {
+        "name": "rhydon",
+        "types": [
+            "ground",
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "113": {
+        "name": "chansey",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "114": {
+        "name": "tangela",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "115": {
+        "name": "kangaskhan",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "116": {
+        "name": "horsea",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "117": {
+        "name": "seadra",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "118": {
+        "name": "goldeen",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "119": {
+        "name": "seaking",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "120": {
+        "name": "staryu",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "121": {
+        "name": "starmie",
+        "types": [
+            "water",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "122": {
+        "name": "mr-mime",
+        "types": [
+            "psychic",
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "123": {
+        "name": "scyther",
+        "types": [
+            "bug",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "124": {
+        "name": "jynx",
+        "types": [
+            "ice",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "125": {
+        "name": "electabuzz",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "126": {
+        "name": "magmar",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "127": {
+        "name": "pinsir",
+        "types": [
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "128": {
+        "name": "tauros",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "129": {
+        "name": "magikarp",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "130": {
+        "name": "gyarados",
+        "types": [
+            "water",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "131": {
+        "name": "lapras",
+        "types": [
+            "water",
+            "ice"
+        ],
+        "is_legendary": false
+    },
+    "132": {
+        "name": "ditto",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "133": {
+        "name": "eevee",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "134": {
+        "name": "vaporeon",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "135": {
+        "name": "jolteon",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "136": {
+        "name": "flareon",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "137": {
+        "name": "porygon",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "138": {
+        "name": "omanyte",
+        "types": [
+            "rock",
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "139": {
+        "name": "omastar",
+        "types": [
+            "rock",
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "140": {
+        "name": "kabuto",
+        "types": [
+            "rock",
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "141": {
+        "name": "kabutops",
+        "types": [
+            "rock",
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "142": {
+        "name": "aerodactyl",
+        "types": [
+            "rock",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "143": {
+        "name": "snorlax",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "144": {
+        "name": "articuno",
+        "types": [
+            "ice",
+            "flying"
+        ],
+        "is_legendary": true
+    },
+    "145": {
+        "name": "zapdos",
+        "types": [
+            "electric",
+            "flying"
+        ],
+        "is_legendary": true
+    },
+    "146": {
+        "name": "moltres",
+        "types": [
+            "fire",
+            "flying"
+        ],
+        "is_legendary": true
+    },
+    "147": {
+        "name": "dratini",
+        "types": [
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "148": {
+        "name": "dragonair",
+        "types": [
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "149": {
+        "name": "dragonite",
+        "types": [
+            "dragon",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "150": {
+        "name": "mewtwo",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": true
+    },
+    "151": {
+        "name": "mew",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": true
+    },
+    "152": {
+        "name": "chikorita",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "153": {
+        "name": "bayleef",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "154": {
+        "name": "meganium",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "155": {
+        "name": "cyndaquil",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "156": {
+        "name": "quilava",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "157": {
+        "name": "typhlosion",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "158": {
+        "name": "totodile",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "159": {
+        "name": "croconaw",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "160": {
+        "name": "feraligatr",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "161": {
+        "name": "sentret",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "162": {
+        "name": "furret",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "163": {
+        "name": "hoothoot",
+        "types": [
+            "normal",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "164": {
+        "name": "noctowl",
+        "types": [
+            "normal",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "165": {
+        "name": "ledyba",
+        "types": [
+            "bug",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "166": {
+        "name": "ledian",
+        "types": [
+            "bug",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "167": {
+        "name": "spinarak",
+        "types": [
+            "bug",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "168": {
+        "name": "ariados",
+        "types": [
+            "bug",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "169": {
+        "name": "crobat",
+        "types": [
+            "poison",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "170": {
+        "name": "chinchou",
+        "types": [
+            "water",
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "171": {
+        "name": "lanturn",
+        "types": [
+            "water",
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "172": {
+        "name": "pichu",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "173": {
+        "name": "cleffa",
+        "types": [
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "174": {
+        "name": "igglybuff",
+        "types": [
+            "normal",
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "175": {
+        "name": "togepi",
+        "types": [
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "176": {
+        "name": "togetic",
+        "types": [
+            "fairy",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "177": {
+        "name": "natu",
+        "types": [
+            "psychic",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "178": {
+        "name": "xatu",
+        "types": [
+            "psychic",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "179": {
+        "name": "mareep",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "180": {
+        "name": "flaaffy",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "181": {
+        "name": "ampharos",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "182": {
+        "name": "bellossom",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "183": {
+        "name": "marill",
+        "types": [
+            "water",
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "184": {
+        "name": "azumarill",
+        "types": [
+            "water",
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "185": {
+        "name": "sudowoodo",
+        "types": [
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "186": {
+        "name": "politoed",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "187": {
+        "name": "hoppip",
+        "types": [
+            "grass",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "188": {
+        "name": "skiploom",
+        "types": [
+            "grass",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "189": {
+        "name": "jumpluff",
+        "types": [
+            "grass",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "190": {
+        "name": "aipom",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "191": {
+        "name": "sunkern",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "192": {
+        "name": "sunflora",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "193": {
+        "name": "yanma",
+        "types": [
+            "bug",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "194": {
+        "name": "wooper",
+        "types": [
+            "water",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "195": {
+        "name": "quagsire",
+        "types": [
+            "water",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "196": {
+        "name": "espeon",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "197": {
+        "name": "umbreon",
+        "types": [
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "198": {
+        "name": "murkrow",
+        "types": [
+            "dark",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "199": {
+        "name": "slowking",
+        "types": [
+            "water",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "200": {
+        "name": "misdreavus",
+        "types": [
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "201": {
+        "name": "unown",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "202": {
+        "name": "wobbuffet",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "203": {
+        "name": "girafarig",
+        "types": [
+            "normal",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "204": {
+        "name": "pineco",
+        "types": [
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "205": {
+        "name": "forretress",
+        "types": [
+            "bug",
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "206": {
+        "name": "dunsparce",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "207": {
+        "name": "gligar",
+        "types": [
+            "ground",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "208": {
+        "name": "steelix",
+        "types": [
+            "steel",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "209": {
+        "name": "snubbull",
+        "types": [
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "210": {
+        "name": "granbull",
+        "types": [
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "211": {
+        "name": "qwilfish",
+        "types": [
+            "water",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "212": {
+        "name": "scizor",
+        "types": [
+            "bug",
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "213": {
+        "name": "shuckle",
+        "types": [
+            "bug",
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "214": {
+        "name": "heracross",
+        "types": [
+            "bug",
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "215": {
+        "name": "sneasel",
+        "types": [
+            "dark",
+            "ice"
+        ],
+        "is_legendary": false
+    },
+    "216": {
+        "name": "teddiursa",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "217": {
+        "name": "ursaring",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "218": {
+        "name": "slugma",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "219": {
+        "name": "magcargo",
+        "types": [
+            "fire",
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "220": {
+        "name": "swinub",
+        "types": [
+            "ice",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "221": {
+        "name": "piloswine",
+        "types": [
+            "ice",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "222": {
+        "name": "corsola",
+        "types": [
+            "water",
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "223": {
+        "name": "remoraid",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "224": {
+        "name": "octillery",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "225": {
+        "name": "delibird",
+        "types": [
+            "ice",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "226": {
+        "name": "mantine",
+        "types": [
+            "water",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "227": {
+        "name": "skarmory",
+        "types": [
+            "steel",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "228": {
+        "name": "houndour",
+        "types": [
+            "dark",
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "229": {
+        "name": "houndoom",
+        "types": [
+            "dark",
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "230": {
+        "name": "kingdra",
+        "types": [
+            "water",
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "231": {
+        "name": "phanpy",
+        "types": [
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "232": {
+        "name": "donphan",
+        "types": [
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "233": {
+        "name": "porygon2",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "234": {
+        "name": "stantler",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "235": {
+        "name": "smeargle",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "236": {
+        "name": "tyrogue",
+        "types": [
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "237": {
+        "name": "hitmontop",
+        "types": [
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "238": {
+        "name": "smoochum",
+        "types": [
+            "ice",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "239": {
+        "name": "elekid",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "240": {
+        "name": "magby",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "241": {
+        "name": "miltank",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "242": {
+        "name": "blissey",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "243": {
+        "name": "raikou",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": true
+    },
+    "244": {
+        "name": "entei",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": true
+    },
+    "245": {
+        "name": "suicune",
+        "types": [
+            "water"
+        ],
+        "is_legendary": true
+    },
+    "246": {
+        "name": "larvitar",
+        "types": [
+            "rock",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "247": {
+        "name": "pupitar",
+        "types": [
+            "rock",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "248": {
+        "name": "tyranitar",
+        "types": [
+            "rock",
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "249": {
+        "name": "lugia",
+        "types": [
+            "psychic",
+            "flying"
+        ],
+        "is_legendary": true
+    },
+    "250": {
+        "name": "ho-oh",
+        "types": [
+            "fire",
+            "flying"
+        ],
+        "is_legendary": true
+    },
+    "251": {
+        "name": "celebi",
+        "types": [
+            "psychic",
+            "grass"
+        ],
+        "is_legendary": true
+    },
+    "252": {
+        "name": "treecko",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "253": {
+        "name": "grovyle",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "254": {
+        "name": "sceptile",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "255": {
+        "name": "torchic",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "256": {
+        "name": "combusken",
+        "types": [
+            "fire",
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "257": {
+        "name": "blaziken",
+        "types": [
+            "fire",
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "258": {
+        "name": "mudkip",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "259": {
+        "name": "marshtomp",
+        "types": [
+            "water",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "260": {
+        "name": "swampert",
+        "types": [
+            "water",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "261": {
+        "name": "poochyena",
+        "types": [
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "262": {
+        "name": "mightyena",
+        "types": [
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "263": {
+        "name": "zigzagoon",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "264": {
+        "name": "linoone",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "265": {
+        "name": "wurmple",
+        "types": [
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "266": {
+        "name": "silcoon",
+        "types": [
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "267": {
+        "name": "beautifly",
+        "types": [
+            "bug",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "268": {
+        "name": "cascoon",
+        "types": [
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "269": {
+        "name": "dustox",
+        "types": [
+            "bug",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "270": {
+        "name": "lotad",
+        "types": [
+            "water",
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "271": {
+        "name": "lombre",
+        "types": [
+            "water",
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "272": {
+        "name": "ludicolo",
+        "types": [
+            "water",
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "273": {
+        "name": "seedot",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "274": {
+        "name": "nuzleaf",
+        "types": [
+            "grass",
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "275": {
+        "name": "shiftry",
+        "types": [
+            "grass",
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "276": {
+        "name": "taillow",
+        "types": [
+            "normal",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "277": {
+        "name": "swellow",
+        "types": [
+            "normal",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "278": {
+        "name": "wingull",
+        "types": [
+            "water",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "279": {
+        "name": "pelipper",
+        "types": [
+            "water",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "280": {
+        "name": "ralts",
+        "types": [
+            "psychic",
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "281": {
+        "name": "kirlia",
+        "types": [
+            "psychic",
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "282": {
+        "name": "gardevoir",
+        "types": [
+            "psychic",
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "283": {
+        "name": "surskit",
+        "types": [
+            "bug",
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "284": {
+        "name": "masquerain",
+        "types": [
+            "bug",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "285": {
+        "name": "shroomish",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "286": {
+        "name": "breloom",
+        "types": [
+            "grass",
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "287": {
+        "name": "slakoth",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "288": {
+        "name": "vigoroth",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "289": {
+        "name": "slaking",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "290": {
+        "name": "nincada",
+        "types": [
+            "bug",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "291": {
+        "name": "ninjask",
+        "types": [
+            "bug",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "292": {
+        "name": "shedinja",
+        "types": [
+            "bug",
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "293": {
+        "name": "whismur",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "294": {
+        "name": "loudred",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "295": {
+        "name": "exploud",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "296": {
+        "name": "makuhita",
+        "types": [
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "297": {
+        "name": "hariyama",
+        "types": [
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "298": {
+        "name": "azurill",
+        "types": [
+            "normal",
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "299": {
+        "name": "nosepass",
+        "types": [
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "300": {
+        "name": "skitty",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "301": {
+        "name": "delcatty",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "302": {
+        "name": "sableye",
+        "types": [
+            "dark",
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "303": {
+        "name": "mawile",
+        "types": [
+            "steel",
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "304": {
+        "name": "aron",
+        "types": [
+            "steel",
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "305": {
+        "name": "lairon",
+        "types": [
+            "steel",
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "306": {
+        "name": "aggron",
+        "types": [
+            "steel",
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "307": {
+        "name": "meditite",
+        "types": [
+            "fighting",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "308": {
+        "name": "medicham",
+        "types": [
+            "fighting",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "309": {
+        "name": "electrike",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "310": {
+        "name": "manectric",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "311": {
+        "name": "plusle",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "312": {
+        "name": "minun",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "313": {
+        "name": "volbeat",
+        "types": [
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "314": {
+        "name": "illumise",
+        "types": [
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "315": {
+        "name": "roselia",
+        "types": [
+            "grass",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "316": {
+        "name": "gulpin",
+        "types": [
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "317": {
+        "name": "swalot",
+        "types": [
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "318": {
+        "name": "carvanha",
+        "types": [
+            "water",
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "319": {
+        "name": "sharpedo",
+        "types": [
+            "water",
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "320": {
+        "name": "wailmer",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "321": {
+        "name": "wailord",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "322": {
+        "name": "numel",
+        "types": [
+            "fire",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "323": {
+        "name": "camerupt",
+        "types": [
+            "fire",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "324": {
+        "name": "torkoal",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "325": {
+        "name": "spoink",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "326": {
+        "name": "grumpig",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "327": {
+        "name": "spinda",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "328": {
+        "name": "trapinch",
+        "types": [
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "329": {
+        "name": "vibrava",
+        "types": [
+            "ground",
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "330": {
+        "name": "flygon",
+        "types": [
+            "ground",
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "331": {
+        "name": "cacnea",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "332": {
+        "name": "cacturne",
+        "types": [
+            "grass",
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "333": {
+        "name": "swablu",
+        "types": [
+            "normal",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "334": {
+        "name": "altaria",
+        "types": [
+            "dragon",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "335": {
+        "name": "zangoose",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "336": {
+        "name": "seviper",
+        "types": [
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "337": {
+        "name": "lunatone",
+        "types": [
+            "rock",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "338": {
+        "name": "solrock",
+        "types": [
+            "rock",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "339": {
+        "name": "barboach",
+        "types": [
+            "water",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "340": {
+        "name": "whiscash",
+        "types": [
+            "water",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "341": {
+        "name": "corphish",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "342": {
+        "name": "crawdaunt",
+        "types": [
+            "water",
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "343": {
+        "name": "baltoy",
+        "types": [
+            "ground",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "344": {
+        "name": "claydol",
+        "types": [
+            "ground",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "345": {
+        "name": "lileep",
+        "types": [
+            "rock",
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "346": {
+        "name": "cradily",
+        "types": [
+            "rock",
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "347": {
+        "name": "anorith",
+        "types": [
+            "rock",
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "348": {
+        "name": "armaldo",
+        "types": [
+            "rock",
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "349": {
+        "name": "feebas",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "350": {
+        "name": "milotic",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "351": {
+        "name": "castform",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "352": {
+        "name": "kecleon",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "353": {
+        "name": "shuppet",
+        "types": [
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "354": {
+        "name": "banette",
+        "types": [
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "355": {
+        "name": "duskull",
+        "types": [
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "356": {
+        "name": "dusclops",
+        "types": [
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "357": {
+        "name": "tropius",
+        "types": [
+            "grass",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "358": {
+        "name": "chimecho",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "359": {
+        "name": "absol",
+        "types": [
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "360": {
+        "name": "wynaut",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "361": {
+        "name": "snorunt",
+        "types": [
+            "ice"
+        ],
+        "is_legendary": false
+    },
+    "362": {
+        "name": "glalie",
+        "types": [
+            "ice"
+        ],
+        "is_legendary": false
+    },
+    "363": {
+        "name": "spheal",
+        "types": [
+            "ice",
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "364": {
+        "name": "sealeo",
+        "types": [
+            "ice",
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "365": {
+        "name": "walrein",
+        "types": [
+            "ice",
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "366": {
+        "name": "clamperl",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "367": {
+        "name": "huntail",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "368": {
+        "name": "gorebyss",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "369": {
+        "name": "relicanth",
+        "types": [
+            "water",
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "370": {
+        "name": "luvdisc",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "371": {
+        "name": "bagon",
+        "types": [
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "372": {
+        "name": "shelgon",
+        "types": [
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "373": {
+        "name": "salamence",
+        "types": [
+            "dragon",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "374": {
+        "name": "beldum",
+        "types": [
+            "steel",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "375": {
+        "name": "metang",
+        "types": [
+            "steel",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "376": {
+        "name": "metagross",
+        "types": [
+            "steel",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "377": {
+        "name": "regirock",
+        "types": [
+            "rock"
+        ],
+        "is_legendary": true
+    },
+    "378": {
+        "name": "regice",
+        "types": [
+            "ice"
+        ],
+        "is_legendary": true
+    },
+    "379": {
+        "name": "registeel",
+        "types": [
+            "steel"
+        ],
+        "is_legendary": true
+    },
+    "380": {
+        "name": "latias",
+        "types": [
+            "dragon",
+            "psychic"
+        ],
+        "is_legendary": true
+    },
+    "381": {
+        "name": "latios",
+        "types": [
+            "dragon",
+            "psychic"
+        ],
+        "is_legendary": true
+    },
+    "382": {
+        "name": "kyogre",
+        "types": [
+            "water"
+        ],
+        "is_legendary": true
+    },
+    "383": {
+        "name": "groudon",
+        "types": [
+            "ground"
+        ],
+        "is_legendary": true
+    },
+    "384": {
+        "name": "rayquaza",
+        "types": [
+            "dragon",
+            "flying"
+        ],
+        "is_legendary": true
+    },
+    "385": {
+        "name": "jirachi",
+        "types": [
+            "steel",
+            "psychic"
+        ],
+        "is_legendary": true
+    },
+    "386": {
+        "name": "deoxys-normal",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": true
+    },
+    "387": {
+        "name": "turtwig",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "388": {
+        "name": "grotle",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "389": {
+        "name": "torterra",
+        "types": [
+            "grass",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "390": {
+        "name": "chimchar",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "391": {
+        "name": "monferno",
+        "types": [
+            "fire",
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "392": {
+        "name": "infernape",
+        "types": [
+            "fire",
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "393": {
+        "name": "piplup",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "394": {
+        "name": "prinplup",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "395": {
+        "name": "empoleon",
+        "types": [
+            "water",
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "396": {
+        "name": "starly",
+        "types": [
+            "normal",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "397": {
+        "name": "staravia",
+        "types": [
+            "normal",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "398": {
+        "name": "staraptor",
+        "types": [
+            "normal",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "399": {
+        "name": "bidoof",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "400": {
+        "name": "bibarel",
+        "types": [
+            "normal",
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "401": {
+        "name": "kricketot",
+        "types": [
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "402": {
+        "name": "kricketune",
+        "types": [
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "403": {
+        "name": "shinx",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "404": {
+        "name": "luxio",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "405": {
+        "name": "luxray",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "406": {
+        "name": "budew",
+        "types": [
+            "grass",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "407": {
+        "name": "roserade",
+        "types": [
+            "grass",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "408": {
+        "name": "cranidos",
+        "types": [
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "409": {
+        "name": "rampardos",
+        "types": [
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "410": {
+        "name": "shieldon",
+        "types": [
+            "rock",
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "411": {
+        "name": "bastiodon",
+        "types": [
+            "rock",
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "412": {
+        "name": "burmy",
+        "types": [
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "413": {
+        "name": "wormadam-plant",
+        "types": [
+            "bug",
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "414": {
+        "name": "mothim",
+        "types": [
+            "bug",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "415": {
+        "name": "combee",
+        "types": [
+            "bug",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "416": {
+        "name": "vespiquen",
+        "types": [
+            "bug",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "417": {
+        "name": "pachirisu",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "418": {
+        "name": "buizel",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "419": {
+        "name": "floatzel",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "420": {
+        "name": "cherubi",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "421": {
+        "name": "cherrim",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "422": {
+        "name": "shellos",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "423": {
+        "name": "gastrodon",
+        "types": [
+            "water",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "424": {
+        "name": "ambipom",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "425": {
+        "name": "drifloon",
+        "types": [
+            "ghost",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "426": {
+        "name": "drifblim",
+        "types": [
+            "ghost",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "427": {
+        "name": "buneary",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "428": {
+        "name": "lopunny",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "429": {
+        "name": "mismagius",
+        "types": [
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "430": {
+        "name": "honchkrow",
+        "types": [
+            "dark",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "431": {
+        "name": "glameow",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "432": {
+        "name": "purugly",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "433": {
+        "name": "chingling",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "434": {
+        "name": "stunky",
+        "types": [
+            "poison",
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "435": {
+        "name": "skuntank",
+        "types": [
+            "poison",
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "436": {
+        "name": "bronzor",
+        "types": [
+            "steel",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "437": {
+        "name": "bronzong",
+        "types": [
+            "steel",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "438": {
+        "name": "bonsly",
+        "types": [
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "439": {
+        "name": "mime-jr",
+        "types": [
+            "psychic",
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "440": {
+        "name": "happiny",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "441": {
+        "name": "chatot",
+        "types": [
+            "normal",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "442": {
+        "name": "spiritomb",
+        "types": [
+            "ghost",
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "443": {
+        "name": "gible",
+        "types": [
+            "dragon",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "444": {
+        "name": "gabite",
+        "types": [
+            "dragon",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "445": {
+        "name": "garchomp",
+        "types": [
+            "dragon",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "446": {
+        "name": "munchlax",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "447": {
+        "name": "riolu",
+        "types": [
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "448": {
+        "name": "lucario",
+        "types": [
+            "fighting",
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "449": {
+        "name": "hippopotas",
+        "types": [
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "450": {
+        "name": "hippowdon",
+        "types": [
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "451": {
+        "name": "skorupi",
+        "types": [
+            "poison",
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "452": {
+        "name": "drapion",
+        "types": [
+            "poison",
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "453": {
+        "name": "croagunk",
+        "types": [
+            "poison",
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "454": {
+        "name": "toxicroak",
+        "types": [
+            "poison",
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "455": {
+        "name": "carnivine",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "456": {
+        "name": "finneon",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "457": {
+        "name": "lumineon",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "458": {
+        "name": "mantyke",
+        "types": [
+            "water",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "459": {
+        "name": "snover",
+        "types": [
+            "grass",
+            "ice"
+        ],
+        "is_legendary": false
+    },
+    "460": {
+        "name": "abomasnow",
+        "types": [
+            "grass",
+            "ice"
+        ],
+        "is_legendary": false
+    },
+    "461": {
+        "name": "weavile",
+        "types": [
+            "dark",
+            "ice"
+        ],
+        "is_legendary": false
+    },
+    "462": {
+        "name": "magnezone",
+        "types": [
+            "electric",
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "463": {
+        "name": "lickilicky",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "464": {
+        "name": "rhyperior",
+        "types": [
+            "ground",
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "465": {
+        "name": "tangrowth",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "466": {
+        "name": "electivire",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "467": {
+        "name": "magmortar",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "468": {
+        "name": "togekiss",
+        "types": [
+            "fairy",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "469": {
+        "name": "yanmega",
+        "types": [
+            "bug",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "470": {
+        "name": "leafeon",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "471": {
+        "name": "glaceon",
+        "types": [
+            "ice"
+        ],
+        "is_legendary": false
+    },
+    "472": {
+        "name": "gliscor",
+        "types": [
+            "ground",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "473": {
+        "name": "mamoswine",
+        "types": [
+            "ice",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "474": {
+        "name": "porygon-z",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "475": {
+        "name": "gallade",
+        "types": [
+            "psychic",
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "476": {
+        "name": "probopass",
+        "types": [
+            "rock",
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "477": {
+        "name": "dusknoir",
+        "types": [
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "478": {
+        "name": "froslass",
+        "types": [
+            "ice",
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "479": {
+        "name": "rotom",
+        "types": [
+            "electric",
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "480": {
+        "name": "uxie",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": true
+    },
+    "481": {
+        "name": "mesprit",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": true
+    },
+    "482": {
+        "name": "azelf",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": true
+    },
+    "483": {
+        "name": "dialga",
+        "types": [
+            "steel",
+            "dragon"
+        ],
+        "is_legendary": true
+    },
+    "484": {
+        "name": "palkia",
+        "types": [
+            "water",
+            "dragon"
+        ],
+        "is_legendary": true
+    },
+    "485": {
+        "name": "heatran",
+        "types": [
+            "fire",
+            "steel"
+        ],
+        "is_legendary": true
+    },
+    "486": {
+        "name": "regigigas",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": true
+    },
+    "487": {
+        "name": "giratina-altered",
+        "types": [
+            "ghost",
+            "dragon"
+        ],
+        "is_legendary": true
+    },
+    "488": {
+        "name": "cresselia",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": true
+    },
+    "489": {
+        "name": "phione",
+        "types": [
+            "water"
+        ],
+        "is_legendary": true
+    },
+    "490": {
+        "name": "manaphy",
+        "types": [
+            "water"
+        ],
+        "is_legendary": true
+    },
+    "491": {
+        "name": "darkrai",
+        "types": [
+            "dark"
+        ],
+        "is_legendary": true
+    },
+    "492": {
+        "name": "shaymin-land",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": true
+    },
+    "493": {
+        "name": "arceus",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": true
+    },
+    "494": {
+        "name": "victini",
+        "types": [
+            "psychic",
+            "fire"
+        ],
+        "is_legendary": true
+    },
+    "495": {
+        "name": "snivy",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "496": {
+        "name": "servine",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "497": {
+        "name": "serperior",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "498": {
+        "name": "tepig",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "499": {
+        "name": "pignite",
+        "types": [
+            "fire",
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "500": {
+        "name": "emboar",
+        "types": [
+            "fire",
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "501": {
+        "name": "oshawott",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "502": {
+        "name": "dewott",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "503": {
+        "name": "samurott",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "504": {
+        "name": "patrat",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "505": {
+        "name": "watchog",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "506": {
+        "name": "lillipup",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "507": {
+        "name": "herdier",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "508": {
+        "name": "stoutland",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "509": {
+        "name": "purrloin",
+        "types": [
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "510": {
+        "name": "liepard",
+        "types": [
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "511": {
+        "name": "pansage",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "512": {
+        "name": "simisage",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "513": {
+        "name": "pansear",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "514": {
+        "name": "simisear",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "515": {
+        "name": "panpour",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "516": {
+        "name": "simipour",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "517": {
+        "name": "munna",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "518": {
+        "name": "musharna",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "519": {
+        "name": "pidove",
+        "types": [
+            "normal",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "520": {
+        "name": "tranquill",
+        "types": [
+            "normal",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "521": {
+        "name": "unfezant",
+        "types": [
+            "normal",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "522": {
+        "name": "blitzle",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "523": {
+        "name": "zebstrika",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "524": {
+        "name": "roggenrola",
+        "types": [
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "525": {
+        "name": "boldore",
+        "types": [
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "526": {
+        "name": "gigalith",
+        "types": [
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "527": {
+        "name": "woobat",
+        "types": [
+            "psychic",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "528": {
+        "name": "swoobat",
+        "types": [
+            "psychic",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "529": {
+        "name": "drilbur",
+        "types": [
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "530": {
+        "name": "excadrill",
+        "types": [
+            "ground",
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "531": {
+        "name": "audino",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "532": {
+        "name": "timburr",
+        "types": [
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "533": {
+        "name": "gurdurr",
+        "types": [
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "534": {
+        "name": "conkeldurr",
+        "types": [
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "535": {
+        "name": "tympole",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "536": {
+        "name": "palpitoad",
+        "types": [
+            "water",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "537": {
+        "name": "seismitoad",
+        "types": [
+            "water",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "538": {
+        "name": "throh",
+        "types": [
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "539": {
+        "name": "sawk",
+        "types": [
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "540": {
+        "name": "sewaddle",
+        "types": [
+            "bug",
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "541": {
+        "name": "swadloon",
+        "types": [
+            "bug",
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "542": {
+        "name": "leavanny",
+        "types": [
+            "bug",
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "543": {
+        "name": "venipede",
+        "types": [
+            "bug",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "544": {
+        "name": "whirlipede",
+        "types": [
+            "bug",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "545": {
+        "name": "scolipede",
+        "types": [
+            "bug",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "546": {
+        "name": "cottonee",
+        "types": [
+            "grass",
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "547": {
+        "name": "whimsicott",
+        "types": [
+            "grass",
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "548": {
+        "name": "petilil",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "549": {
+        "name": "lilligant",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "550": {
+        "name": "basculin-red-striped",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "551": {
+        "name": "sandile",
+        "types": [
+            "ground",
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "552": {
+        "name": "krokorok",
+        "types": [
+            "ground",
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "553": {
+        "name": "krookodile",
+        "types": [
+            "ground",
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "554": {
+        "name": "darumaka",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "555": {
+        "name": "darmanitan-standard",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "556": {
+        "name": "maractus",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "557": {
+        "name": "dwebble",
+        "types": [
+            "bug",
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "558": {
+        "name": "crustle",
+        "types": [
+            "bug",
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "559": {
+        "name": "scraggy",
+        "types": [
+            "dark",
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "560": {
+        "name": "scrafty",
+        "types": [
+            "dark",
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "561": {
+        "name": "sigilyph",
+        "types": [
+            "psychic",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "562": {
+        "name": "yamask",
+        "types": [
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "563": {
+        "name": "cofagrigus",
+        "types": [
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "564": {
+        "name": "tirtouga",
+        "types": [
+            "water",
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "565": {
+        "name": "carracosta",
+        "types": [
+            "water",
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "566": {
+        "name": "archen",
+        "types": [
+            "rock",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "567": {
+        "name": "archeops",
+        "types": [
+            "rock",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "568": {
+        "name": "trubbish",
+        "types": [
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "569": {
+        "name": "garbodor",
+        "types": [
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "570": {
+        "name": "zorua",
+        "types": [
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "571": {
+        "name": "zoroark",
+        "types": [
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "572": {
+        "name": "minccino",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "573": {
+        "name": "cinccino",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "574": {
+        "name": "gothita",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "575": {
+        "name": "gothorita",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "576": {
+        "name": "gothitelle",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "577": {
+        "name": "solosis",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "578": {
+        "name": "duosion",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "579": {
+        "name": "reuniclus",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "580": {
+        "name": "ducklett",
+        "types": [
+            "water",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "581": {
+        "name": "swanna",
+        "types": [
+            "water",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "582": {
+        "name": "vanillite",
+        "types": [
+            "ice"
+        ],
+        "is_legendary": false
+    },
+    "583": {
+        "name": "vanillish",
+        "types": [
+            "ice"
+        ],
+        "is_legendary": false
+    },
+    "584": {
+        "name": "vanilluxe",
+        "types": [
+            "ice"
+        ],
+        "is_legendary": false
+    },
+    "585": {
+        "name": "deerling",
+        "types": [
+            "normal",
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "586": {
+        "name": "sawsbuck",
+        "types": [
+            "normal",
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "587": {
+        "name": "emolga",
+        "types": [
+            "electric",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "588": {
+        "name": "karrablast",
+        "types": [
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "589": {
+        "name": "escavalier",
+        "types": [
+            "bug",
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "590": {
+        "name": "foongus",
+        "types": [
+            "grass",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "591": {
+        "name": "amoonguss",
+        "types": [
+            "grass",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "592": {
+        "name": "frillish",
+        "types": [
+            "water",
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "593": {
+        "name": "jellicent",
+        "types": [
+            "water",
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "594": {
+        "name": "alomomola",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "595": {
+        "name": "joltik",
+        "types": [
+            "bug",
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "596": {
+        "name": "galvantula",
+        "types": [
+            "bug",
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "597": {
+        "name": "ferroseed",
+        "types": [
+            "grass",
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "598": {
+        "name": "ferrothorn",
+        "types": [
+            "grass",
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "599": {
+        "name": "klink",
+        "types": [
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "600": {
+        "name": "klang",
+        "types": [
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "601": {
+        "name": "klinklang",
+        "types": [
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "602": {
+        "name": "tynamo",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "603": {
+        "name": "eelektrik",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "604": {
+        "name": "eelektross",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "605": {
+        "name": "elgyem",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "606": {
+        "name": "beheeyem",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "607": {
+        "name": "litwick",
+        "types": [
+            "ghost",
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "608": {
+        "name": "lampent",
+        "types": [
+            "ghost",
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "609": {
+        "name": "chandelure",
+        "types": [
+            "ghost",
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "610": {
+        "name": "axew",
+        "types": [
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "611": {
+        "name": "fraxure",
+        "types": [
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "612": {
+        "name": "haxorus",
+        "types": [
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "613": {
+        "name": "cubchoo",
+        "types": [
+            "ice"
+        ],
+        "is_legendary": false
+    },
+    "614": {
+        "name": "beartic",
+        "types": [
+            "ice"
+        ],
+        "is_legendary": false
+    },
+    "615": {
+        "name": "cryogonal",
+        "types": [
+            "ice"
+        ],
+        "is_legendary": false
+    },
+    "616": {
+        "name": "shelmet",
+        "types": [
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "617": {
+        "name": "accelgor",
+        "types": [
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "618": {
+        "name": "stunfisk",
+        "types": [
+            "ground",
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "619": {
+        "name": "mienfoo",
+        "types": [
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "620": {
+        "name": "mienshao",
+        "types": [
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "621": {
+        "name": "druddigon",
+        "types": [
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "622": {
+        "name": "golett",
+        "types": [
+            "ground",
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "623": {
+        "name": "golurk",
+        "types": [
+            "ground",
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "624": {
+        "name": "pawniard",
+        "types": [
+            "dark",
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "625": {
+        "name": "bisharp",
+        "types": [
+            "dark",
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "626": {
+        "name": "bouffalant",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "627": {
+        "name": "rufflet",
+        "types": [
+            "normal",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "628": {
+        "name": "braviary",
+        "types": [
+            "normal",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "629": {
+        "name": "vullaby",
+        "types": [
+            "dark",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "630": {
+        "name": "mandibuzz",
+        "types": [
+            "dark",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "631": {
+        "name": "heatmor",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "632": {
+        "name": "durant",
+        "types": [
+            "bug",
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "633": {
+        "name": "deino",
+        "types": [
+            "dark",
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "634": {
+        "name": "zweilous",
+        "types": [
+            "dark",
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "635": {
+        "name": "hydreigon",
+        "types": [
+            "dark",
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "636": {
+        "name": "larvesta",
+        "types": [
+            "bug",
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "637": {
+        "name": "volcarona",
+        "types": [
+            "bug",
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "638": {
+        "name": "cobalion",
+        "types": [
+            "steel",
+            "fighting"
+        ],
+        "is_legendary": true
+    },
+    "639": {
+        "name": "terrakion",
+        "types": [
+            "rock",
+            "fighting"
+        ],
+        "is_legendary": true
+    },
+    "640": {
+        "name": "virizion",
+        "types": [
+            "grass",
+            "fighting"
+        ],
+        "is_legendary": true
+    },
+    "641": {
+        "name": "tornadus-incarnate",
+        "types": [
+            "flying"
+        ],
+        "is_legendary": true
+    },
+    "642": {
+        "name": "thundurus-incarnate",
+        "types": [
+            "electric",
+            "flying"
+        ],
+        "is_legendary": true
+    },
+    "643": {
+        "name": "reshiram",
+        "types": [
+            "dragon",
+            "fire"
+        ],
+        "is_legendary": true
+    },
+    "644": {
+        "name": "zekrom",
+        "types": [
+            "dragon",
+            "electric"
+        ],
+        "is_legendary": true
+    },
+    "645": {
+        "name": "landorus-incarnate",
+        "types": [
+            "ground",
+            "flying"
+        ],
+        "is_legendary": true
+    },
+    "646": {
+        "name": "kyurem",
+        "types": [
+            "dragon",
+            "ice"
+        ],
+        "is_legendary": true
+    },
+    "647": {
+        "name": "keldeo-ordinary",
+        "types": [
+            "water",
+            "fighting"
+        ],
+        "is_legendary": true
+    },
+    "648": {
+        "name": "meloetta-aria",
+        "types": [
+            "normal",
+            "psychic"
+        ],
+        "is_legendary": true
+    },
+    "649": {
+        "name": "genesect",
+        "types": [
+            "bug",
+            "steel"
+        ],
+        "is_legendary": true
+    },
+    "650": {
+        "name": "chespin",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "651": {
+        "name": "quilladin",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "652": {
+        "name": "chesnaught",
+        "types": [
+            "grass",
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "653": {
+        "name": "fennekin",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "654": {
+        "name": "braixen",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "655": {
+        "name": "delphox",
+        "types": [
+            "fire",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "656": {
+        "name": "froakie",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "657": {
+        "name": "frogadier",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "658": {
+        "name": "greninja",
+        "types": [
+            "water",
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "659": {
+        "name": "bunnelby",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "660": {
+        "name": "diggersby",
+        "types": [
+            "normal",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "661": {
+        "name": "fletchling",
+        "types": [
+            "normal",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "662": {
+        "name": "fletchinder",
+        "types": [
+            "fire",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "663": {
+        "name": "talonflame",
+        "types": [
+            "fire",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "664": {
+        "name": "scatterbug",
+        "types": [
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "665": {
+        "name": "spewpa",
+        "types": [
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "666": {
+        "name": "vivillon",
+        "types": [
+            "bug",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "667": {
+        "name": "litleo",
+        "types": [
+            "fire",
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "668": {
+        "name": "pyroar",
+        "types": [
+            "fire",
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "669": {
+        "name": "flabebe",
+        "types": [
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "670": {
+        "name": "floette",
+        "types": [
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "671": {
+        "name": "florges",
+        "types": [
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "672": {
+        "name": "skiddo",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "673": {
+        "name": "gogoat",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "674": {
+        "name": "pancham",
+        "types": [
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "675": {
+        "name": "pangoro",
+        "types": [
+            "fighting",
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "676": {
+        "name": "furfrou",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "677": {
+        "name": "espurr",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "678": {
+        "name": "meowstic-male",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "679": {
+        "name": "honedge",
+        "types": [
+            "steel",
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "680": {
+        "name": "doublade",
+        "types": [
+            "steel",
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "681": {
+        "name": "aegislash-shield",
+        "types": [
+            "steel",
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "682": {
+        "name": "spritzee",
+        "types": [
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "683": {
+        "name": "aromatisse",
+        "types": [
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "684": {
+        "name": "swirlix",
+        "types": [
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "685": {
+        "name": "slurpuff",
+        "types": [
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "686": {
+        "name": "inkay",
+        "types": [
+            "dark",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "687": {
+        "name": "malamar",
+        "types": [
+            "dark",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "688": {
+        "name": "binacle",
+        "types": [
+            "rock",
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "689": {
+        "name": "barbaracle",
+        "types": [
+            "rock",
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "690": {
+        "name": "skrelp",
+        "types": [
+            "poison",
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "691": {
+        "name": "dragalge",
+        "types": [
+            "poison",
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "692": {
+        "name": "clauncher",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "693": {
+        "name": "clawitzer",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "694": {
+        "name": "helioptile",
+        "types": [
+            "electric",
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "695": {
+        "name": "heliolisk",
+        "types": [
+            "electric",
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "696": {
+        "name": "tyrunt",
+        "types": [
+            "rock",
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "697": {
+        "name": "tyrantrum",
+        "types": [
+            "rock",
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "698": {
+        "name": "amaura",
+        "types": [
+            "rock",
+            "ice"
+        ],
+        "is_legendary": false
+    },
+    "699": {
+        "name": "aurorus",
+        "types": [
+            "rock",
+            "ice"
+        ],
+        "is_legendary": false
+    },
+    "700": {
+        "name": "sylveon",
+        "types": [
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "701": {
+        "name": "hawlucha",
+        "types": [
+            "fighting",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "702": {
+        "name": "dedenne",
+        "types": [
+            "electric",
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "703": {
+        "name": "carbink",
+        "types": [
+            "rock",
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "704": {
+        "name": "goomy",
+        "types": [
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "705": {
+        "name": "sliggoo",
+        "types": [
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "706": {
+        "name": "goodra",
+        "types": [
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "707": {
+        "name": "klefki",
+        "types": [
+            "steel",
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "708": {
+        "name": "phantump",
+        "types": [
+            "ghost",
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "709": {
+        "name": "trevenant",
+        "types": [
+            "ghost",
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "710": {
+        "name": "pumpkaboo-average",
+        "types": [
+            "ghost",
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "711": {
+        "name": "gourgeist-average",
+        "types": [
+            "ghost",
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "712": {
+        "name": "bergmite",
+        "types": [
+            "ice"
+        ],
+        "is_legendary": false
+    },
+    "713": {
+        "name": "avalugg",
+        "types": [
+            "ice"
+        ],
+        "is_legendary": false
+    },
+    "714": {
+        "name": "noibat",
+        "types": [
+            "flying",
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "715": {
+        "name": "noivern",
+        "types": [
+            "flying",
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "716": {
+        "name": "xerneas",
+        "types": [
+            "fairy"
+        ],
+        "is_legendary": true
+    },
+    "717": {
+        "name": "yveltal",
+        "types": [
+            "dark",
+            "flying"
+        ],
+        "is_legendary": true
+    },
+    "718": {
+        "name": "zygarde-50",
+        "types": [
+            "dragon",
+            "ground"
+        ],
+        "is_legendary": true
+    },
+    "719": {
+        "name": "diancie",
+        "types": [
+            "rock",
+            "fairy"
+        ],
+        "is_legendary": true
+    },
+    "720": {
+        "name": "hoopa",
+        "types": [
+            "psychic",
+            "ghost"
+        ],
+        "is_legendary": true
+    },
+    "721": {
+        "name": "volcanion",
+        "types": [
+            "fire",
+            "water"
+        ],
+        "is_legendary": true
+    },
+    "722": {
+        "name": "rowlet",
+        "types": [
+            "grass",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "723": {
+        "name": "dartrix",
+        "types": [
+            "grass",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "724": {
+        "name": "decidueye",
+        "types": [
+            "grass",
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "725": {
+        "name": "litten",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "726": {
+        "name": "torracat",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "727": {
+        "name": "incineroar",
+        "types": [
+            "fire",
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "728": {
+        "name": "popplio",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "729": {
+        "name": "brionne",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "730": {
+        "name": "primarina",
+        "types": [
+            "water",
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "731": {
+        "name": "pikipek",
+        "types": [
+            "normal",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "732": {
+        "name": "trumbeak",
+        "types": [
+            "normal",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "733": {
+        "name": "toucannon",
+        "types": [
+            "normal",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "734": {
+        "name": "yungoos",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "735": {
+        "name": "gumshoos",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "736": {
+        "name": "grubbin",
+        "types": [
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "737": {
+        "name": "charjabug",
+        "types": [
+            "bug",
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "738": {
+        "name": "vikavolt",
+        "types": [
+            "bug",
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "739": {
+        "name": "crabrawler",
+        "types": [
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "740": {
+        "name": "crabominable",
+        "types": [
+            "fighting",
+            "ice"
+        ],
+        "is_legendary": false
+    },
+    "741": {
+        "name": "oricorio-baile",
+        "types": [
+            "fire",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "742": {
+        "name": "cutiefly",
+        "types": [
+            "bug",
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "743": {
+        "name": "ribombee",
+        "types": [
+            "bug",
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "744": {
+        "name": "rockruff",
+        "types": [
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "745": {
+        "name": "lycanroc-midday",
+        "types": [
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "746": {
+        "name": "wishiwashi-solo",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "747": {
+        "name": "mareanie",
+        "types": [
+            "poison",
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "748": {
+        "name": "toxapex",
+        "types": [
+            "poison",
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "749": {
+        "name": "mudbray",
+        "types": [
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "750": {
+        "name": "mudsdale",
+        "types": [
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "751": {
+        "name": "dewpider",
+        "types": [
+            "water",
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "752": {
+        "name": "araquanid",
+        "types": [
+            "water",
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "753": {
+        "name": "fomantis",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "754": {
+        "name": "lurantis",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "755": {
+        "name": "morelull",
+        "types": [
+            "grass",
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "756": {
+        "name": "shiinotic",
+        "types": [
+            "grass",
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "757": {
+        "name": "salandit",
+        "types": [
+            "poison",
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "758": {
+        "name": "salazzle",
+        "types": [
+            "poison",
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "759": {
+        "name": "stufful",
+        "types": [
+            "normal",
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "760": {
+        "name": "bewear",
+        "types": [
+            "normal",
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "761": {
+        "name": "bounsweet",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "762": {
+        "name": "steenee",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "763": {
+        "name": "tsareena",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "764": {
+        "name": "comfey",
+        "types": [
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "765": {
+        "name": "oranguru",
+        "types": [
+            "normal",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "766": {
+        "name": "passimian",
+        "types": [
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "767": {
+        "name": "wimpod",
+        "types": [
+            "bug",
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "768": {
+        "name": "golisopod",
+        "types": [
+            "bug",
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "769": {
+        "name": "sandygast",
+        "types": [
+            "ghost",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "770": {
+        "name": "palossand",
+        "types": [
+            "ghost",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "771": {
+        "name": "pyukumuku",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "772": {
+        "name": "type-null",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": true
+    },
+    "773": {
+        "name": "silvally",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": true
+    },
+    "774": {
+        "name": "minior-red-meteor",
+        "types": [
+            "rock",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "775": {
+        "name": "komala",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "776": {
+        "name": "turtonator",
+        "types": [
+            "fire",
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "777": {
+        "name": "togedemaru",
+        "types": [
+            "electric",
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "778": {
+        "name": "mimikyu-disguised",
+        "types": [
+            "ghost",
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "779": {
+        "name": "bruxish",
+        "types": [
+            "water",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "780": {
+        "name": "drampa",
+        "types": [
+            "normal",
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "781": {
+        "name": "dhelmise",
+        "types": [
+            "ghost",
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "782": {
+        "name": "jangmo-o",
+        "types": [
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "783": {
+        "name": "hakamo-o",
+        "types": [
+            "dragon",
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "784": {
+        "name": "kommo-o",
+        "types": [
+            "dragon",
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "785": {
+        "name": "tapu-koko",
+        "types": [
+            "electric",
+            "fairy"
+        ],
+        "is_legendary": true
+    },
+    "786": {
+        "name": "tapu-lele",
+        "types": [
+            "psychic",
+            "fairy"
+        ],
+        "is_legendary": true
+    },
+    "787": {
+        "name": "tapu-bulu",
+        "types": [
+            "grass",
+            "fairy"
+        ],
+        "is_legendary": true
+    },
+    "788": {
+        "name": "tapu-fini",
+        "types": [
+            "water",
+            "fairy"
+        ],
+        "is_legendary": true
+    },
+    "789": {
+        "name": "cosmog",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": true
+    },
+    "790": {
+        "name": "cosmoem",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": true
+    },
+    "791": {
+        "name": "solgaleo",
+        "types": [
+            "psychic",
+            "steel"
+        ],
+        "is_legendary": true
+    },
+    "792": {
+        "name": "lunala",
+        "types": [
+            "psychic",
+            "ghost"
+        ],
+        "is_legendary": true
+    },
+    "793": {
+        "name": "nihilego",
+        "types": [
+            "rock",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "794": {
+        "name": "buzzwole",
+        "types": [
+            "bug",
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "795": {
+        "name": "pheromosa",
+        "types": [
+            "bug",
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "796": {
+        "name": "xurkitree",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "797": {
+        "name": "celesteela",
+        "types": [
+            "steel",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "798": {
+        "name": "kartana",
+        "types": [
+            "grass",
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "799": {
+        "name": "guzzlord",
+        "types": [
+            "dark",
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "800": {
+        "name": "necrozma",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": true
+    },
+    "801": {
+        "name": "magearna",
+        "types": [
+            "steel",
+            "fairy"
+        ],
+        "is_legendary": true
+    },
+    "802": {
+        "name": "marshadow",
+        "types": [
+            "fighting",
+            "ghost"
+        ],
+        "is_legendary": true
+    },
+    "803": {
+        "name": "poipole",
+        "types": [
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "804": {
+        "name": "naganadel",
+        "types": [
+            "poison",
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "805": {
+        "name": "stakataka",
+        "types": [
+            "rock",
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "806": {
+        "name": "blacephalon",
+        "types": [
+            "fire",
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "807": {
+        "name": "zeraora",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": true
+    },
+    "808": {
+        "name": "meltan",
+        "types": [
+            "steel"
+        ],
+        "is_legendary": true
+    },
+    "809": {
+        "name": "melmetal",
+        "types": [
+            "steel"
+        ],
+        "is_legendary": true
+    },
+    "810": {
+        "name": "grookey",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "811": {
+        "name": "thwackey",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "812": {
+        "name": "rillaboom",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "813": {
+        "name": "scorbunny",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "814": {
+        "name": "raboot",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "815": {
+        "name": "cinderace",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "816": {
+        "name": "sobble",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "817": {
+        "name": "drizzile",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "818": {
+        "name": "inteleon",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "819": {
+        "name": "skwovet",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "820": {
+        "name": "greedent",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "821": {
+        "name": "rookidee",
+        "types": [
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "822": {
+        "name": "corvisquire",
+        "types": [
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "823": {
+        "name": "corviknight",
+        "types": [
+            "flying",
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "824": {
+        "name": "blipbug",
+        "types": [
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "825": {
+        "name": "dottler",
+        "types": [
+            "bug",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "826": {
+        "name": "orbeetle",
+        "types": [
+            "bug",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "827": {
+        "name": "nickit",
+        "types": [
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "828": {
+        "name": "thievul",
+        "types": [
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "829": {
+        "name": "gossifleur",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "830": {
+        "name": "eldegoss",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "831": {
+        "name": "wooloo",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "832": {
+        "name": "dubwool",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "833": {
+        "name": "chewtle",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "834": {
+        "name": "drednaw",
+        "types": [
+            "water",
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "835": {
+        "name": "yamper",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "836": {
+        "name": "boltund",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "837": {
+        "name": "rolycoly",
+        "types": [
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "838": {
+        "name": "carkol",
+        "types": [
+            "rock",
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "839": {
+        "name": "coalossal",
+        "types": [
+            "rock",
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "840": {
+        "name": "applin",
+        "types": [
+            "grass",
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "841": {
+        "name": "flapple",
+        "types": [
+            "grass",
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "842": {
+        "name": "appletun",
+        "types": [
+            "grass",
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "843": {
+        "name": "silicobra",
+        "types": [
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "844": {
+        "name": "sandaconda",
+        "types": [
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "845": {
+        "name": "cramorant",
+        "types": [
+            "flying",
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "846": {
+        "name": "arrokuda",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "847": {
+        "name": "barraskewda",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "848": {
+        "name": "toxel",
+        "types": [
+            "electric",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "849": {
+        "name": "toxtricity-amped",
+        "types": [
+            "electric",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "850": {
+        "name": "sizzlipede",
+        "types": [
+            "fire",
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "851": {
+        "name": "centiskorch",
+        "types": [
+            "fire",
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "852": {
+        "name": "clobbopus",
+        "types": [
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "853": {
+        "name": "grapploct",
+        "types": [
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "854": {
+        "name": "sinistea",
+        "types": [
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "855": {
+        "name": "polteageist",
+        "types": [
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "856": {
+        "name": "hatenna",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "857": {
+        "name": "hattrem",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "858": {
+        "name": "hatterene",
+        "types": [
+            "psychic",
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "859": {
+        "name": "impidimp",
+        "types": [
+            "dark",
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "860": {
+        "name": "morgrem",
+        "types": [
+            "dark",
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "861": {
+        "name": "grimmsnarl",
+        "types": [
+            "dark",
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "862": {
+        "name": "obstagoon",
+        "types": [
+            "dark",
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "863": {
+        "name": "perrserker",
+        "types": [
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "864": {
+        "name": "cursola",
+        "types": [
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "865": {
+        "name": "sirfetchd",
+        "types": [
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "866": {
+        "name": "mr-rime",
+        "types": [
+            "ice",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "867": {
+        "name": "runerigus",
+        "types": [
+            "ground",
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "868": {
+        "name": "milcery",
+        "types": [
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "869": {
+        "name": "alcremie",
+        "types": [
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "870": {
+        "name": "falinks",
+        "types": [
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "871": {
+        "name": "pincurchin",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "872": {
+        "name": "snom",
+        "types": [
+            "ice",
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "873": {
+        "name": "frosmoth",
+        "types": [
+            "ice",
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "874": {
+        "name": "stonjourner",
+        "types": [
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "875": {
+        "name": "eiscue-ice",
+        "types": [
+            "ice"
+        ],
+        "is_legendary": false
+    },
+    "876": {
+        "name": "indeedee-male",
+        "types": [
+            "psychic",
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "877": {
+        "name": "morpeko-full-belly",
+        "types": [
+            "electric",
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "878": {
+        "name": "cufant",
+        "types": [
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "879": {
+        "name": "copperajah",
+        "types": [
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "880": {
+        "name": "dracozolt",
+        "types": [
+            "electric",
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "881": {
+        "name": "arctozolt",
+        "types": [
+            "electric",
+            "ice"
+        ],
+        "is_legendary": false
+    },
+    "882": {
+        "name": "dracovish",
+        "types": [
+            "water",
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "883": {
+        "name": "arctovish",
+        "types": [
+            "water",
+            "ice"
+        ],
+        "is_legendary": false
+    },
+    "884": {
+        "name": "duraludon",
+        "types": [
+            "steel",
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "885": {
+        "name": "dreepy",
+        "types": [
+            "dragon",
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "886": {
+        "name": "drakloak",
+        "types": [
+            "dragon",
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "887": {
+        "name": "dragapult",
+        "types": [
+            "dragon",
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "888": {
+        "name": "zacian",
+        "types": [
+            "fairy"
+        ],
+        "is_legendary": true
+    },
+    "889": {
+        "name": "zamazenta",
+        "types": [
+            "fighting"
+        ],
+        "is_legendary": true
+    },
+    "890": {
+        "name": "eternatus",
+        "types": [
+            "poison",
+            "dragon"
+        ],
+        "is_legendary": true
+    },
+    "891": {
+        "name": "kubfu",
+        "types": [
+            "fighting"
+        ],
+        "is_legendary": true
+    },
+    "892": {
+        "name": "urshifu-single-strike",
+        "types": [
+            "fighting",
+            "dark"
+        ],
+        "is_legendary": true
+    },
+    "893": {
+        "name": "zarude",
+        "types": [
+            "dark",
+            "grass"
+        ],
+        "is_legendary": true
+    },
+    "894": {
+        "name": "regieleki",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": true
+    },
+    "895": {
+        "name": "regidrago",
+        "types": [
+            "dragon"
+        ],
+        "is_legendary": true
+    },
+    "896": {
+        "name": "glastrier",
+        "types": [
+            "ice"
+        ],
+        "is_legendary": true
+    },
+    "897": {
+        "name": "spectrier",
+        "types": [
+            "ghost"
+        ],
+        "is_legendary": true
+    },
+    "898": {
+        "name": "calyrex",
+        "types": [
+            "psychic",
+            "grass"
+        ],
+        "is_legendary": true
+    },
+    "899": {
+        "name": "wyrdeer",
+        "types": [
+            "normal",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "900": {
+        "name": "kleavor",
+        "types": [
+            "bug",
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "901": {
+        "name": "ursaluna",
+        "types": [
+            "ground",
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "902": {
+        "name": "basculegion-male",
+        "types": [
+            "water",
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "903": {
+        "name": "sneasler",
+        "types": [
+            "fighting",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "904": {
+        "name": "overqwil",
+        "types": [
+            "dark",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "905": {
+        "name": "enamorus-incarnate",
+        "types": [
+            "fairy",
+            "flying"
+        ],
+        "is_legendary": true
+    },
+    "906": {
+        "name": "sprigatito",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "907": {
+        "name": "floragato",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "908": {
+        "name": "meowscarada",
+        "types": [
+            "grass",
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "909": {
+        "name": "fuecoco",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "910": {
+        "name": "crocalor",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "911": {
+        "name": "skeledirge",
+        "types": [
+            "fire",
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "912": {
+        "name": "quaxly",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "913": {
+        "name": "quaxwell",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "914": {
+        "name": "quaquaval",
+        "types": [
+            "water",
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "915": {
+        "name": "lechonk",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "916": {
+        "name": "oinkologne-male",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "917": {
+        "name": "tarountula",
+        "types": [
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "918": {
+        "name": "spidops",
+        "types": [
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "919": {
+        "name": "nymble",
+        "types": [
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "920": {
+        "name": "lokix",
+        "types": [
+            "bug",
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "921": {
+        "name": "pawmi",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "922": {
+        "name": "pawmo",
+        "types": [
+            "electric",
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "923": {
+        "name": "pawmot",
+        "types": [
+            "electric",
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "924": {
+        "name": "tandemaus",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "925": {
+        "name": "maushold-family-of-four",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "926": {
+        "name": "fidough",
+        "types": [
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "927": {
+        "name": "dachsbun",
+        "types": [
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "928": {
+        "name": "smoliv",
+        "types": [
+            "grass",
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "929": {
+        "name": "dolliv",
+        "types": [
+            "grass",
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "930": {
+        "name": "arboliva",
+        "types": [
+            "grass",
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "931": {
+        "name": "squawkabilly-green-plumage",
+        "types": [
+            "normal",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "932": {
+        "name": "nacli",
+        "types": [
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "933": {
+        "name": "naclstack",
+        "types": [
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "934": {
+        "name": "garganacl",
+        "types": [
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "935": {
+        "name": "charcadet",
+        "types": [
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "936": {
+        "name": "armarouge",
+        "types": [
+            "fire",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "937": {
+        "name": "ceruledge",
+        "types": [
+            "fire",
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "938": {
+        "name": "tadbulb",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "939": {
+        "name": "bellibolt",
+        "types": [
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "940": {
+        "name": "wattrel",
+        "types": [
+            "electric",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "941": {
+        "name": "kilowattrel",
+        "types": [
+            "electric",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "942": {
+        "name": "maschiff",
+        "types": [
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "943": {
+        "name": "mabosstiff",
+        "types": [
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "944": {
+        "name": "shroodle",
+        "types": [
+            "poison",
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "945": {
+        "name": "grafaiai",
+        "types": [
+            "poison",
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "946": {
+        "name": "bramblin",
+        "types": [
+            "grass",
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "947": {
+        "name": "brambleghast",
+        "types": [
+            "grass",
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "948": {
+        "name": "toedscool",
+        "types": [
+            "ground",
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "949": {
+        "name": "toedscruel",
+        "types": [
+            "ground",
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "950": {
+        "name": "klawf",
+        "types": [
+            "rock"
+        ],
+        "is_legendary": false
+    },
+    "951": {
+        "name": "capsakid",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": false
+    },
+    "952": {
+        "name": "scovillain",
+        "types": [
+            "grass",
+            "fire"
+        ],
+        "is_legendary": false
+    },
+    "953": {
+        "name": "rellor",
+        "types": [
+            "bug"
+        ],
+        "is_legendary": false
+    },
+    "954": {
+        "name": "rabsca",
+        "types": [
+            "bug",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "955": {
+        "name": "flittle",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "956": {
+        "name": "espathra",
+        "types": [
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "957": {
+        "name": "tinkatink",
+        "types": [
+            "fairy",
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "958": {
+        "name": "tinkatuff",
+        "types": [
+            "fairy",
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "959": {
+        "name": "tinkaton",
+        "types": [
+            "fairy",
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "960": {
+        "name": "wiglett",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "961": {
+        "name": "wugtrio",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "962": {
+        "name": "bombirdier",
+        "types": [
+            "flying",
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "963": {
+        "name": "finizen",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "964": {
+        "name": "palafin-zero",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "965": {
+        "name": "varoom",
+        "types": [
+            "steel",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "966": {
+        "name": "revavroom",
+        "types": [
+            "steel",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "967": {
+        "name": "cyclizar",
+        "types": [
+            "dragon",
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "968": {
+        "name": "orthworm",
+        "types": [
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "969": {
+        "name": "glimmet",
+        "types": [
+            "rock",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "970": {
+        "name": "glimmora",
+        "types": [
+            "rock",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "971": {
+        "name": "greavard",
+        "types": [
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "972": {
+        "name": "houndstone",
+        "types": [
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "973": {
+        "name": "flamigo",
+        "types": [
+            "flying",
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "974": {
+        "name": "cetoddle",
+        "types": [
+            "ice"
+        ],
+        "is_legendary": false
+    },
+    "975": {
+        "name": "cetitan",
+        "types": [
+            "ice"
+        ],
+        "is_legendary": false
+    },
+    "976": {
+        "name": "veluza",
+        "types": [
+            "water",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "977": {
+        "name": "dondozo",
+        "types": [
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "978": {
+        "name": "tatsugiri-curly",
+        "types": [
+            "dragon",
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "979": {
+        "name": "annihilape",
+        "types": [
+            "fighting",
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "980": {
+        "name": "clodsire",
+        "types": [
+            "poison",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "981": {
+        "name": "farigiraf",
+        "types": [
+            "normal",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "982": {
+        "name": "dudunsparce-two-segment",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": false
+    },
+    "983": {
+        "name": "kingambit",
+        "types": [
+            "dark",
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "984": {
+        "name": "great-tusk",
+        "types": [
+            "ground",
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "985": {
+        "name": "scream-tail",
+        "types": [
+            "fairy",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "986": {
+        "name": "brute-bonnet",
+        "types": [
+            "grass",
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "987": {
+        "name": "flutter-mane",
+        "types": [
+            "ghost",
+            "fairy"
+        ],
+        "is_legendary": false
+    },
+    "988": {
+        "name": "slither-wing",
+        "types": [
+            "bug",
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "989": {
+        "name": "sandy-shocks",
+        "types": [
+            "electric",
+            "ground"
+        ],
+        "is_legendary": false
+    },
+    "990": {
+        "name": "iron-treads",
+        "types": [
+            "ground",
+            "steel"
+        ],
+        "is_legendary": false
+    },
+    "991": {
+        "name": "iron-bundle",
+        "types": [
+            "ice",
+            "water"
+        ],
+        "is_legendary": false
+    },
+    "992": {
+        "name": "iron-hands",
+        "types": [
+            "fighting",
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "993": {
+        "name": "iron-jugulis",
+        "types": [
+            "dark",
+            "flying"
+        ],
+        "is_legendary": false
+    },
+    "994": {
+        "name": "iron-moth",
+        "types": [
+            "fire",
+            "poison"
+        ],
+        "is_legendary": false
+    },
+    "995": {
+        "name": "iron-thorns",
+        "types": [
+            "rock",
+            "electric"
+        ],
+        "is_legendary": false
+    },
+    "996": {
+        "name": "frigibax",
+        "types": [
+            "dragon",
+            "ice"
+        ],
+        "is_legendary": false
+    },
+    "997": {
+        "name": "arctibax",
+        "types": [
+            "dragon",
+            "ice"
+        ],
+        "is_legendary": false
+    },
+    "998": {
+        "name": "baxcalibur",
+        "types": [
+            "dragon",
+            "ice"
+        ],
+        "is_legendary": false
+    },
+    "999": {
+        "name": "gimmighoul",
+        "types": [
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "1000": {
+        "name": "gholdengo",
+        "types": [
+            "steel",
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "1001": {
+        "name": "wo-chien",
+        "types": [
+            "dark",
+            "grass"
+        ],
+        "is_legendary": true
+    },
+    "1002": {
+        "name": "chien-pao",
+        "types": [
+            "dark",
+            "ice"
+        ],
+        "is_legendary": true
+    },
+    "1003": {
+        "name": "ting-lu",
+        "types": [
+            "dark",
+            "ground"
+        ],
+        "is_legendary": true
+    },
+    "1004": {
+        "name": "chi-yu",
+        "types": [
+            "dark",
+            "fire"
+        ],
+        "is_legendary": true
+    },
+    "1005": {
+        "name": "roaring-moon",
+        "types": [
+            "dragon",
+            "dark"
+        ],
+        "is_legendary": false
+    },
+    "1006": {
+        "name": "iron-valiant",
+        "types": [
+            "fairy",
+            "fighting"
+        ],
+        "is_legendary": false
+    },
+    "1007": {
+        "name": "koraidon",
+        "types": [
+            "fighting",
+            "dragon"
+        ],
+        "is_legendary": true
+    },
+    "1008": {
+        "name": "miraidon",
+        "types": [
+            "electric",
+            "dragon"
+        ],
+        "is_legendary": true
+    },
+    "1009": {
+        "name": "walking-wake",
+        "types": [
+            "water",
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "1010": {
+        "name": "iron-leaves",
+        "types": [
+            "grass",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "1011": {
+        "name": "dipplin",
+        "types": [
+            "grass",
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "1012": {
+        "name": "poltchageist",
+        "types": [
+            "grass",
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "1013": {
+        "name": "sinistcha",
+        "types": [
+            "grass",
+            "ghost"
+        ],
+        "is_legendary": false
+    },
+    "1014": {
+        "name": "okidogi",
+        "types": [
+            "poison",
+            "fighting"
+        ],
+        "is_legendary": true
+    },
+    "1015": {
+        "name": "munkidori",
+        "types": [
+            "poison",
+            "psychic"
+        ],
+        "is_legendary": true
+    },
+    "1016": {
+        "name": "fezandipiti",
+        "types": [
+            "poison",
+            "fairy"
+        ],
+        "is_legendary": true
+    },
+    "1017": {
+        "name": "ogerpon",
+        "types": [
+            "grass"
+        ],
+        "is_legendary": true
+    },
+    "1018": {
+        "name": "archaludon",
+        "types": [
+            "steel",
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "1019": {
+        "name": "hydrapple",
+        "types": [
+            "grass",
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "1020": {
+        "name": "gouging-fire",
+        "types": [
+            "fire",
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "1021": {
+        "name": "raging-bolt",
+        "types": [
+            "electric",
+            "dragon"
+        ],
+        "is_legendary": false
+    },
+    "1022": {
+        "name": "iron-boulder",
+        "types": [
+            "rock",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "1023": {
+        "name": "iron-crown",
+        "types": [
+            "steel",
+            "psychic"
+        ],
+        "is_legendary": false
+    },
+    "1024": {
+        "name": "terapagos",
+        "types": [
+            "normal"
+        ],
+        "is_legendary": true
+    },
+    "1025": {
+        "name": "pecharunt",
+        "types": [
+            "poison",
+            "ghost"
+        ],
+        "is_legendary": true
+    }
+}
