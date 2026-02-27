@@ -49,6 +49,8 @@ interface GameState {
         amount: number;
         region?: string;
     };
+    goalCount?: number;       // raw count from slot_data (how many Pokémon to guess)
+    activePokemonLimit: number; // max Pokémon index in this generation (151/251/386)
     logs: LogEntry[];
     gameMode: 'archipelago' | 'standalone' | null;
 }
@@ -112,6 +114,8 @@ interface GameContextType extends GameState {
     unlockType: (type: string) => void;
     lockType: (type: string) => void;
     clearAllTypes: () => void;
+    goalCount: number | undefined;
+    activePokemonLimit: number;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -134,6 +138,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [legendaryGating, setLegendaryGating] = useState(0);
     const [regionPasses, setRegionPasses] = useState<Set<string>>(new Set());
     const [typeUnlocks, setTypeUnlocks] = useState<Set<string>>(new Set());
+    const [activePokemonLimit, setActivePokemonLimit] = useState<number>(386); // default to Gen 3
+    const [goalCount, setGoalCount] = useState<number | undefined>(undefined);
+
     const [pingLatency, setPingLatency] = useState<number | null>(null);
     const [connectionQuality, setConnectionQuality] = useState<'good' | 'degraded' | 'dead' | null>(null);
     const pingTimeoutRef = useRef<number | ReturnType<typeof setInterval> | null>(null);
@@ -444,50 +451,20 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         checkExtendedLocations();
     }, [checkedIds, isConnected, gameMode, pokemonMetadata, unlockedIds, typeLocksEnabled, typeUnlocks]);
 
-    // --- Goal Checking ---
+    // --- Goal / Victory Checking ---
     useEffect(() => {
-        if (!clientRef.current || !isConnected || gameMode !== 'archipelago' || !goal) return;
+        if (!clientRef.current || !isConnected || gameMode !== 'archipelago') return;
+        if (goalCount === undefined) return;
 
-        let won = false;
-        const guessedPokemonCount = Array.from(checkedIds).filter(id => id < 500 || (id >= 520 && id < 1000)).length;
+        // Count Pokémon guess locations only (IDs 1–1025, excluding Oak's Lab 500-519 and milestones 1000+)
+        const guessedCount = Array.from(checkedIds).filter(id => id >= 1 && id < 500).length
+            + Array.from(checkedIds).filter(id => id >= 520 && id < 1000).length;
 
-        if (goal.type === 'any_pokemon' || goal.type === 'percentage') {
-            won = guessedPokemonCount >= goal.amount;
-        } else if (goal.type === 'region_completion' && goal.region) {
-            // Count how many we have from this region
-            let countInRegion = 0;
-            let totalInRegion = 0;
-
-            // Go through all pokemon to find total needed
-            allPokemon.forEach(p => {
-                const region = GENERATIONS.find(g => p.id >= g.startId && p.id <= g.endId)?.region;
-                if (region === goal.region) {
-                    totalInRegion++;
-                    if (checkedIds.has(p.id)) countInRegion++;
-                }
-            });
-
-            won = totalInRegion > 0 && countInRegion >= totalInRegion;
-        } else if (goal.type === 'all_legendaries') {
-            let countLegs = 0;
-            let totalLegs = 0;
-
-            allPokemon.forEach(p => {
-                const data = (pokemonMetadata as any)[p.id];
-                if (data?.is_legendary) {
-                    totalLegs++;
-                    if (checkedIds.has(p.id)) countLegs++;
-                }
-            });
-
-            won = totalLegs > 0 && countLegs >= totalLegs;
+        if (guessedCount >= goalCount) {
+            console.log(`Goal met! ${guessedCount}/${goalCount} Pokémon guessed. Sending CLIENT_GOAL.`);
+            clientRef.current.updateStatus(30); // 30 = ClientStatus.CLIENT_GOAL
         }
-
-        if (won) {
-            console.log("Goal met! Sending CLIENT_GOAL status.");
-            clientRef.current.updateStatus(30); // 30 is ClientStatus.CLIENT_GOAL
-        }
-    }, [checkedIds, isConnected, gameMode, goal, allPokemon]);
+    }, [checkedIds, isConnected, gameMode, goalCount]);
 
     const addLog = useCallback((entry: Omit<LogEntry, 'id' | 'timestamp'>) => {
         setLogs(prev => [
@@ -606,20 +583,18 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     // Generation scaling
                     if (slotData.pokemon_generations !== undefined) {
                         const gens = slotData.pokemon_generations;
-                        if (gens === 0) setGenerationFilter([0]);
-                        else if (gens === 1) setGenerationFilter([0, 1]);
-                        else if (gens === 2) setGenerationFilter([0, 1, 2]);
+                        if (gens === 0) { setGenerationFilter([0]); setActivePokemonLimit(151); }
+                        else if (gens === 1) { setGenerationFilter([0, 1]); setActivePokemonLimit(251); }
+                        else if (gens === 2) { setGenerationFilter([0, 1, 2]); setActivePokemonLimit(386); }
                     }
 
-                    // Goal setting
-                    if (slotData.goal !== undefined && slotData.goal_amount !== undefined) {
-                        const goalTypes: ('any_pokemon' | 'percentage' | 'region_completion' | 'all_legendaries')[] =
-                            ['any_pokemon', 'percentage', 'region_completion', 'all_legendaries'];
-                        const regions = ["Kanto", "Johto", "Hoenn", "Sinnoh", "Unova", "Kalos", "Alola", "Galar", "Paldea"];
+                    // Goal setting — server sends 'goal_count' (a raw Pokémon count)
+                    if (slotData.goal_count !== undefined) {
+                        setGoalCount(slotData.goal_count);
+                        // Also set legacy goal for display in the toolbar
                         setGoal({
-                            type: goalTypes[slotData.goal] || 'any_pokemon',
-                            amount: slotData.goal_amount,
-                            region: slotData.goal_region ? regions[slotData.goal_region - 1] : undefined
+                            type: 'any_pokemon',
+                            amount: slotData.goal_count,
                         });
                     }
                 });
@@ -963,6 +938,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             isPokemonGuessable,
             gameMode,
             setGameMode,
+            goalCount,
+            activePokemonLimit,
             unlockRegion,
             lockRegion,
             clearAllRegions,

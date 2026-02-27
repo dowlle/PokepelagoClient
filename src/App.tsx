@@ -15,7 +15,7 @@ const GameContent: React.FC = () => {
   const {
     allPokemon, unlockedIds, checkedIds, unlockPokemon, isLoading, isConnected,
     uiSettings, goal, gameMode, isPokemonGuessable,
-    typeUnlocks,
+    typeUnlocks, activePokemonLimit,
     unlockType, lockType, clearAllTypes
   } = useGame();
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
@@ -30,8 +30,10 @@ const GameContent: React.FC = () => {
   const [isDebugVisible, setIsDebugVisible] = React.useState(false);
   const [debugType, setDebugType] = React.useState(POKEMON_TYPES[0]);
 
+  // Only count Pokémon guess locations (IDs 1-499 and 520-999).
+  // Excludes Oak's Lab freebie locations (500-519) and milestone locations (1000+).
   const guessedPokemonCount = React.useMemo(() =>
-    Array.from(checkedIds).filter(id => id <= 1025).length,
+    Array.from(checkedIds).filter(id => (id >= 1 && id < 500) || (id >= 520 && id < 1000)).length,
     [checkedIds]);
 
   // Expose debug toggle to window for GlobalGuessInput to call
@@ -101,7 +103,7 @@ const GameContent: React.FC = () => {
               {' · '}
               Checked: <span className="text-green-400 font-bold">{guessedPokemonCount}</span>
               {' / '}
-              {allPokemon.length}
+              {activePokemonLimit}
             </span>
 
             {goal && (
