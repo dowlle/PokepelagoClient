@@ -22,6 +22,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
         updateUiSettings,
         connectionInfo,
         setConnectionInfo,
+        pingLatency,
         spriteCount,
         refreshSpriteCount,
         gameMode,
@@ -174,7 +175,17 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                                     <Wifi size={16} />
                                 </div>
                                 <div>
-                                    <div className="text-xs font-bold text-green-400 uppercase tracking-widest">Connected</div>
+                                    <div className="text-xs font-bold text-green-400 uppercase tracking-widest flex items-center gap-2">
+                                        Connected
+                                        {pingLatency !== null && (
+                                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${pingLatency < 100 ? 'bg-green-500/20 text-green-300' :
+                                                pingLatency < 300 ? 'bg-yellow-500/20 text-yellow-300' :
+                                                    'bg-red-500/20 text-red-300'
+                                                }`}>
+                                                {pingLatency}ms
+                                            </span>
+                                        )}
+                                    </div>
                                     <div className="text-[10px] text-gray-400">as {connectionInfo.slotName}</div>
                                 </div>
                             </div>

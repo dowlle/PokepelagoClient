@@ -1,73 +1,57 @@
-# React + TypeScript + Vite
+# Pokepelago Client
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Welcome to the **Pokepelago Client**, the companion React web application for the Archipelago Pokepelago APWorld!
 
-Currently, two official plugins are available:
+This client allows you to visually track your progress, track your caught Pokémon, and interact with the Archipelago multiworld server in a highly polished, interactive Pokédex interface.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Features
 
-## React Compiler
+- **Archipelago Integration**: Connects directly to any Archipelago server using `archipelago.js`. 
+- **Real-time Sync**: Instantly receives items, type keys, and updates your Pokédex as you progress through your seed.
+- **Smart Logic Validations**: Prevents you from guessing Pokémon you haven't mathematically unlocked yet (e.g., requires specific Type Keys).
+- **Responsive Design**: Includes a masonry-style Pokédex or a traditional grid. 
+- **Visual Flourishes**: Features shiny variations, hints, and dynamic unlocking animations.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Setup & Installation
 
-## Expanding the ESLint configuration
+Make sure you have [Node.js](https://nodejs.org/) installed on your machine.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/dowlle/PokepelagoClient.git
+   cd PokepelagoClient
+   ```
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+3. **Start the development server**:
+   ```bash
+   npm run dev
+   ```
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+4. **Build for production**:
+   ```bash
+   npm run build
+   ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## How to Play
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+1. Start your Archipelago Server with the Pokepelago `.apworld` generated seed.
+2. Open the Pokepelago Client in your browser.
+3. Enter your **Hostname**, **Port**, and **Slot Name** (e.g., `AshKetchum`) in the connection prompt.
+4. Once connected, your `Oak's Lab` starting items will automatically sync.
+5. Use the input bar at the bottom to "guess" Pokémon names. 
+6. As you guess Pokémon and receive items from the multiworld, more Pokémon will become catchable!
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Debugging
+
+The client includes an auto-guesser script designed for testing seed mathematically. You can activate it by enabling the Debug Controls in the UI settings or using the custom debug triggers.
+
+---
+
+### Contributing
+
+Feel free to open issues or submit pull requests if you want to improve the client's UI or add new tracking features!

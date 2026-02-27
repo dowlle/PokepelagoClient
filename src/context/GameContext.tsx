@@ -79,6 +79,7 @@ interface GameContextType extends GameState {
     say: (text: string) => void;
     connectionInfo: ConnectionInfo;
     setConnectionInfo: React.Dispatch<React.SetStateAction<ConnectionInfo>>;
+    pingLatency: number | null;
     selectedPokemonId: number | null;
     setSelectedPokemonId: (id: number | null) => void;
     getLocationName: (locationId: number) => string;
@@ -129,6 +130,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [legendaryGating, setLegendaryGating] = useState(0);
     const [regionPasses, setRegionPasses] = useState<Set<string>>(new Set());
     const [typeUnlocks, setTypeUnlocks] = useState<Set<string>>(new Set());
+    const [pingLatency, setPingLatency] = useState<number | null>(null);
+    const pingTimeoutRef = useRef<number | ReturnType<typeof setInterval> | null>(null);
+    const lastPingTimeRef = useRef<number>(0);
     const [masterBalls, setMasterBalls] = useState(0);
     const [pokegears, setPokegears] = useState(0);
     const [pokedexes, setPokedexes] = useState(0);
@@ -472,6 +476,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 client.socket.on('connectionRefused', (packet: ConnectionRefusedPacket) => {
                     setConnectionError(`Connection refused: ${packet.errors?.join(', ') || 'Unknown error'}`);
                     setIsConnected(false);
+                    if (pingTimeoutRef.current) clearInterval(pingTimeoutRef.current);
+                });
+
+                client.socket.on('bounced', (packet: any) => {
+                    if (packet.tags && packet.tags.includes('ping')) {
+                        setPingLatency(Date.now() - lastPingTimeRef.current);
+                    }
                 });
 
                 client.socket.on('connected', (packet: ConnectedPacket) => {
@@ -662,6 +673,16 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setConnectionError(null);
                 localStorage.setItem('pokepelago_connected', 'true');
                 isConnectingRef.current = false;
+
+                if (pingTimeoutRef.current) clearInterval(pingTimeoutRef.current as any);
+                pingTimeoutRef.current = setInterval(() => {
+                    if (clientRef.current) {
+                        lastPingTimeRef.current = Date.now();
+                        // Bypass type checking for custom packet sending if send is not exposed
+                        (clientRef.current as any).socket.socket.send(JSON.stringify([{ cmd: 'Bounce', tags: ['ping'] }]));
+                    }
+                }, 5000);
+
                 return; // Successfully connected! Exit loop.
 
             } catch (err: any) {
@@ -687,6 +708,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const disconnect = () => {
+        if (pingTimeoutRef.current) {
+            clearInterval(pingTimeoutRef.current as any);
+            pingTimeoutRef.current = null;
+        }
+        setPingLatency(null);
         if (clientRef.current) {
             clientRef.current.socket.disconnect();
             clientRef.current = null;
@@ -835,6 +861,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             say,
             connectionInfo,
             setConnectionInfo,
+            pingLatency,
             selectedPokemonId,
             setSelectedPokemonId,
             getLocationName,
