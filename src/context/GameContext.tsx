@@ -10,6 +10,7 @@ import type {
 } from 'archipelago.js';
 import pokemonMetadata from '../data/pokemon_metadata.json';
 import { getSprite, countSprites, generateSpriteKey } from '../services/spriteService';
+import { resolveExternalSpriteUrl } from '../utils/pokesprite';
 
 export interface LogEntry {
     id: string;
@@ -102,6 +103,8 @@ interface GameContextType extends GameState {
     setGameMode: (mode: 'archipelago' | 'standalone' | null) => void;
     refreshSpriteCount: () => Promise<void>;
     getSpriteUrl: (id: number, options?: { shiny?: boolean; animated?: boolean }) => Promise<string | null>;
+    spriteRepoUrl: string;
+    setSpriteRepoUrl: (url: string) => void;
     unlockRegion: (region: string) => void;
     lockRegion: (region: string) => void;
     clearAllRegions: () => void;
@@ -160,6 +163,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('pokepelago_usedPokedexes', JSON.stringify(Array.from(usedPokedexes)));
     }, [usedPokedexes]);
     const [spriteCount, setSpriteCount] = useState(0);
+    const [spriteRepoUrl, setSpriteRepoUrlState] = useState<string>(
+        () => localStorage.getItem('pokepelago_spriteRepoUrl') || ''
+    );
+
+    const setSpriteRepoUrl = useCallback((url: string) => {
+        setSpriteRepoUrlState(url);
+        localStorage.setItem('pokepelago_spriteRepoUrl', url);
+    }, []);
     const [gameMode, setGameModeState] = useState<'archipelago' | 'standalone' | null>(() => {
         const params = new URLSearchParams(window.location.search);
         if (params.has('splash')) return null;
@@ -185,6 +196,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const blob = await getSprite(key);
         if (blob) {
             return URL.createObjectURL(blob);
+        }
+        // Fall back to external repo URL if configured
+        const repoUrl = localStorage.getItem('pokepelago_spriteRepoUrl') || '';
+        if (repoUrl) {
+            return resolveExternalSpriteUrl(repoUrl, id, options);
         }
         return null;
     }, []);
@@ -893,6 +909,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             spriteCount,
             refreshSpriteCount,
             getSpriteUrl,
+            spriteRepoUrl,
+            setSpriteRepoUrl,
             isPokemonGuessable,
             gameMode,
             setGameMode,

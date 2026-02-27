@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
 import { GENERATIONS } from '../types/pokemon';
-import { X, Server, Wifi, LayoutGrid, Maximize, Image, Trash2, Upload } from 'lucide-react';
+import { X, Server, Wifi, LayoutGrid, Maximize, Image, Trash2, Upload, Link2 } from 'lucide-react';
 import { importFromFiles, clearAllSprites } from '../services/spriteService';
 
 interface SettingsPanelProps {
@@ -26,7 +26,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
         spriteCount,
         refreshSpriteCount,
         gameMode,
-        setGameMode
+        setGameMode,
+        spriteRepoUrl,
+        setSpriteRepoUrl
     } = useGame();
 
     const [isConnecting, setIsConnecting] = useState(false);
@@ -278,6 +280,36 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                             className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-yellow-600 focus:ring-yellow-500"
                         />
                     </label>
+
+                    {/* Sprite Repo URL */}
+                    <div className="space-y-2 mb-2">
+                        <label className="flex items-center gap-2 text-xs font-bold text-gray-300">
+                            <Link2 size={14} className="text-blue-400" />
+                            Sprite Repo URL
+                        </label>
+                        <div className="flex gap-2">
+                            <input
+                                type="url"
+                                value={spriteRepoUrl}
+                                onChange={(e) => setSpriteRepoUrl(e.target.value)}
+                                placeholder="https://github.com/PokeAPI/sprites/tree/master/sprites"
+                                className="flex-1 bg-gray-900/60 border border-gray-700 rounded-lg px-3 py-2 text-[11px] text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
+                            />
+                            {spriteRepoUrl && (
+                                <button
+                                    onClick={() => setSpriteRepoUrl('')}
+                                    className="p-2 text-gray-500 hover:text-red-400 hover:bg-gray-800 rounded-lg transition-colors"
+                                    title="Clear URL"
+                                >
+                                    <X size={14} />
+                                </button>
+                            )}
+                        </div>
+                        <p className="text-[9px] text-gray-600 italic">
+                            Paste a GitHub sprites tree URL to load sprites directly. Local imports take priority.
+                            Try: <a href="https://github.com/PokeAPI/sprites/tree/master/sprites" target="_blank" rel="noreferrer" className="text-blue-500 hover:underline">PokeAPI sprites</a>
+                        </p>
+                    </div>
 
                     <div className="space-y-2">
                         <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-700 rounded-xl hover:bg-gray-800/40 hover:border-gray-600 transition-all cursor-pointer group">
