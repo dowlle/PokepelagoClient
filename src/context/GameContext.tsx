@@ -535,6 +535,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     setTypeLocksEnabled(!!slotData.type_locks);
                     setLegendaryGating(slotData.legendary_gating ?? 0);
 
+                    // Generation scaling
+                    if (slotData.pokemon_generations !== undefined) {
+                        const gens = slotData.pokemon_generations;
+                        if (gens === 0) setGenerationFilter([0]);
+                        else if (gens === 1) setGenerationFilter([0, 1]);
+                        else if (gens === 2) setGenerationFilter([0, 1, 2]);
+                    }
+
                     // Goal setting
                     if (slotData.goal !== undefined && slotData.goal_amount !== undefined) {
                         const goalTypes: ('any_pokemon' | 'percentage' | 'region_completion' | 'all_legendaries')[] =
