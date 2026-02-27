@@ -138,7 +138,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [connectionQuality, setConnectionQuality] = useState<'good' | 'degraded' | 'dead' | null>(null);
     const pingTimeoutRef = useRef<number | ReturnType<typeof setInterval> | null>(null);
     const lastPingTimeRef = useRef<number>(0);
-    const lastPongTimeRef = useRef<number>(0);
     const [masterBalls, setMasterBalls] = useState(0);
     const [pokegears, setPokegears] = useState(0);
     const [pokedexes, setPokedexes] = useState(0);
@@ -312,45 +311,38 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const locationId = LOCATION_OFFSET + id;
 
-        // If connected and socket is open, send immediately
-        const ws = (clientRef.current as any)?.socket?.socket;
-        if (clientRef.current && ws && ws.readyState === WebSocket.OPEN) {
-            clientRef.current.check(locationId);
+        // Use the library's proper `authenticated` property — this checks both socket connection and AP login
+        if (clientRef.current?.authenticated) {
+            try {
+                clientRef.current.check(locationId);
+            } catch (e) {
+                console.warn('[checkPokemon] check() threw:', e);
+            }
             return;
         }
 
-        // Socket is gone / closed — attempt a silent reconnect then re-send the check
-        if (!isConnectingRef.current) {
-            console.log('[checkPokemon] Socket not open, attempting silent reconnect...');
-            // We can't await inside useCallback, so fire-and-forget with a queued re-check
-            const savedInfo = connectionInfoRef.current;
-            const doReconnect = async () => {
-                // Small delay to let any in-progress teardown settle
-                await new Promise(r => setTimeout(r, 500));
-                if (clientRef.current) {
-                    try { clientRef.current.socket.disconnect(); } catch (_) { }
-                    clientRef.current = null;
+        // Disconnected — queue a reconnect then send the check once online again.
+        // Store pending location so it can be sent after the 'connected' event fires.
+        console.log('[checkPokemon] Not authenticated, reconnecting...');
+        const pendingLocationId = locationId;
+        const savedInfo = connectionInfoRef.current;
+
+        const doReconnect = async () => {
+            if (isConnectingRef.current) return;
+            try {
+                // connect() will set up all event handlers (receivedItems, disconnected, etc.) properly
+                await connect(savedInfo);
+                // After reconnect, try sending the check if now authenticated
+                if (clientRef.current?.authenticated) {
+                    try { clientRef.current.check(pendingLocationId); } catch (_) { }
                 }
-                const { Client: FreshClient } = await import('archipelago.js');
-                const freshClient = new FreshClient();
-                clientRef.current = freshClient;
-                const protocols = ['wss://', 'ws://'];
-                for (const proto of protocols) {
-                    try {
-                        await freshClient.login(`${proto}${savedInfo.hostname}:${savedInfo.port}`, savedInfo.slotName, 'Pokepelago', {
-                            password: savedInfo.password,
-                            items: (await import('archipelago.js')).itemsHandlingFlags.all,
-                        });
-                        setIsConnected(true);
-                        setConnectionQuality('good');
-                        freshClient.check(locationId);
-                        break;
-                    } catch (_) { /* try next protocol */ }
-                }
-            };
-            doReconnect();
-        }
+            } catch (e) {
+                console.warn('[checkPokemon] reconnect failed:', e);
+            }
+        };
+        doReconnect();
     }, [isConnected]);
+
 
 
     // --- Auto-check Oak's Lab (Starting Items) ---
@@ -541,17 +533,23 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     if (pingTimeoutRef.current) clearInterval(pingTimeoutRef.current);
                 });
 
-                // ANY message from the server is proof the connection is alive
-                (client.socket as any).socket?.addEventListener('message', () => {
-                    lastPongTimeRef.current = Date.now();
-                });
-
                 client.socket.on('bounced', (packet: any) => {
                     if (packet.tags && packet.tags.includes('ping')) {
-                        const now = Date.now();
-                        setPingLatency(now - lastPingTimeRef.current);
-                        lastPongTimeRef.current = now;
+                        setPingLatency(Date.now() - lastPingTimeRef.current);
                         setConnectionQuality('good');
+                    }
+                });
+
+                // Properly detect disconnects using the library's built-in event.
+                // This fires whether the server drops us or we lose network.
+                client.socket.on('disconnected', () => {
+                    console.log('[GameContext] Disconnected from Archipelago server.');
+                    setIsConnected(false);
+                    setConnectionQuality('dead');
+                    setPingLatency(null);
+                    if (pingTimeoutRef.current) {
+                        clearInterval(pingTimeoutRef.current as any);
+                        pingTimeoutRef.current = null;
                     }
                 });
 
@@ -752,24 +750,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 localStorage.setItem('pokepelago_connected', 'true');
                 isConnectingRef.current = false;
 
-                lastPongTimeRef.current = Date.now(); // Treat connect as first pong
                 if (pingTimeoutRef.current) clearInterval(pingTimeoutRef.current as any);
                 pingTimeoutRef.current = setInterval(() => {
-                    if (clientRef.current) {
+                    if (clientRef.current?.authenticated) {
                         lastPingTimeRef.current = Date.now();
                         (clientRef.current as any).socket.send({ cmd: 'Bounce', tags: ['ping'] });
-
-                        // Check how long since we last heard from the server (any packet)
-                        const silentMs = Date.now() - lastPongTimeRef.current;
-                        if (silentMs > 15000) {
-                            setConnectionQuality('dead');
-                            // Don't force-disconnect — just show the warning.
-                            // The user can reconnect manually or it auto-reconnects on next check.
-                        } else if (silentMs > 10000) {
-                            setConnectionQuality('degraded');
-                        } else {
-                            setConnectionQuality('good');
-                        }
                     }
                 }, 5000);
 
