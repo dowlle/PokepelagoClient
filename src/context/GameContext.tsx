@@ -81,6 +81,7 @@ interface GameContextType extends GameState {
     connectionInfo: ConnectionInfo;
     setConnectionInfo: React.Dispatch<React.SetStateAction<ConnectionInfo>>;
     pingLatency: number | null;
+    connectionQuality: 'good' | 'degraded' | 'dead' | null;
     selectedPokemonId: number | null;
     setSelectedPokemonId: (id: number | null) => void;
     getLocationName: (locationId: number) => string;
@@ -134,8 +135,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [regionPasses, setRegionPasses] = useState<Set<string>>(new Set());
     const [typeUnlocks, setTypeUnlocks] = useState<Set<string>>(new Set());
     const [pingLatency, setPingLatency] = useState<number | null>(null);
+    const [connectionQuality, setConnectionQuality] = useState<'good' | 'degraded' | 'dead' | null>(null);
     const pingTimeoutRef = useRef<number | ReturnType<typeof setInterval> | null>(null);
     const lastPingTimeRef = useRef<number>(0);
+    const lastPongTimeRef = useRef<number>(0);
     const [masterBalls, setMasterBalls] = useState(0);
     const [pokegears, setPokegears] = useState(0);
     const [pokedexes, setPokedexes] = useState(0);
@@ -501,7 +504,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                 client.socket.on('bounced', (packet: any) => {
                     if (packet.tags && packet.tags.includes('ping')) {
-                        setPingLatency(Date.now() - lastPingTimeRef.current);
+                        const now = Date.now();
+                        setPingLatency(now - lastPingTimeRef.current);
+                        lastPongTimeRef.current = now;
+                        setConnectionQuality('good');
                     }
                 });
 
@@ -702,12 +708,26 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 localStorage.setItem('pokepelago_connected', 'true');
                 isConnectingRef.current = false;
 
+                lastPongTimeRef.current = Date.now(); // Treat connect as first pong
                 if (pingTimeoutRef.current) clearInterval(pingTimeoutRef.current as any);
                 pingTimeoutRef.current = setInterval(() => {
                     if (clientRef.current) {
                         lastPingTimeRef.current = Date.now();
-                        // Use the socket.send method provided by archipelago.js
                         (clientRef.current as any).socket.send({ cmd: 'Bounce', tags: ['ping'] });
+
+                        // Check how long since we last heard back
+                        const silentMs = Date.now() - lastPongTimeRef.current;
+                        if (silentMs > 15000) {
+                            // 3+ missed pongs → server is dead, force disconnect
+                            setConnectionQuality('dead');
+                            setIsConnected(false);
+                            setPingLatency(null);
+                            clearInterval(pingTimeoutRef.current as any);
+                            pingTimeoutRef.current = null;
+                        } else if (silentMs > 10000) {
+                            // 2+ missed pongs → degraded
+                            setConnectionQuality('degraded');
+                        }
                     }
                 }, 5000);
 
@@ -741,6 +761,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             pingTimeoutRef.current = null;
         }
         setPingLatency(null);
+        setConnectionQuality(null);
         if (clientRef.current) {
             clientRef.current.socket.disconnect();
             clientRef.current = null;
@@ -890,6 +911,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             connectionInfo,
             setConnectionInfo,
             pingLatency,
+            connectionQuality,
             selectedPokemonId,
             setSelectedPokemonId,
             getLocationName,

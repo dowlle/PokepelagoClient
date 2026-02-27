@@ -28,7 +28,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
         gameMode,
         setGameMode,
         spriteRepoUrl,
-        setSpriteRepoUrl
+        setSpriteRepoUrl,
+        connectionQuality
     } = useGame();
 
     const [isConnecting, setIsConnecting] = useState(false);
@@ -170,21 +171,38 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                         </form>
                     )
                 ) : (
-                    <div className="bg-green-900/10 border border-green-800/30 rounded p-4 flex flex-col gap-3">
+                    <div className={`border rounded p-4 flex flex-col gap-3 ${connectionQuality === 'dead' ? 'bg-red-900/10 border-red-800/30' :
+                            connectionQuality === 'degraded' ? 'bg-yellow-900/10 border-yellow-800/30' :
+                                'bg-green-900/10 border-green-800/30'
+                        }`}>
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-full bg-green-900/30 flex items-center justify-center text-green-400">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${connectionQuality === 'dead' ? 'bg-red-900/30 text-red-400' :
+                                        connectionQuality === 'degraded' ? 'bg-yellow-900/30 text-yellow-400' :
+                                            'bg-green-900/30 text-green-400'
+                                    }`}>
                                     <Wifi size={16} />
                                 </div>
                                 <div>
-                                    <div className="text-xs font-bold text-green-400 uppercase tracking-widest flex items-center gap-2">
-                                        Connected
-                                        {pingLatency !== null && (
-                                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${pingLatency < 100 ? 'bg-green-500/20 text-green-300' :
-                                                pingLatency < 300 ? 'bg-yellow-500/20 text-yellow-300' :
-                                                    'bg-red-500/20 text-red-300'
+                                    <div className={`text-xs font-bold uppercase tracking-widest flex items-center gap-2 ${connectionQuality === 'dead' ? 'text-red-400' :
+                                            connectionQuality === 'degraded' ? 'text-yellow-400' :
+                                                'text-green-400'
+                                        }`}>
+                                        {connectionQuality === 'dead' ? 'Lost Connection' :
+                                            connectionQuality === 'degraded' ? 'Unstable' :
+                                                'Connected'}
+                                        {pingLatency !== null && connectionQuality !== 'dead' && (
+                                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${connectionQuality === 'degraded' ? 'bg-yellow-500/20 text-yellow-300' :
+                                                    pingLatency < 100 ? 'bg-green-500/20 text-green-300' :
+                                                        pingLatency < 300 ? 'bg-yellow-500/20 text-yellow-300' :
+                                                            'bg-red-500/20 text-red-300'
                                                 }`}>
                                                 {pingLatency}ms
+                                            </span>
+                                        )}
+                                        {connectionQuality === 'degraded' && (
+                                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 animate-pulse">
+                                                No response
                                             </span>
                                         )}
                                     </div>
