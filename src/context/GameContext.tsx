@@ -299,6 +299,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
     }, []);
 
+    const connectionInfoRef = useRef(connectionInfo);
+    useEffect(() => { connectionInfoRef.current = connectionInfo; }, [connectionInfo]);
+
     const checkPokemon = useCallback((id: number) => {
         setCheckedIds(prev => {
             if (prev.has(id)) return prev;
@@ -307,12 +310,48 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return next;
         });
 
-        // Send check to Archipelago
-        if (clientRef.current && isConnected) {
-            const locationId = LOCATION_OFFSET + id;
+        const locationId = LOCATION_OFFSET + id;
+
+        // If connected and socket is open, send immediately
+        const ws = (clientRef.current as any)?.socket?.socket;
+        if (clientRef.current && ws && ws.readyState === WebSocket.OPEN) {
             clientRef.current.check(locationId);
+            return;
+        }
+
+        // Socket is gone / closed — attempt a silent reconnect then re-send the check
+        if (!isConnectingRef.current) {
+            console.log('[checkPokemon] Socket not open, attempting silent reconnect...');
+            // We can't await inside useCallback, so fire-and-forget with a queued re-check
+            const savedInfo = connectionInfoRef.current;
+            const doReconnect = async () => {
+                // Small delay to let any in-progress teardown settle
+                await new Promise(r => setTimeout(r, 500));
+                if (clientRef.current) {
+                    try { clientRef.current.socket.disconnect(); } catch (_) { }
+                    clientRef.current = null;
+                }
+                const { Client: FreshClient } = await import('archipelago.js');
+                const freshClient = new FreshClient();
+                clientRef.current = freshClient;
+                const protocols = ['wss://', 'ws://'];
+                for (const proto of protocols) {
+                    try {
+                        await freshClient.login(`${proto}${savedInfo.hostname}:${savedInfo.port}`, savedInfo.slotName, 'Pokepelago', {
+                            password: savedInfo.password,
+                            items: (await import('archipelago.js')).itemsHandlingFlags.all,
+                        });
+                        setIsConnected(true);
+                        setConnectionQuality('good');
+                        freshClient.check(locationId);
+                        break;
+                    } catch (_) { /* try next protocol */ }
+                }
+            };
+            doReconnect();
         }
     }, [isConnected]);
+
 
     // --- Auto-check Oak's Lab (Starting Items) ---
     useEffect(() => {
@@ -500,6 +539,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     setConnectionError(`Connection refused: ${packet.errors?.join(', ') || 'Unknown error'}`);
                     setIsConnected(false);
                     if (pingTimeoutRef.current) clearInterval(pingTimeoutRef.current);
+                });
+
+                // ANY message from the server is proof the connection is alive
+                (client.socket as any).socket?.addEventListener('message', () => {
+                    lastPongTimeRef.current = Date.now();
                 });
 
                 client.socket.on('bounced', (packet: any) => {
@@ -715,18 +759,16 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         lastPingTimeRef.current = Date.now();
                         (clientRef.current as any).socket.send({ cmd: 'Bounce', tags: ['ping'] });
 
-                        // Check how long since we last heard back
+                        // Check how long since we last heard from the server (any packet)
                         const silentMs = Date.now() - lastPongTimeRef.current;
                         if (silentMs > 15000) {
-                            // 3+ missed pongs → server is dead, force disconnect
                             setConnectionQuality('dead');
-                            setIsConnected(false);
-                            setPingLatency(null);
-                            clearInterval(pingTimeoutRef.current as any);
-                            pingTimeoutRef.current = null;
+                            // Don't force-disconnect — just show the warning.
+                            // The user can reconnect manually or it auto-reconnects on next check.
                         } else if (silentMs > 10000) {
-                            // 2+ missed pongs → degraded
                             setConnectionQuality('degraded');
+                        } else {
+                            setConnectionQuality('good');
                         }
                     }
                 }, 5000);
