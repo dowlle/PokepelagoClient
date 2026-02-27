@@ -343,7 +343,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
 
             // 1. Global Milestone Locations (1000 + count)
-            const globalMilestones = [1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 148];
+            const globalMilestones = [
+                1, 5, 10,
+                ...Array.from({ length: 37 }, (_, i) => (i + 2) * 10), // 20, 30, ..., 380
+                148, 248, 383
+            ].filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b);
             globalMilestones.forEach(count => {
                 const newCatches = Math.max(0, totalCatches - 3);
                 if (newCatches >= count) {
