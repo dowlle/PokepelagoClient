@@ -98,8 +98,9 @@ export const importFromFiles = async (files: FileList | File[], onProgress?: (co
                 const id = parsePokemonIdFromFileName(name);
                 if (id !== null && id < 10000) key = generateSpriteKey(id, { animated: true });
             }
-        } else if (!path.includes('/')) {
-            // Flat file import (only standard files, no directories)
+        } else if (path.split('/').length <= 2) {
+            // Flat folder import: webkitRelativePath is "foldername/001.png" (one slash).
+            // Also handles bare file drag-drop with no path separator.
             const id = parsePokemonIdFromFileName(name);
             if (id !== null && id < 10000) {
                 const lowerName = name.toLowerCase();
