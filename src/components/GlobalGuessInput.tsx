@@ -45,16 +45,14 @@ export const GlobalGuessInput: React.FC = () => {
             // Loop until complete or stopped
             while ((window as any).isAutoCompleting) {
                 let guessedThisLoop = false;
-                for (let id = 1; id <= 151; id++) {
+                for (const p of allPokemon) {
                     if (!(window as any).isAutoCompleting) break;
 
+                    const id = p.id;
                     if (checkedIdsRef.current.has(id)) continue;
 
                     const guessCheck = isPokemonGuessableRef.current(id);
                     if (!guessCheck.canGuess) continue;
-
-                    const p = allPokemon.find(x => x.id === id);
-                    if (!p) continue;
 
                     guessedThisLoop = true;
                     setGuess(p.name);

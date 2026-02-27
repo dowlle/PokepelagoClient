@@ -686,8 +686,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 pingTimeoutRef.current = setInterval(() => {
                     if (clientRef.current) {
                         lastPingTimeRef.current = Date.now();
-                        // Bypass type checking for custom packet sending if send is not exposed
-                        (clientRef.current as any).socket.socket.send(JSON.stringify([{ cmd: 'Bounce', tags: ['ping'] }]));
+                        // Use the socket.send method provided by archipelago.js
+                        (clientRef.current as any).socket.send({ cmd: 'Bounce', tags: ['ping'] });
                     }
                 }, 5000);
 
