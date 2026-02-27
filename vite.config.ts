@@ -4,7 +4,8 @@ import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/PokepelagoClient/',
+  // Use /PokepelagoClient/ as base only on GitHub Pages (CI), not localhost
+  base: process.env.GITHUB_ACTIONS ? '/PokepelagoClient/' : '/',
   plugins: [
     react(),
     tailwindcss(),
