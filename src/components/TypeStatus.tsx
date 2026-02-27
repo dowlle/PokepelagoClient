@@ -25,7 +25,7 @@ const TYPE_COLORS: Record<string, string> = {
 const TYPES_ORDER = [
     'Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice',
     'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug',
-    'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel'
+    'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'
 ];
 
 export const TypeStatus: React.FC = () => {
