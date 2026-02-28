@@ -10,7 +10,9 @@ import type {
 } from 'archipelago.js';
 import pokemonMetadata from '../data/pokemon_metadata.json';
 import { getSprite, countSprites, generateSpriteKey } from '../services/spriteService';
+import { getCleanName } from '../utils/pokemon';
 import { resolveExternalSpriteUrl } from '../utils/pokesprite';
+import { loadDerpemonIndex, getDerpemonUrl, type DerpemonIndex } from '../services/derpemonService';
 
 export interface LogEntry {
     id: string;
@@ -60,6 +62,7 @@ export interface UISettings {
     masonry: boolean;
     enableSprites: boolean;
     enableShadows: boolean;
+    spriteSet: 'normal' | 'derpemon';
 }
 
 interface ConnectionInfo {
@@ -106,11 +109,14 @@ interface GameContextType extends GameState {
     setGameMode: (mode: 'archipelago' | 'standalone' | null) => void;
     refreshSpriteCount: () => Promise<void>;
     getSpriteUrl: (id: number, options?: { shiny?: boolean; animated?: boolean }) => Promise<string | null>;
+    derpemonIndex: DerpemonIndex;
+    derpemonSpriteCount: number;
     spriteRepoUrl: string;
     setSpriteRepoUrl: (url: string) => void;
     unlockRegion: (region: string) => void;
     lockRegion: (region: string) => void;
     clearAllRegions: () => void;
+    scoutLocation: (locationId: number) => Promise<{ itemName: string; playerName: string } | null>;
     unlockType: (type: string) => void;
     lockType: (type: string) => void;
     clearAllTypes: () => void;
@@ -172,6 +178,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('pokepelago_usedPokedexes', JSON.stringify(Array.from(usedPokedexes)));
     }, [usedPokedexes]);
     const [spriteCount, setSpriteCount] = useState(0);
+    const [derpemonIndex, setDerpemonIndex] = useState<DerpemonIndex>({});
     const [spriteRepoUrl, setSpriteRepoUrlState] = useState<string>(
         () => localStorage.getItem('pokepelago_spriteRepoUrl') || ''
     );
@@ -200,28 +207,62 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSpriteCount(count);
     }, []);
 
+    // A ref that always reflects the current spriteSet — used inside getSpriteUrl
+    // to avoid the circular declaration-order issue (getSpriteUrl is defined before uiSettings).
+    const spriteSetRef = useRef<'normal' | 'derpemon'>('normal');
+
     const getSpriteUrl = useCallback(async (id: number, options: { shiny?: boolean; animated?: boolean } = {}) => {
+        // 1. Check local IDB sprites first (always takes priority)
         const key = generateSpriteKey(id, options);
         const blob = await getSprite(key);
         if (blob) {
             return URL.createObjectURL(blob);
         }
-        // Fall back to external repo URL if configured
+
+        // 2. Derpemon sprite set (GitHub CDN, static sprites only — no shiny/animated)
+        if (spriteSetRef.current === 'derpemon' && !options.animated) {
+            const derpemonUrl = getDerpemonUrl(derpemonIndex, id);
+            if (derpemonUrl) return derpemonUrl;
+        }
+
+        // 3. Fall back to external repo URL if configured
         const repoUrl = localStorage.getItem('pokepelago_spriteRepoUrl') || '';
         if (repoUrl) {
             return resolveExternalSpriteUrl(repoUrl, id, options);
         }
         return null;
-    }, []);
+        // uiSettings.spriteSet is listed here so the callback re-creates when it changes,
+        // ensuring PokemonSlot/PokemonDetails effects re-run and fetch the correct sprite.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [derpemonIndex, spriteSetRef.current]);
+
 
     useEffect(() => {
         refreshSpriteCount();
     }, [refreshSpriteCount]);
 
-    const getLocationName = useCallback((locationId: number) => {
-        if (!clientRef.current) return `Location #${locationId}`;
-        return clientRef.current.package.lookupLocationName(clientRef.current.game, locationId) || `Location #${locationId}`;
+    // Load Derpemon index once on mount
+    useEffect(() => {
+        loadDerpemonIndex().then(setDerpemonIndex);
     }, []);
+
+    const getLocationName = useCallback((locationId: number) => {
+        let name: string | undefined;
+
+        if (clientRef.current) {
+            name = clientRef.current.package.lookupLocationName(clientRef.current.game, locationId, false);
+        }
+
+        if (!name && locationId > 8571000 && locationId <= 8572025) {
+            const pkmnId = locationId - 8571000;
+            const pkmn = allPokemon.find(p => p.id === pkmnId);
+            if (pkmn) {
+                name = `Pokémon #${pkmnId} (${getCleanName(pkmn.name)})`;
+            }
+        }
+
+        return name || `Unknown Location ${locationId}`;
+    }, [allPokemon]);
 
     const [connectionInfo, setConnectionInfo] = useState<ConnectionInfo>(() => {
         const saved = localStorage.getItem('pokepelago_connection');
@@ -246,8 +287,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [connectionError, setConnectionError] = useState<string | null>(null);
     const [uiSettings, setUiSettings] = useState<UISettings>(() => {
         const saved = localStorage.getItem('pokepelago_ui');
-        return saved ? JSON.parse(saved) : { widescreen: false, masonry: false, enableSprites: true, enableShadows: false };
+        const defaults: UISettings = { widescreen: false, masonry: false, enableSprites: true, enableShadows: false, spriteSet: 'normal' };
+        return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
     });
+
+    // Keep spriteSetRef in sync every render so getSpriteUrl always reads the latest value.
+    spriteSetRef.current = uiSettings.spriteSet;
 
     const clientRef = useRef<Client | null>(null);
     const isConnectingRef = useRef<boolean>(false);
@@ -256,6 +301,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         localStorage.setItem('pokepelago_ui', JSON.stringify(uiSettings));
     }, [uiSettings]);
+
 
     // Save Connection Info
     useEffect(() => {
@@ -715,10 +761,32 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     });
                 });
 
+                // 1. Try to load cached DataPackage
+                const cachedPackageRaw = localStorage.getItem('pokepelago_datapackage');
+                if (cachedPackageRaw) {
+                    try {
+                        const parsedCache = JSON.parse(cachedPackageRaw);
+                        client.package.importPackage(parsedCache);
+                        console.log('[GameContext] Loaded Archipelago data package from cache.');
+                    } catch (e) {
+                        console.warn('[GameContext] Failed to parse cached data package, ignoring.', e);
+                    }
+                }
+
                 await client.login(url, info.slotName, 'Pokepelago', {
                     password: info.password,
                     items: itemsHandlingFlags.all,
                 });
+
+                // 2. Save DataPackage back to cache immediately upon successful login
+                // (this ensures we have definitions for the current game)
+                try {
+                    const latestPackage = client.package.exportPackage();
+                    localStorage.setItem('pokepelago_datapackage', JSON.stringify(latestPackage));
+                    console.log('[GameContext] Saved Archipelago data package to cache.');
+                } catch (e) {
+                    console.error('[GameContext] Failed to save data package to cache.', e);
+                }
 
                 setIsConnected(true);
                 setConnectionError(null);
@@ -845,6 +913,23 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setTypeUnlocks(new Set());
     }, []);
 
+    const scoutLocation = useCallback(async (locationId: number) => {
+        if (!clientRef.current?.authenticated) return null;
+        try {
+            const items = await clientRef.current.scout([locationId]);
+            if (items && items.length > 0) {
+                const item = items[0];
+                return {
+                    itemName: item.name,
+                    playerName: item.receiver.alias
+                };
+            }
+        } catch (e) {
+            console.warn('[GameContext] Failed to scout location', locationId, e);
+        }
+        return null;
+    }, []);
+
     const isPokemonGuessable = useCallback((id: number) => {
         const data = (pokemonMetadata as any)[id];
         if (!data) return { canGuess: true };
@@ -933,6 +1018,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             spriteCount,
             refreshSpriteCount,
             getSpriteUrl,
+            derpemonIndex,
+            derpemonSpriteCount: Object.keys(derpemonIndex).length,
             spriteRepoUrl,
             setSpriteRepoUrl,
             isPokemonGuessable,
@@ -943,6 +1030,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             unlockRegion,
             lockRegion,
             clearAllRegions,
+            scoutLocation,
             unlockType,
             lockType,
             clearAllTypes

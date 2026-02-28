@@ -15,7 +15,7 @@ const GameContent: React.FC = () => {
   const {
     allPokemon, unlockedIds, checkedIds, unlockPokemon, isLoading, isConnected,
     uiSettings, goal, gameMode, isPokemonGuessable,
-    typeUnlocks, activePokemonLimit,
+    typeUnlocks,
     unlockType, lockType, clearAllTypes
   } = useGame();
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
@@ -100,10 +100,6 @@ const GameContent: React.FC = () => {
 
             <span className="text-xs text-gray-500">
               Guessable: <span className="text-orange-400 font-bold">{allPokemon.filter(p => !checkedIds.has(p.id) && isPokemonGuessable(p.id).canGuess).length}</span>
-              {' · '}
-              Checked: <span className="text-green-400 font-bold">{guessedPokemonCount}</span>
-              {' / '}
-              {activePokemonLimit}
             </span>
 
             {goal && (

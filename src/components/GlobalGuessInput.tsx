@@ -4,7 +4,7 @@ import { getCleanName } from '../utils/pokemon';
 import pokemonNames from '../data/pokemon_names.json';
 
 export const GlobalGuessInput: React.FC = () => {
-    const { allPokemon, checkedIds, checkPokemon, gameMode, isPokemonGuessable } = useGame();
+    const { allPokemon, checkedIds, checkPokemon, gameMode, isPokemonGuessable, activePokemonLimit } = useGame();
     const [guess, setGuess] = useState('');
     const [feedback, setFeedback] = useState<{ type: 'success' | 'error' | 'already'; name: string } | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -205,14 +205,20 @@ export const GlobalGuessInput: React.FC = () => {
                     </div>
                 </form>
 
-                {/* Stats */}
-                <div className="flex items-center gap-4 text-sm whitespace-nowrap">
-                    <span className="text-green-400 font-bold">
-                        {Array.from(checkedIds).filter(id => id <= 1025).length}
-                    </span>
-                    <span className="text-gray-500">/</span>
-                    <span className="text-gray-300">{allPokemon.length}</span>
-                </div>
+                {/* Stats: guessed pokémon / active limit */}
+                {(() => {
+                    const guessedCount = Array.from(checkedIds).filter(id => (id >= 1 && id < 500) || (id >= 520 && id < 1000)).length;
+                    const isGoalMet = guessedCount >= activePokemonLimit;
+                    return (
+                        <div className="flex items-center gap-1 text-sm whitespace-nowrap">
+                            <span className={`font-bold ${isGoalMet ? 'text-yellow-400' : 'text-green-400'}`}>
+                                {guessedCount}
+                            </span>
+                            <span className="text-gray-500">/</span>
+                            <span className="text-gray-300">{activePokemonLimit}</span>
+                        </div>
+                    );
+                })()}
 
                 {/* Feedback toast */}
                 {feedback && (

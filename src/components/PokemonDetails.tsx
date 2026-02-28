@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useGame } from '../context/GameContext';
-import { X, ExternalLink, HelpCircle, MapPin, Sparkles, CheckCircle2, Lock } from 'lucide-react';
+import { X, ExternalLink, HelpCircle, MapPin, Sparkles, CheckCircle2, Lock, Palette } from 'lucide-react';
 import { getCleanName } from '../utils/pokemon';
+import { getDerpemonCredit } from '../services/derpemonService';
 
 export const PokemonDetails: React.FC = () => {
     const {
@@ -23,7 +24,11 @@ export const PokemonDetails: React.FC = () => {
         usedPokegears,
         usedPokedexes,
         isPokemonGuessable,
-        getSpriteUrl
+        getSpriteUrl,
+        uiSettings,
+        derpemonIndex,
+        scoutLocation,
+        isConnected
     } = useGame();
 
     const [details, setDetails] = useState<any>(null);
@@ -32,15 +37,19 @@ export const PokemonDetails: React.FC = () => {
     const [hintSent, setHintSent] = useState(false);
     const [itemCooldown, setItemCooldown] = useState<string | null>(null);
     const [spriteUrl, setSpriteUrl] = useState<string | null>(null);
+    const [scoutedItem, setScoutedItem] = useState<{ itemName: string, playerName: string } | null>(null);
     const gifRef = useRef<HTMLImageElement>(null);
 
     const pokemon = allPokemon.find(p => p.id === selectedPokemonId);
+    const isChecked = selectedPokemonId ? checkedIds.has(selectedPokemonId) : false;
+    const isHinted = selectedPokemonId ? hintedIds.has(selectedPokemonId) : false;
 
     useEffect(() => {
         if (selectedPokemonId) {
             setLoading(true);
             setGifLoaded(false);
             setHintSent(false);
+            setScoutedItem(null);
 
             // Fetch PokeAPI metadata
             fetch(`https://pokeapi.co/api/v2/pokemon/${selectedPokemonId}`)
@@ -54,30 +63,45 @@ export const PokemonDetails: React.FC = () => {
                     setLoading(false);
                 });
 
-            // Fetch Local Sprite (prefer animated if possible)
+            // Fetch Local Sprite (prefer Derpemon > animated > static)
             const loadLocalSprites = async () => {
                 const isShiny = shinyIds.has(selectedPokemonId);
-                // Try animated first
+
+                // When Derpémon set is active, try the Derpemon static sprite first.
+                // Only fall back to animated/showdown if no Derpemon sprite exists.
+                if (uiSettings.spriteSet === 'derpemon') {
+                    const derpUrl = await getSpriteUrl(selectedPokemonId, { shiny: isShiny });
+                    if (derpUrl) {
+                        setSpriteUrl(derpUrl);
+                        return;
+                    }
+                }
+
+                // Default path: prefer animated, fall back to static
                 let url = await getSpriteUrl(selectedPokemonId, { shiny: isShiny, animated: true });
                 if (!url) {
-                    // Fallback to static
                     url = await getSpriteUrl(selectedPokemonId, { shiny: isShiny });
                 }
                 setSpriteUrl(url);
                 if (!url) setGifLoaded(true); // No sprite to load, mark as loaded to show info
             };
             loadLocalSprites();
+
+            // Scout item contents
+            if (isChecked && isConnected) {
+                scoutLocation(selectedPokemonId + 8571000).then(res => {
+                    if (res) setScoutedItem(res);
+                }).catch(e => console.warn('Failed to scout location', e));
+            }
         } else {
             setDetails(null);
             setSpriteUrl(null);
         }
-    }, [selectedPokemonId, shinyIds, getSpriteUrl]);
+    }, [selectedPokemonId, uiSettings.spriteSet, allPokemon, isChecked, isConnected, scoutLocation, shinyIds, getSpriteUrl]);
 
     if (!selectedPokemonId || !pokemon) return null;
 
     const isUnlocked = unlockedIds.has(selectedPokemonId);
-    const isChecked = checkedIds.has(selectedPokemonId);
-    const isHinted = hintedIds.has(selectedPokemonId);
     const isShiny = shinyIds.has(selectedPokemonId);
 
     // Only show name and real info if guessed (checked)
@@ -110,8 +134,13 @@ export const PokemonDetails: React.FC = () => {
         displayName = pokemon.name.slice(0, 3).toUpperCase() + '...';
     }
 
-    // Location ID = National Dex ID + 200000
-    const unlockLocationName = getLocationName(selectedPokemonId + 200000);
+    // Location ID = National Dex ID + 8571000
+    const unlockLocationName = getLocationName(selectedPokemonId + 8571000);
+
+    // Derpemon credit (shown for all unlocked Pokémon when Derpemon set is active)
+    const derpemonCreator = uiSettings.spriteSet === 'derpemon'
+        ? getDerpemonCredit(derpemonIndex, selectedPokemonId)
+        : null;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
@@ -264,7 +293,19 @@ export const PokemonDetails: React.FC = () => {
                                 <CheckCircle2 size={18} className="text-green-500 mt-0.5" />
                                 <div>
                                     <span className="text-[10px] text-green-500 font-bold uppercase block">Obtained</span>
-                                    <p className="text-sm text-white font-medium">Unlocks: {unlockLocationName}</p>
+                                    {scoutedItem ? (
+                                        <>
+                                            <p className="text-sm text-white font-medium">
+                                                {scoutedItem.itemName}
+                                                {scoutedItem.playerName !== 'Appiepelago' && scoutedItem.playerName !== 'Player1' && scoutedItem.playerName !== 'Archipelago' && (
+                                                    <span className="text-gray-400 font-normal"> for {scoutedItem.playerName}</span>
+                                                )}
+                                            </p>
+                                            <p className="text-[10px] text-green-500/80 mt-0.5">at {unlockLocationName}</p>
+                                        </>
+                                    ) : (
+                                        <p className="text-sm text-white font-medium">Unlocks: {unlockLocationName}</p>
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -376,6 +417,26 @@ export const PokemonDetails: React.FC = () => {
                             </div>
                         )}
                     </div>
+
+                    {/* Derpemon Creator Credit */}
+                    {derpemonCreator && (isUnlocked || isChecked) && (
+                        <div className="flex items-center justify-center gap-1.5 text-[10px] text-purple-400/70 animate-in fade-in duration-500">
+                            <Palette size={10} />
+                            <span>
+                                Sprite by{' '}
+                                <span className="font-bold text-purple-400">{derpemonCreator}</span>
+                                {' • '}
+                                <a
+                                    href="https://github.com/TheShadowOfLight/DerpemonCommunityProject"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-purple-500 hover:underline"
+                                >
+                                    Derpemon Community Project ↗
+                                </a>
+                            </span>
+                        </div>
+                    )}
 
                     {showInfo && (
                         <div className="flex justify-center text-[10px]">
