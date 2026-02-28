@@ -226,15 +226,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         // 3. Fall back to external repo URL if configured
-        const repoUrl = localStorage.getItem('pokepelago_spriteRepoUrl') || '';
-        if (repoUrl) {
-            return resolveExternalSpriteUrl(repoUrl, id, options);
+        if (spriteRepoUrl) {
+            return resolveExternalSpriteUrl(spriteRepoUrl, id, options);
         }
         return null;
         // uiSettings.spriteSet is listed here so the callback re-creates when it changes,
         // ensuring PokemonSlot/PokemonDetails effects re-run and fetch the correct sprite.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [derpemonIndex, spriteSetRef.current]);
+    }, [derpemonIndex, spriteSetRef.current, spriteRepoUrl]);
 
 
     useEffect(() => {
