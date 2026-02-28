@@ -30,6 +30,12 @@ export interface LogPart {
     color?: string;
 }
 
+export interface ToastMessage {
+    type: 'success' | 'error' | 'already' | 'recaught' | 'trap';
+    message: string;
+    id: number;
+}
+
 interface GameState {
     allPokemon: PokemonRef[];
     unlockedIds: Set<number>;
@@ -56,6 +62,9 @@ interface GameState {
     activePokemonLimit: number; // max Pokémon index in this generation (151/251/386)
     logs: LogEntry[];
     gameMode: 'archipelago' | 'standalone' | null;
+    shuffleEndTime: number;
+    derpyfiedIds: Set<number>;
+    releasedIds: Set<number>;
 }
 
 export interface UISettings {
@@ -123,6 +132,16 @@ interface GameContextType extends GameState {
     clearAllTypes: () => void;
     goalCount: number | undefined;
     activePokemonLimit: number;
+    shuffleEndTime: number;
+    derpyfiedIds: Set<number>;
+    releasedIds: Set<number>;
+    setShuffleEndTime: React.Dispatch<React.SetStateAction<number>>;
+    setDerpyfiedIds: React.Dispatch<React.SetStateAction<Set<number>>>;
+    setReleasedIds: React.Dispatch<React.SetStateAction<Set<number>>>;
+    spriteRefreshCounter: number;
+    setSpriteRefreshCounter: React.Dispatch<React.SetStateAction<number>>;
+    toast: ToastMessage | null;
+    showToast: (type: ToastMessage['type'], message: string) => void;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -147,6 +166,23 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [typeUnlocks, setTypeUnlocks] = useState<Set<string>>(new Set());
     const [activePokemonLimit, setActivePokemonLimit] = useState<number>(386); // default to Gen 3
     const [goalCount, setGoalCount] = useState<number | undefined>(undefined);
+
+    const [shuffleEndTime, setShuffleEndTime] = useState<number>(0);
+    const [derpyfiedIds, setDerpyfiedIds] = useState<Set<number>>(new Set());
+    const [releasedIds, setReleasedIds] = useState<Set<number>>(new Set());
+    const [spriteRefreshCounter, setSpriteRefreshCounter] = useState<number>(0);
+    const [toast, setToast] = useState<ToastMessage | null>(null);
+
+    const showToast = useCallback((type: ToastMessage['type'], message: string) => {
+        setToast({ type, message, id: Date.now() });
+    }, []);
+
+    useEffect(() => {
+        if (toast) {
+            const timer = setTimeout(() => setToast(null), 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [toast]);
 
     const [pingLatency, setPingLatency] = useState<number | null>(null);
     const [connectionQuality, setConnectionQuality] = useState<'good' | 'degraded' | 'dead' | null>(null);
@@ -214,6 +250,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const enableSpritesRef = useRef<boolean>(true);
 
     const getSpriteUrl = useCallback(async (id: number, options: { shiny?: boolean; animated?: boolean } = {}) => {
+        // 0. Derp Trap Forced Override (takes highest precedence)
+        if (derpyfiedIds.has(id) && !options.animated) {
+            const derpemonUrl = getDerpemonUrl(derpemonIndex, id);
+            if (derpemonUrl) return derpemonUrl;
+        }
+
         // 1. Derpemon sprite set (GitHub CDN, static sprites only — no shiny/animated)
         if (spriteSetRef.current === 'derpemon' && !options.animated) {
             const derpemonUrl = getDerpemonUrl(derpemonIndex, id);
@@ -234,10 +276,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return resolveExternalSpriteUrl(spriteRepoUrl, id, options);
         }
         return null;
-        // uiSettings.spriteSet is listed here so the callback re-creates when it changes,
-        // ensuring PokemonSlot/PokemonDetails effects re-run and fetch the correct sprite.
+        // spriteSetRef.current and derpyfiedIds are listed here so the callback re-creates when they change,
+        // ensuring PokemonSlot/PokemonDetails effects re-run and fetch the correct sprite immediately.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [derpemonIndex, spriteSetRef.current, enableSpritesRef.current, spriteRepoUrl]);
+    }, [derpemonIndex, spriteSetRef.current, enableSpritesRef.current, spriteRepoUrl, derpyfiedIds]);
 
 
     useEffect(() => {
@@ -300,6 +342,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const clientRef = useRef<Client | null>(null);
     const isConnectingRef = useRef<boolean>(false);
+    const checkedIdsRef = useRef<Set<number>>(checkedIds);
+    const isPokemonGuessableRef = useRef<any>(null); // To avoid dependency cycle in useEffect
+
+    useEffect(() => {
+        checkedIdsRef.current = checkedIds;
+    }, [checkedIds]);
 
     // Save UI settings
     useEffect(() => {
@@ -501,6 +549,52 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         checkExtendedLocations();
     }, [checkedIds, isConnected, gameMode, pokemonMetadata, unlockedIds, typeLocksEnabled, typeUnlocks]);
 
+    const isPokemonGuessable = useCallback((id: number) => {
+        const data = (pokemonMetadata as any)[id];
+        if (!data) return { canGuess: true };
+
+        // --- STANDALONE PROGRESSION ---
+        if (gameMode === 'standalone') {
+            const genIdx = GENERATIONS.findIndex(g => id >= g.startId && id <= g.endId);
+            if (genIdx === -1 || !generationFilter.includes(genIdx)) {
+                return { canGuess: false, reason: 'Generation not enabled in settings' };
+            }
+            return { canGuess: true };
+        }
+
+        // --- ARCHIPELAGO PROGRESSION ---
+        // 1. Missing Pokemon Unlock Check
+        if (!unlockedIds.has(id)) {
+            return {
+                canGuess: false,
+                reason: 'You have not found this Pokemon yet!',
+                missingPokemon: true
+            };
+        }
+
+        // 2. Type Locks Check
+        if (typeLocksEnabled) {
+            const missingTypes = data.types.filter((t: string) => {
+                const cType = t.charAt(0).toUpperCase() + t.slice(1);
+                return !typeUnlocks.has(cType);
+            });
+            if (missingTypes.length > 0) {
+                const missing = missingTypes.map((t: string) => t.charAt(0).toUpperCase() + t.slice(1));
+                return {
+                    canGuess: false,
+                    reason: `Missing Type Keys: ${missing.join(', ')}`,
+                    missingTypes: missing
+                };
+            }
+        }
+
+        return { canGuess: true };
+    }, [gameMode, generationFilter, typeLocksEnabled, typeUnlocks, unlockedIds, pokemonMetadata]);
+
+    useEffect(() => {
+        isPokemonGuessableRef.current = isPokemonGuessable;
+    }, [isPokemonGuessable]);
+
     // --- Goal / Victory Checking ---
     useEffect(() => {
         if (!clientRef.current || !isConnected || gameMode !== 'archipelago') return;
@@ -523,7 +617,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 id: Math.random().toString(36).substring(7),
                 timestamp: Date.now()
             },
-            ...prev.slice(0, 99) // Keep last 100
+            ...prev.slice(0, 999) // Keep last 1000
         ]);
     }, []);
 
@@ -654,8 +748,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     const mbKey = `pokepelago_team_${team}_slot_${slot}_used_masterballs`;
                     const pgKey = `pokepelago_team_${team}_slot_${slot}_used_pokegears`;
                     const pdKey = `pokepelago_team_${team}_slot_${slot}_used_pokedexes`;
+                    const derpKey = `pokepelago_team_${team}_slot_${slot}_derpyfied`;
+                    const relKey = `pokepelago_team_${team}_slot_${slot}_released`;
 
-                    client.storage.notify([mbKey, pgKey, pdKey], (key, value) => {
+                    client.storage.notify([mbKey, pgKey, pdKey, derpKey, relKey], (key, value) => {
                         if (!Array.isArray(value)) return;
                         const usedIds = new Set(value as number[]);
 
@@ -681,6 +777,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                 setPokedexes(Math.max(0, totalServer - merged.size));
                                 return merged;
                             });
+                        } else if (key === derpKey) {
+                            setDerpyfiedIds(usedIds);
+                        } else if (key === relKey) {
+                            setReleasedIds(usedIds);
                         }
                     }).then((data) => {
                         const localMB = new Set(JSON.parse(localStorage.getItem('pokepelago_usedMasterBalls') || '[]'));
@@ -699,6 +799,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         pushUnsynced(localMB, data[mbKey], mbKey);
                         pushUnsynced(localPG, data[pgKey], pgKey);
                         pushUnsynced(localPD, data[pdKey], pdKey);
+
+                        // Initialize traps from server data
+                        if (Array.isArray(data[derpKey])) setDerpyfiedIds(new Set(data[derpKey] as number[]));
+                        if (Array.isArray(data[relKey])) setReleasedIds(new Set(data[relKey] as number[]));
                     }).catch(console.error);
                 });
 
@@ -735,6 +839,18 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                 text: `Received Type Unlock: ${typeName}`,
                                 parts: [{ text: `Received Type Unlock: ${typeName}`, type: 'color', color: '#10B981' }]
                             }, ...prev.slice(0, 99)]);
+                        } else if (item.id === ITEM_OFFSET + 3001) {
+                            // Small Shuffle Trap
+                            setShuffleEndTime(Date.now() + 30000); // 30s
+                        } else if (item.id === ITEM_OFFSET + 3002) {
+                            // Big Shuffle Trap
+                            setShuffleEndTime(Date.now() + 150000); // 2m 30s
+                        } else if (item.id === ITEM_OFFSET + 3003) {
+                            // Derpy Mon Trap
+                            recalculateItems = true;
+                        } else if (item.id === ITEM_OFFSET + 3004) {
+                            // Release Trap
+                            recalculateItems = true;
                         } else if (item.id === ITEM_OFFSET + 2001 || item.id === ITEM_OFFSET + 2002 || item.id === ITEM_OFFSET + 2003) {
                             recalculateItems = true;
                         }
@@ -755,6 +871,102 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + 2003).length;
                             setPokedexes(Math.max(0, totalServer - used.size));
                             return used;
+                        });
+
+                        // Process Trap items (Derp Mon, Release Trap)
+                        // This logic runs to find "unprocessed" trap events safely by comparing server quantities against stored list sizes
+                        setDerpyfiedIds(derps => {
+                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + 3003).length;
+                            if (totalServer > derps.size) {
+                                let newDerps = new Set(derps);
+                                const basePathPokes = allPokemon.filter(p => !newDerps.has(p.id) && derpemonIndex[p.id]);
+
+                                // Priority 1: Guessed or Guessable
+                                let availablePokes = basePathPokes.filter(p => checkedIdsRef.current.has(p.id) || (isPokemonGuessableRef.current && isPokemonGuessableRef.current(p.id).canGuess));
+
+                                // Priority 2: Fallback to all if Priority 1 is empty
+                                if (availablePokes.length === 0) {
+                                    availablePokes = basePathPokes;
+                                }
+
+                                let toAdd = totalServer - derps.size;
+                                while (toAdd > 0 && availablePokes.length > 0) {
+                                    const randIdx = Math.floor(Math.random() * availablePokes.length);
+                                    const picked = availablePokes.splice(randIdx, 1)[0];
+                                    newDerps.add(picked.id);
+                                    toAdd--;
+
+                                    // Remove the picked Pokemon from basePathPokes so we don't accidentally pick it again if we fall back
+                                    const baseIdx = basePathPokes.findIndex(p => p.id === picked.id);
+                                    if (baseIdx !== -1) basePathPokes.splice(baseIdx, 1);
+
+                                    if (availablePokes.length === 0 && toAdd > 0) {
+                                        availablePokes = basePathPokes; // Fallback mid-loop if we run out
+                                    }
+
+                                    if (checkedIdsRef.current.has(picked.id)) {
+                                        showToast('trap', `${getCleanName(picked.name)} turned derpy!`);
+                                    } else {
+                                        showToast('trap', `A Pokémon turned derpy!`);
+                                    }
+                                }
+
+                                // Sync newly added IDs to server
+                                const team = client.players.self.team;
+                                const slot = client.players.self.slot;
+                                const derpKey = `pokepelago_team_${team}_slot_${slot}_derpyfied`;
+
+                                const unsynced = Array.from(newDerps).filter(id => !derps.has(id));
+                                if (unsynced.length > 0) {
+                                    client.storage.prepare(derpKey, []).add(unsynced).commit();
+                                }
+
+                                if (toAdd > 0) {
+                                    setSpriteRefreshCounter(c => c + 1); // Force re-render of sprites
+                                }
+
+                                return newDerps;
+                            }
+                            return derps;
+                        });
+
+                        setReleasedIds(released => {
+                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + 3004).length;
+                            if (totalServer > released.size) {
+                                let newReleased = new Set(released);
+                                // Pick from currently checked Pokémon (but not starters 1, 4, 7 for safety and thematic reasons)
+                                const validCheckedIds = Array.from(checkedIdsRef.current).filter(id => id !== 1 && id !== 4 && id !== 7 && !newReleased.has(id));
+                                let toAdd = totalServer - released.size;
+
+                                while (toAdd > 0 && validCheckedIds.length > 0) {
+                                    const randIdx = Math.floor(Math.random() * validCheckedIds.length);
+                                    const pickedId = validCheckedIds.splice(randIdx, 1)[0];
+                                    newReleased.add(pickedId);
+                                    toAdd--;
+
+                                    setLogs(prev => [{
+                                        id: crypto.randomUUID(),
+                                        timestamp: Date.now(),
+                                        type: 'system',
+                                        text: `Release Trap triggering! A Pokémon ran away!`,
+                                        parts: [{ text: `A Pokémon ran away! You must guess it again.`, type: 'color', color: '#EF4444' }]
+                                    }, ...prev.slice(0, 99)]);
+
+                                    showToast('trap', 'Oh no! A Pokémon ran away!');
+                                }
+
+                                // Sync newly added IDs to server
+                                const team = client.players.self.team;
+                                const slot = client.players.self.slot;
+                                const relKey = `pokepelago_team_${team}_slot_${slot}_released`;
+
+                                const unsynced = Array.from(newReleased).filter(id => !released.has(id));
+                                if (unsynced.length > 0) {
+                                    client.storage.prepare(relKey, []).add(unsynced).commit();
+                                }
+                                return newReleased;
+                            }
+                            return released;
                         });
                     }
                 });
@@ -910,7 +1122,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const updateUiSettings = (newSettings: Partial<UISettings>) => {
-        setUiSettings(prev => ({ ...prev, ...newSettings }));
+        setUiSettings(prev => {
+            const next = { ...prev, ...newSettings };
+            if (newSettings.spriteSet !== undefined || newSettings.enableSprites !== undefined) {
+                setSpriteRefreshCounter(c => c + 1);
+            }
+            return next;
+        });
     };
 
     const useMasterBall = useCallback((pokemonId: number) => {
@@ -1020,48 +1238,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return null;
     }, []);
 
-    const isPokemonGuessable = useCallback((id: number) => {
-        const data = (pokemonMetadata as any)[id];
-        if (!data) return { canGuess: true };
-
-        // --- STANDALONE PROGRESSION ---
-        if (gameMode === 'standalone') {
-            const genIdx = GENERATIONS.findIndex(g => id >= g.startId && id <= g.endId);
-            if (genIdx === -1 || !generationFilter.includes(genIdx)) {
-                return { canGuess: false, reason: 'Generation not enabled in settings' };
-            }
-            return { canGuess: true };
-        }
-
-        // --- ARCHIPELAGO PROGRESSION ---
-        // 1. Missing Pokemon Unlock Check
-        if (!unlockedIds.has(id)) {
-            return {
-                canGuess: false,
-                reason: 'You have not found this Pokemon yet!',
-                missingPokemon: true
-            };
-        }
-
-        // 2. Type Locks Check
-        if (typeLocksEnabled) {
-            const missingTypes = data.types.filter((t: string) => {
-                const cType = t.charAt(0).toUpperCase() + t.slice(1);
-                return !typeUnlocks.has(cType);
-            });
-            if (missingTypes.length > 0) {
-                const missing = missingTypes.map((t: string) => t.charAt(0).toUpperCase() + t.slice(1));
-                return {
-                    canGuess: false,
-                    reason: `Missing Type Keys: ${missing.join(', ')}`,
-                    missingTypes: missing
-                };
-            }
-        }
-
-        return { canGuess: true };
-    }, [gameMode, generationFilter, typeLocksEnabled, typeUnlocks, unlockedIds, legendaryGating]);
-
+    // isPokemonGuessable moved up
     return (
         <GameContext.Provider value={{
             allPokemon,
@@ -1123,7 +1300,17 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             scoutLocation,
             unlockType,
             lockType,
-            clearAllTypes
+            clearAllTypes,
+            shuffleEndTime,
+            derpyfiedIds,
+            releasedIds,
+            setShuffleEndTime,
+            setDerpyfiedIds,
+            setReleasedIds,
+            spriteRefreshCounter,
+            setSpriteRefreshCounter,
+            toast,
+            showToast
         }}>
             {children}
         </GameContext.Provider>

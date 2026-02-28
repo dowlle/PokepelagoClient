@@ -4,18 +4,9 @@ import { getCleanName } from '../utils/pokemon';
 import pokemonNames from '../data/pokemon_names.json';
 
 export const GlobalGuessInput: React.FC = () => {
-    const { allPokemon, checkedIds, checkPokemon, gameMode, isPokemonGuessable, activePokemonLimit } = useGame();
+    const { allPokemon, checkedIds, checkPokemon, gameMode, isPokemonGuessable, activePokemonLimit, releasedIds, setReleasedIds, toast, showToast } = useGame();
     const [guess, setGuess] = useState('');
-    const [feedback, setFeedback] = useState<{ type: 'success' | 'error' | 'already'; name: string } | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
-
-    // Auto-clear feedback
-    useEffect(() => {
-        if (feedback) {
-            const timer = setTimeout(() => setFeedback(null), 2000);
-            return () => clearTimeout(timer);
-        }
-    }, [feedback]);
 
     // Debug trigger
     useEffect(() => {
@@ -105,19 +96,30 @@ export const GlobalGuessInput: React.FC = () => {
             }
 
             if (!isMatch) return false;
-            if (checkedIds.has(p.id)) return false;
+            // Allow checking if it's in releasedIds even if it's in checkedIds
+            if (checkedIds.has(p.id) && !releasedIds.has(p.id)) return false;
 
             // Check all unlock conditions (gen filters, region lock, type lock, dexsanity, etc.)
-            return isPokemonGuessable(p.id).canGuess;
+            return isPokemonGuessable(p.id).canGuess || releasedIds.has(p.id);
         });
 
         if (match) {
-            // Success! Auto-submit
-            checkPokemon(match.id);
-            setFeedback({ type: 'success', name: getCleanName(match.name) });
+            if (releasedIds.has(match.id)) {
+                // Re-caught a released Pokemon
+                setReleasedIds(prev => {
+                    const next = new Set(prev);
+                    next.delete(match.id);
+                    return next;
+                });
+                showToast('recaught', `Re-caught ${getCleanName(match.name)}!`);
+            } else {
+                // Success! Auto-submit
+                checkPokemon(match.id);
+                showToast('success', `✓ ${getCleanName(match.name)}!`);
+            }
             setGuess('');
         }
-    }, [guess, allPokemon, checkedIds, checkPokemon, isPokemonGuessable]);
+    }, [guess, allPokemon, checkedIds, checkPokemon, isPokemonGuessable, releasedIds, setReleasedIds]);
 
     const attemptGuess = (name: string) => {
         const normalised = name.toLowerCase().trim();
@@ -150,12 +152,24 @@ export const GlobalGuessInput: React.FC = () => {
         });
 
         if (!match) {
-            setFeedback({ type: 'error', name: normalised });
+            showToast('error', `✗ ${normalised}`);
+            return;
+        }
+
+        if (releasedIds.has(match.id)) {
+            // Re-caught a released Pokemon
+            setReleasedIds(prev => {
+                const next = new Set(prev);
+                next.delete(match.id);
+                return next;
+            });
+            showToast('recaught', `Re-caught ${getCleanName(match.name)}!`);
+            setGuess('');
             return;
         }
 
         if (checkedIds.has(match.id)) {
-            setFeedback({ type: 'already', name: getCleanName(match.name) });
+            showToast('already', `Already guessed ${getCleanName(match.name)}`);
             setGuess('');
             return;
         }
@@ -164,13 +178,13 @@ export const GlobalGuessInput: React.FC = () => {
         if (!guessCheck.canGuess) {
             // Correct name, but blocked by some lock condition
             const reason = gameMode === 'standalone' ? 'Generation Locked' : (guessCheck.reason || 'Not found or not unlocked');
-            setFeedback({ type: 'error', name: reason });
+            showToast('error', `✗ ${reason}`);
             return;
         }
 
         // Success!
         checkPokemon(match.id);
-        setFeedback({ type: 'success', name: getCleanName(match.name) });
+        showToast('success', `✓ ${getCleanName(match.name)}!`);
         setGuess('');
     };
 
@@ -221,14 +235,13 @@ export const GlobalGuessInput: React.FC = () => {
                 })()}
 
                 {/* Feedback toast */}
-                {feedback && (
-                    <div className={`absolute top-full left-1/2 -translate-x-1/2 mt-2 px-4 py-2 rounded-lg text-sm font-medium shadow-lg transition-all animate-fade-in ${feedback.type === 'success' ? 'bg-green-600 text-white' :
-                        feedback.type === 'already' ? 'bg-yellow-600 text-white' :
-                            'bg-red-600 text-white'
+                {toast && (
+                    <div key={toast.id} className={`absolute top-full left-1/2 -translate-x-1/2 mt-2 px-4 py-2 rounded-lg text-sm font-medium shadow-lg transition-all animate-fade-in z-50 whitespace-nowrap ${toast.type === 'success' || toast.type === 'recaught' ? 'bg-green-600 text-white' :
+                        toast.type === 'already' ? 'bg-yellow-600 text-white' :
+                            toast.type === 'trap' ? 'bg-purple-600 text-white font-bold' :
+                                'bg-red-600 text-white'
                         }`}>
-                        {feedback.type === 'success' && `✓ ${feedback.name}!`}
-                        {feedback.type === 'already' && `Already guessed ${feedback.name}`}
-                        {feedback.type === 'error' && `✗ ${feedback.name}`}
+                        {toast.message}
                     </div>
                 )}
 

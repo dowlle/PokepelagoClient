@@ -28,7 +28,9 @@ export const PokemonDetails: React.FC = () => {
         uiSettings,
         derpemonIndex,
         scoutLocation,
-        isConnected
+        isConnected,
+        derpyfiedIds,
+        spriteRefreshCounter
     } = useGame();
 
     const [details, setDetails] = useState<any>(null);
@@ -97,7 +99,7 @@ export const PokemonDetails: React.FC = () => {
             setDetails(null);
             setSpriteUrl(null);
         }
-    }, [selectedPokemonId, uiSettings.spriteSet, allPokemon, isChecked, isConnected, scoutLocation, shinyIds, getSpriteUrl]);
+    }, [selectedPokemonId, uiSettings.spriteSet, allPokemon, isChecked, isConnected, scoutLocation, shinyIds, getSpriteUrl, spriteRefreshCounter]);
 
     if (!selectedPokemonId || !pokemon) return null;
 
@@ -137,8 +139,8 @@ export const PokemonDetails: React.FC = () => {
     // Location ID = National Dex ID + 8571000
     const unlockLocationName = getLocationName(selectedPokemonId + 8571000);
 
-    // Derpemon credit (shown for all unlocked Pokémon when Derpemon set is active)
-    const derpemonCreator = uiSettings.spriteSet === 'derpemon'
+    // Derpemon credit (shown for all unlocked Pokémon when Derpemon set is active OR if hit by Derp Trap)
+    const derpemonCreator = (uiSettings.spriteSet === 'derpemon' || derpyfiedIds.has(selectedPokemonId))
         ? getDerpemonCredit(derpemonIndex, selectedPokemonId)
         : null;
 

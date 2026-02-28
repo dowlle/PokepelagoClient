@@ -58,33 +58,46 @@ export const ArchipelagoLog: React.FC = () => {
                         Waiting for signal...
                     </div>
                 ) : (
-                    logs.filter(log => !filterToMe || log.isMe).map((log) => (
-                        <div key={log.id} className="animate-in fade-in slide-in-from-left-1 duration-300 border-l-2 border-gray-800 pl-3 py-0.5">
-                            <div className="flex justify-between items-center mb-1">
-                                <span className="text-[9px] text-gray-500 opacity-50">
-                                    {new Date(log.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                                </span>
-                                <span className={`text-[8px] uppercase px-1 rounded-sm border ${log.type === 'item' ? 'border-yellow-900/50 text-yellow-600' :
-                                    log.type === 'chat' ? 'border-blue-900/50 text-blue-400' :
-                                        log.type === 'hint' ? 'border-purple-900/50 text-purple-400' :
-                                            'border-gray-800 text-gray-500'
-                                    }`}>
-                                    {log.type}
-                                </span>
+                    logs
+                        .filter(log => {
+                            if (!filterToMe) return true;
+                            // When filtering to me, exclude join/leave messages even if they are marked as 'me'
+                            // Usually join/leave messages don't have parts or are just text.
+                            // The user said "remove left the game, joined the game, etc"
+                            const t = log.text;
+                            if (log.type === 'system' && (t.includes('has left') || t.includes('has joined') || t.includes('has connected') || t.includes('has stopped tracking'))) {
+                                return false;
+                            }
+                            return log.isMe;
+                        })
+                        .slice(0, 100) // Keep the filtered list at max 100
+                        .map((log) => (
+                            <div key={log.id} className="animate-in fade-in slide-in-from-left-1 duration-300 border-l-2 border-gray-800 pl-3 py-0.5">
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="text-[9px] text-gray-500 opacity-50">
+                                        {new Date(log.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                    </span>
+                                    <span className={`text-[8px] uppercase px-1 rounded-sm border ${log.type === 'item' ? 'border-yellow-900/50 text-yellow-600' :
+                                        log.type === 'chat' ? 'border-blue-900/50 text-blue-400' :
+                                            log.type === 'hint' ? 'border-purple-900/50 text-purple-400' :
+                                                'border-gray-800 text-gray-500'
+                                        }`}>
+                                        {log.type}
+                                    </span>
+                                </div>
+                                <div className="flex flex-wrap gap-x-1 items-baseline">
+                                    {log.parts ? (
+                                        log.parts.map((part, i) => (
+                                            <span key={i} className={getPartColor(part)}>
+                                                {part.text}
+                                            </span>
+                                        ))
+                                    ) : (
+                                        <span className="text-gray-300">{log.text}</span>
+                                    )}
+                                </div>
                             </div>
-                            <div className="flex flex-wrap gap-x-1 items-baseline">
-                                {log.parts ? (
-                                    log.parts.map((part, i) => (
-                                        <span key={i} className={getPartColor(part)}>
-                                            {part.text}
-                                        </span>
-                                    ))
-                                ) : (
-                                    <span className="text-gray-300">{log.text}</span>
-                                )}
-                            </div>
-                        </div>
-                    ))
+                        ))
                 )}
             </div>
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { PokemonRef } from '../types/pokemon';
 import { GENERATIONS } from '../types/pokemon';
 import { useGame } from '../context/GameContext';
@@ -6,7 +6,18 @@ import { PokemonSlot } from './PokemonSlot';
 import { Lock } from 'lucide-react';
 
 export const DexGrid: React.FC = () => {
-    const { allPokemon, unlockedIds, checkedIds, hintedIds, shinyIds, generationFilter, uiSettings, gameMode, isPokemonGuessable } = useGame();
+    const { allPokemon, unlockedIds, checkedIds, hintedIds, shinyIds, generationFilter, uiSettings, gameMode, isPokemonGuessable, shuffleEndTime, releasedIds } = useGame();
+
+    const [now, setNow] = useState(Date.now());
+
+    useEffect(() => {
+        if (shuffleEndTime > now) {
+            const interval = setInterval(() => setNow(Date.now()), 1000);
+            return () => clearInterval(interval);
+        }
+    }, [shuffleEndTime, now]);
+
+    const isShuffled = shuffleEndTime > now;
 
     // Build a map for quick lookups
     const pokemonById = React.useMemo(() => {
@@ -16,6 +27,7 @@ export const DexGrid: React.FC = () => {
     }, [allPokemon]);
 
     const getStatus = (id: number): 'locked' | 'unlocked' | 'checked' | 'shadow' | 'hint' => {
+        if (releasedIds.has(id)) return 'shadow'; // Release Trap takes precedence
         if (checkedIds.has(id)) return 'checked';
 
         if (gameMode === 'standalone') {
@@ -47,10 +59,26 @@ export const DexGrid: React.FC = () => {
                 if (!generationFilter.includes(genIdx)) return null;
 
                 // Build list of pokemon IDs in this generation
-                const pokemonInGen: PokemonRef[] = [];
+                let pokemonInGen: PokemonRef[] = [];
                 for (let id = gen.startId; id <= gen.endId; id++) {
                     const p = pokemonById.get(id);
                     if (p) pokemonInGen.push(p);
+                }
+
+                const shuffleOrder = new Map<number, number>();
+                if (isShuffled) {
+                    // Seeded random based on time remaining so it jumps around every second
+                    const secondsLeft = Math.ceil((shuffleEndTime - now) / 1000);
+                    const shuffleArr = [...pokemonInGen];
+                    for (let i = shuffleArr.length - 1; i > 0; i--) {
+                        // pseudo-random using id and time
+                        const j = (i * secondsLeft * 17) % (i + 1);
+                        [shuffleArr[i], shuffleArr[j]] = [shuffleArr[j], shuffleArr[i]];
+                    }
+                    // Map pokemon id to its new visual index
+                    shuffleArr.forEach((p, idx) => {
+                        shuffleOrder.set(p.id, idx);
+                    });
                 }
 
                 const checkedCount = pokemonInGen.filter(p => checkedIds.has(p.id)).length;
@@ -70,6 +98,7 @@ export const DexGrid: React.FC = () => {
                             <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
                                 {gen.region}
                                 {isLocked && <Lock size={12} className="text-gray-600" />}
+                                {isShuffled && <span className="text-red-500 animate-pulse text-xs lowercase">shuffled! ({Math.ceil((shuffleEndTime - now) / 1000)}s)</span>}
                             </h3>
                             <span className="text-xs font-mono text-gray-600">
                                 {checkedCount} / {pokemonInGen.length}
@@ -82,6 +111,7 @@ export const DexGrid: React.FC = () => {
                                     pokemon={p}
                                     status={getStatus(p.id) as any}
                                     isShiny={shinyIds.has(p.id)}
+                                    order={shuffleOrder.get(p.id)}
                                 />
                             ))}
                         </div>

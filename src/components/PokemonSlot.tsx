@@ -7,10 +7,11 @@ interface PokemonSlotProps {
     pokemon: PokemonRef;
     status: 'locked' | 'unlocked' | 'checked' | 'shadow' | 'hint';
     isShiny?: boolean;
+    order?: number;
 }
 
-export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShiny = false }) => {
-    const { setSelectedPokemonId, isPokemonGuessable, usedPokegears, getSpriteUrl, uiSettings, gameMode } = useGame();
+export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShiny = false, order }) => {
+    const { setSelectedPokemonId, isPokemonGuessable, usedPokegears, getSpriteUrl, uiSettings, gameMode, releasedIds, spriteRefreshCounter } = useGame();
     const { canGuess, reason } = isPokemonGuessable(pokemon.id);
     const isPokegeared = usedPokegears.has(pokemon.id);
 
@@ -39,7 +40,7 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
         };
         loadSprite();
         return () => { active = false; };
-    }, [pokemon.id, isShiny, getSpriteUrl, uiSettings.enableSprites]);
+    }, [pokemon.id, isShiny, getSpriteUrl, uiSettings.enableSprites, spriteRefreshCounter]);
 
     // Reset load state when url changes
     React.useEffect(() => {
@@ -54,6 +55,7 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
     const isReadyToGuess = !isChecked && canGuess && status === 'shadow' && gameMode !== 'standalone';
 
     const getBorderClass = () => {
+        if (releasedIds.has(pokemon.id)) return 'bg-blue-950/30 border-blue-800/30 opacity-40';
         if (isChecked) return 'bg-green-900/40 border-green-700/60';
         if (isReadyToGuess) return 'bg-emerald-950/80 border-green-500/70 shadow-[0_0_8px_rgba(34,197,94,0.35)]';
         if (status === 'shadow') return 'bg-blue-950/30 border-blue-800/30 opacity-40';
@@ -75,6 +77,7 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
                 ${isReadyToGuess ? 'hover:scale-110 hover:shadow-[0_0_14px_rgba(34,197,94,0.6)] active:scale-95' : 'hover:scale-105 active:scale-95'}
                 ${isShiny && isChecked ? 'shadow-[0_0_10px_rgba(255,215,0,0.4)]' : ''}
             `}
+            style={order !== undefined ? { order } : undefined}
             title={!canGuess ? reason : (isChecked ? cleanName : status === 'hint' ? `${cleanName} (Hinted)` : `#${pokemon.id}`)}
         >
             {isVisible && !hasError && spriteUrl && (
@@ -87,7 +90,7 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
                         className={`
                             w-12 h-12 object-contain z-10 scale-[1.1] transition-all duration-300
                             ${isLoaded ? 'opacity-100' : 'opacity-0'}
-                            ${status === 'shadow' || status === 'hint'
+                            ${status === 'shadow' || status === 'hint' || releasedIds.has(pokemon.id)
                                 ? (isPokegeared ? 'brightness-50 opacity-80' : 'brightness-0 contrast-100 opacity-60')
                                 : ''}
                         `}

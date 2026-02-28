@@ -8,6 +8,7 @@ import { ArchipelagoLog } from './components/ArchipelagoLog';
 import { PokemonDetails } from './components/PokemonDetails';
 import { TypeStatus } from './components/TypeStatus';
 import { SplashScreen } from './components/SplashScreen';
+import { getCleanName } from './utils/pokemon';
 
 const POKEMON_TYPES = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
 
@@ -16,7 +17,8 @@ const GameContent: React.FC = () => {
     allPokemon, unlockedIds, checkedIds, unlockPokemon, isLoading, isConnected,
     uiSettings, goal, gameMode, isPokemonGuessable,
     typeUnlocks,
-    unlockType, lockType, clearAllTypes
+    unlockType, lockType, clearAllTypes,
+    setShuffleEndTime, setDerpyfiedIds, setReleasedIds, derpemonIndex, releasedIds, derpyfiedIds, setSpriteRefreshCounter, showToast
   } = useGame();
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
   const [sidebarTab, setSidebarTab] = React.useState<'log' | 'settings'>(() => {
@@ -77,6 +79,30 @@ const GameContent: React.FC = () => {
   const unlockAll = () => {
     if (confirm('Unlock EVERY Pokemon? This might lag for a second.')) {
       allPokemon.forEach(p => unlockPokemon(p.id));
+    }
+  };
+
+  const triggerDerpTrap = () => {
+    const available = allPokemon.filter(p => !derpyfiedIds.has(p.id) && derpemonIndex[p.id]);
+    if (available.length > 0) {
+      const p = available[Math.floor(Math.random() * available.length)];
+      setDerpyfiedIds(prev => new Set(prev).add(p.id));
+      setSpriteRefreshCounter((c: number) => c + 1);
+
+      if (checkedIds.has(p.id)) {
+        showToast('trap', `${getCleanName(p.name)} turned derpy!`);
+      } else {
+        showToast('trap', `A Pokémon turned derpy!`);
+      }
+    }
+  };
+
+  const triggerReleaseTrap = () => {
+    const valid = Array.from(checkedIds).filter(id => id !== 1 && id !== 4 && id !== 7 && !releasedIds.has(id));
+    if (valid.length > 0) {
+      const id = valid[Math.floor(Math.random() * valid.length)];
+      setReleasedIds(prev => new Set(prev).add(id));
+      showToast('trap', 'Oh no! A Pokémon ran away!');
     }
   };
 
@@ -182,6 +208,10 @@ const GameContent: React.FC = () => {
                   <button onClick={unlockRandom} className="px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded text-xs border border-gray-700 whitespace-nowrap">Unlock 1</button>
                   <button onClick={unlockBatch} className="px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded text-xs border border-gray-700 whitespace-nowrap">Unlock 10</button>
                   <button onClick={unlockAll} className="px-3 py-1 bg-red-900/50 hover:bg-red-900/80 text-red-200 rounded text-xs border border-red-700/50 whitespace-nowrap">Unlock ALL</button>
+                  <div className="w-px h-4 bg-gray-700 mx-1"></div>
+                  <button onClick={() => setShuffleEndTime(Date.now() + 30000)} className="px-3 py-1 bg-purple-900/50 hover:bg-purple-900/80 text-purple-200 rounded text-xs border border-purple-700/50 whitespace-nowrap">Shuffle Trap (30s)</button>
+                  <button onClick={triggerDerpTrap} className="px-3 py-1 bg-purple-900/50 hover:bg-purple-900/80 text-purple-200 rounded text-xs border border-purple-700/50 whitespace-nowrap">Derp Trap</button>
+                  <button onClick={triggerReleaseTrap} className="px-3 py-1 bg-purple-900/50 hover:bg-purple-900/80 text-purple-200 rounded text-xs border border-purple-700/50 whitespace-nowrap">Release Trap</button>
                 </div>
               </div>
 
