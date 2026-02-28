@@ -30,7 +30,8 @@ export const PokemonDetails: React.FC = () => {
         scoutLocation,
         isConnected,
         derpyfiedIds,
-        spriteRefreshCounter
+        spriteRefreshCounter,
+        locationOffset
     } = useGame();
 
     const [details, setDetails] = useState<any>(null);
@@ -91,7 +92,7 @@ export const PokemonDetails: React.FC = () => {
 
             // Scout item contents
             if (isChecked && isConnected) {
-                scoutLocation(selectedPokemonId + 8571000).then(res => {
+                scoutLocation(selectedPokemonId + locationOffset).then(res => {
                     if (res) setScoutedItem(res);
                 }).catch(e => console.warn('Failed to scout location', e));
             }
@@ -99,7 +100,7 @@ export const PokemonDetails: React.FC = () => {
             setDetails(null);
             setSpriteUrl(null);
         }
-    }, [selectedPokemonId, uiSettings.spriteSet, allPokemon, isChecked, isConnected, scoutLocation, shinyIds, getSpriteUrl, spriteRefreshCounter]);
+    }, [selectedPokemonId, uiSettings.spriteSet, allPokemon, isChecked, isConnected, scoutLocation, shinyIds, getSpriteUrl, spriteRefreshCounter, locationOffset]);
 
     if (!selectedPokemonId || !pokemon) return null;
 
@@ -136,8 +137,8 @@ export const PokemonDetails: React.FC = () => {
         displayName = pokemon.name.slice(0, 3).toUpperCase() + '...';
     }
 
-    // Location ID = National Dex ID + 8571000
-    const unlockLocationName = getLocationName(selectedPokemonId + 8571000);
+    // Location ID = National Dex ID + locationOffset
+    const unlockLocationName = getLocationName(selectedPokemonId + locationOffset);
 
     // Derpemon credit (shown for all unlocked Pokémon when Derpemon set is active OR if hit by Derp Trap)
     const derpemonCreator = (uiSettings.spriteSet === 'derpemon' || derpyfiedIds.has(selectedPokemonId))

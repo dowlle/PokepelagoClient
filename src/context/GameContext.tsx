@@ -142,6 +142,7 @@ interface GameContextType extends GameState {
     setSpriteRefreshCounter: React.Dispatch<React.SetStateAction<number>>;
     toast: ToastMessage | null;
     showToast: (type: ToastMessage['type'], message: string) => void;
+    locationOffset: number;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -1354,7 +1355,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             spriteRefreshCounter,
             setSpriteRefreshCounter,
             toast,
-            showToast
+            showToast,
+            locationOffset: LOCATION_OFFSET
         }}>
             {children}
         </GameContext.Provider>
