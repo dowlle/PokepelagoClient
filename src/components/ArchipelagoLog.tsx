@@ -6,6 +6,7 @@ export const ArchipelagoLog: React.FC = () => {
     const { logs, say, isConnected } = useGame();
     const scrollRef = useRef<HTMLDivElement>(null);
     const [chatInput, setChatInput] = useState('');
+    const [filterToMe, setFilterToMe] = useState(false);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -34,7 +35,16 @@ export const ArchipelagoLog: React.FC = () => {
     return (
         <div className="flex flex-col h-full bg-gray-950/20">
             <div className="px-4 py-3 border-b border-gray-800 flex items-center justify-between bg-gray-950/40">
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Activity History</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 flex items-center gap-2">
+                    Activity History
+                    <button
+                        onClick={() => setFilterToMe(!filterToMe)}
+                        className={`p-1 rounded transition-colors ${filterToMe ? 'bg-blue-900/50 text-blue-400' : 'hover:bg-gray-800 text-gray-600 hover:text-gray-400'}`}
+                        title="Filter to me"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
+                    </button>
+                </span>
                 <span className="text-[9px] text-gray-600 bg-gray-900 px-1.5 py-0.5 rounded border border-gray-800">{logs.length} entries</span>
             </div>
 
@@ -48,7 +58,7 @@ export const ArchipelagoLog: React.FC = () => {
                         Waiting for signal...
                     </div>
                 ) : (
-                    logs.map((log) => (
+                    logs.filter(log => !filterToMe || log.isMe).map((log) => (
                         <div key={log.id} className="animate-in fade-in slide-in-from-left-1 duration-300 border-l-2 border-gray-800 pl-3 py-0.5">
                             <div className="flex justify-between items-center mb-1">
                                 <span className="text-[9px] text-gray-500 opacity-50">

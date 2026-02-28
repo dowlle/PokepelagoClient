@@ -21,6 +21,7 @@ export interface LogEntry {
     text: string;
     color?: string; // CSS color or class
     parts?: LogPart[];
+    isMe?: boolean;
 }
 
 export interface LogPart {
@@ -210,19 +211,22 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // A ref that always reflects the current spriteSet — used inside getSpriteUrl
     // to avoid the circular declaration-order issue (getSpriteUrl is defined before uiSettings).
     const spriteSetRef = useRef<'normal' | 'derpemon'>('normal');
+    const enableSpritesRef = useRef<boolean>(true);
 
     const getSpriteUrl = useCallback(async (id: number, options: { shiny?: boolean; animated?: boolean } = {}) => {
-        // 1. Check local IDB sprites first (always takes priority)
-        const key = generateSpriteKey(id, options);
-        const blob = await getSprite(key);
-        if (blob) {
-            return URL.createObjectURL(blob);
-        }
-
-        // 2. Derpemon sprite set (GitHub CDN, static sprites only — no shiny/animated)
+        // 1. Derpemon sprite set (GitHub CDN, static sprites only — no shiny/animated)
         if (spriteSetRef.current === 'derpemon' && !options.animated) {
             const derpemonUrl = getDerpemonUrl(derpemonIndex, id);
             if (derpemonUrl) return derpemonUrl;
+        }
+
+        // 2. Check local IDB sprites
+        if (enableSpritesRef.current) {
+            const key = generateSpriteKey(id, options);
+            const blob = await getSprite(key);
+            if (blob) {
+                return URL.createObjectURL(blob);
+            }
         }
 
         // 3. Fall back to external repo URL if configured
@@ -233,7 +237,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // uiSettings.spriteSet is listed here so the callback re-creates when it changes,
         // ensuring PokemonSlot/PokemonDetails effects re-run and fetch the correct sprite.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [derpemonIndex, spriteSetRef.current, spriteRepoUrl]);
+    }, [derpemonIndex, spriteSetRef.current, enableSpritesRef.current, spriteRepoUrl]);
 
 
     useEffect(() => {
@@ -292,6 +296,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Keep spriteSetRef in sync every render so getSpriteUrl always reads the latest value.
     spriteSetRef.current = uiSettings.spriteSet;
+    enableSpritesRef.current = uiSettings.enableSprites;
 
     const clientRef = useRef<Client | null>(null);
     const isConnectingRef = useRef<boolean>(false);
@@ -653,7 +658,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     client.storage.notify([mbKey, pgKey, pdKey], (key, value) => {
                         if (!Array.isArray(value)) return;
                         const usedIds = new Set(value as number[]);
-                        
+
                         // Because this callback runs anytime the value changes, update the state and the dynamic counters.
                         if (key === mbKey) {
                             setUsedMasterBalls(prev => {
@@ -792,10 +797,18 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             return { text, type, color: p.color };
                         });
 
+                        const isHintOrItem = packet.type === 'Hint' || packet.type === 'ItemSend' || packet.type === 'ItemCheat';
+                        let isMe = true;
+                        if (isHintOrItem && client.players.self) {
+                            // If it's a hint or item, default to not me, unless my slot is mentioned
+                            isMe = packet.data.some((p: any) => p.type === 'player_id' && parseInt(p.text) === client.players.self.slot);
+                        }
+
                         addLog({
                             type: packet.type === 'Hint' ? 'hint' : packet.type === 'ItemSend' ? 'item' : packet.type === 'Chat' ? 'chat' : 'system',
                             text: parts.map(p => p.text).join(''),
-                            parts
+                            parts,
+                            isMe
                         });
                     }
                 });
@@ -841,6 +854,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
 
                 setIsConnected(true);
+                setConnectionQuality('good');
                 setConnectionError(null);
                 localStorage.setItem('pokepelago_connected', 'true');
                 isConnectingRef.current = false;
@@ -913,7 +927,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             checkPokemon(pokemonId);
             addLog({
                 type: 'system',
-                text: `Used a Master Ball on Pokemon #${pokemonId}!`
+                text: `Used a Master Ball on Pokemon #${pokemonId}!`,
+                isMe: true
             });
         }
     }, [masterBalls, checkPokemon, addLog]);
@@ -931,7 +946,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             addLog({
                 type: 'system',
-                text: `Used a Pokegear on Pokemon #${pokemonId}!`
+                text: `Used a Pokegear on Pokemon #${pokemonId}!`,
+                isMe: true
             });
         }
     }, [pokegears, addLog]);
@@ -949,7 +965,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             addLog({
                 type: 'system',
-                text: `Used a Pokedex on Pokemon #${pokemonId}!`
+                text: `Used a Pokedex on Pokemon #${pokemonId}!`,
+                isMe: true
             });
         }
     }, [pokedexes, addLog]);
