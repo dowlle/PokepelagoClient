@@ -147,8 +147,15 @@ interface GameContextType extends GameState {
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
 // ID Offsets (must match apworld)
-const ITEM_OFFSET = 8574000;
-const LOCATION_OFFSET = 8571000;
+let ITEM_OFFSET = 8574000;
+let LOCATION_OFFSET = 8571000;
+let STARTER_OFFSET = 500;
+let MILESTONE_OFFSET = 1000;
+let TYPE_MILESTONE_OFFSET = 2000;
+let TYPE_MILESTONE_MULTIPLIER = 50;
+let TYPE_ITEM_OFFSET = 1100;
+let USEFUL_ITEM_OFFSET = 2000;
+let TRAP_ITEM_OFFSET = 3000;
 
 export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [allPokemon, setAllPokemon] = useState<PokemonRef[]>([]);
@@ -298,8 +305,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             name = clientRef.current.package.lookupLocationName(clientRef.current.game, locationId, false);
         }
 
-        if (!name && locationId > 8571000 && locationId <= 8572025) {
-            const pkmnId = locationId - 8571000;
+        if (!name && locationId > LOCATION_OFFSET && locationId <= LOCATION_OFFSET + Math.max(1050, MILESTONE_OFFSET)) {
+            const pkmnId = locationId - LOCATION_OFFSET;
             const pkmn = allPokemon.find(p => p.id === pkmnId);
             if (pkmn) {
                 name = `Pokémon #${pkmnId} (${getCleanName(pkmn.name)})`;
@@ -456,10 +463,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         let sentChecks = false;
         const newChecked = new Set<number>();
-        for (let i = 500; i < 520; i++) {
-            if (!checkedIds.has(i)) {
-                clientRef.current.check(LOCATION_OFFSET + i);
-                newChecked.add(i);
+        for (let i = 0; i < 20; i++) {
+            const localId = STARTER_OFFSET + i;
+            if (!checkedIds.has(localId)) {
+                clientRef.current.check(LOCATION_OFFSET + localId);
+                newChecked.add(localId);
                 sentChecks = true;
             }
         }
@@ -483,8 +491,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             // Count everything we've guessed so far (Checked Locations)
             Array.from(checkedIds).forEach(id => {
-                if (id >= 500 && id < 520) return; // Skip Oak's Lab starting items
-                if (id >= 1000) return; // Skip Milestones
+                if (id >= STARTER_OFFSET && id < STARTER_OFFSET + 20) return; // Skip Oak's Lab starting items
+                if (id >= MILESTONE_OFFSET && id < MILESTONE_OFFSET + 2000) return; // Skip Global Milestones
+                if (id >= TYPE_MILESTONE_OFFSET) return; // Skip Type Milestones
 
                 totalCatches++;
                 const data = (pokemonMetadata as any)[id];
@@ -506,7 +515,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             globalMilestones.forEach(count => {
                 const newCatches = Math.max(0, totalCatches - 3);
                 if (newCatches >= count) {
-                    const apLocationId = LOCATION_OFFSET + 1000 + count;
+                    const apLocationId = LOCATION_OFFSET + MILESTONE_OFFSET + count;
                     const localId = apLocationId - LOCATION_OFFSET;
                     if (!checkedIds.has(localId)) {
                         clientRef.current?.check(apLocationId);
@@ -535,7 +544,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                 typeSteps.forEach(step => {
                     if (newTypeCatches >= step) {
-                        const apLocationId = LOCATION_OFFSET + 2000 + (index * 50) + step;
+                        const apLocationId = LOCATION_OFFSET + TYPE_MILESTONE_OFFSET + (index * TYPE_MILESTONE_MULTIPLIER) + step;
                         const localId = apLocationId - LOCATION_OFFSET;
                         if (!checkedIds.has(localId)) {
                             clientRef.current?.check(apLocationId);
@@ -677,11 +686,40 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 client.socket.on('connected', (packet: ConnectedPacket) => {
                     console.log(`Connected to Archipelago via ${protocol || '(explicit protocol)'}!`, packet);
 
+                    // Detect APVersion based on offset
+                    const allLocs = [
+                        ...(packet.missing_locations || []),
+                        ...(packet.checked_locations || [])
+                    ];
+                    // The new offset is 8560000, so any location ID between 8560000 and 8569999 means it's the new apworld
+                    const isNewVersion = allLocs.some((id: number) => id >= 8560000 && id < 8570000);
+                    if (isNewVersion) {
+                        LOCATION_OFFSET = 8560000;
+                        STARTER_OFFSET = 100_000;
+                        MILESTONE_OFFSET = 10_000;
+                        TYPE_MILESTONE_OFFSET = 20_000;
+                        TYPE_MILESTONE_MULTIPLIER = 1000;
+                        TYPE_ITEM_OFFSET = 2000;
+                        USEFUL_ITEM_OFFSET = 3000;
+                        TRAP_ITEM_OFFSET = 4000;
+                        console.log('[GameContext] Detected Gen 9+ APWorld (Location Offset: 8560000)');
+                    } else {
+                        LOCATION_OFFSET = 8571000;
+                        STARTER_OFFSET = 500;
+                        MILESTONE_OFFSET = 1000;
+                        TYPE_MILESTONE_OFFSET = 2000;
+                        TYPE_MILESTONE_MULTIPLIER = 50;
+                        TYPE_ITEM_OFFSET = 1100;
+                        USEFUL_ITEM_OFFSET = 2000;
+                        TRAP_ITEM_OFFSET = 3000;
+                        console.log('[GameContext] Detected Legacy APWorld (Location Offset: 8571000)');
+                    }
+
                     // Sync already checked locations
                     const checkedLocs = packet.checked_locations || [];
                     const newChecked = new Set<number>();
                     checkedLocs.forEach((locId: number) => {
-                        if (locId >= LOCATION_OFFSET && locId < LOCATION_OFFSET + 2000) {
+                        if (locId >= LOCATION_OFFSET && locId <= LOCATION_OFFSET + 200_000) {
                             newChecked.add(locId - LOCATION_OFFSET);
                         }
                     });
@@ -708,8 +746,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     const newTypeUnlocks = new Set<string>();
                     const typesMap = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
                     receivedItems.forEach(item => {
-                        if (item.id >= ITEM_OFFSET + 1100 && item.id <= ITEM_OFFSET + 1117) {
-                            newTypeUnlocks.add(typesMap[item.id - (ITEM_OFFSET + 1100)]);
+                        if (item.id >= ITEM_OFFSET + TYPE_ITEM_OFFSET && item.id <= ITEM_OFFSET + TYPE_ITEM_OFFSET + 17) {
+                            newTypeUnlocks.add(typesMap[item.id - (ITEM_OFFSET + TYPE_ITEM_OFFSET)]);
                         }
                     });
                     setTypeUnlocks(newTypeUnlocks);
@@ -730,6 +768,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         if (gens === 0) { setGenerationFilter([0]); setActivePokemonLimit(151); }
                         else if (gens === 1) { setGenerationFilter([0, 1]); setActivePokemonLimit(251); }
                         else if (gens === 2) { setGenerationFilter([0, 1, 2]); setActivePokemonLimit(386); }
+                        else if (gens === 3) { setGenerationFilter([0, 1, 2, 3]); setActivePokemonLimit(493); }
+                        else if (gens === 4) { setGenerationFilter([0, 1, 2, 3, 4]); setActivePokemonLimit(649); }
+                        else if (gens === 5) { setGenerationFilter([0, 1, 2, 3, 4, 5]); setActivePokemonLimit(721); }
+                        else if (gens === 6) { setGenerationFilter([0, 1, 2, 3, 4, 5, 6]); setActivePokemonLimit(809); }
+                        else if (gens === 7) { setGenerationFilter([0, 1, 2, 3, 4, 5, 6, 7]); setActivePokemonLimit(898); }
+                        else if (gens === 8) { setGenerationFilter([0, 1, 2, 3, 4, 5, 6, 7, 8]); setActivePokemonLimit(1025); }
                     }
 
                     // Goal setting — server sends 'goal_count' (a raw Pokémon count)
@@ -759,21 +803,21 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         if (key === mbKey) {
                             setUsedMasterBalls(prev => {
                                 const merged = new Set([...prev, ...usedIds]);
-                                const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + 2001).length;
+                                const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 1).length;
                                 setMasterBalls(Math.max(0, totalServer - merged.size));
                                 return merged;
                             });
                         } else if (key === pgKey) {
                             setUsedPokegears(prev => {
                                 const merged = new Set([...prev, ...usedIds]);
-                                const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + 2002).length;
+                                const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 2).length;
                                 setPokegears(Math.max(0, totalServer - merged.size));
                                 return merged;
                             });
                         } else if (key === pdKey) {
                             setUsedPokedexes(prev => {
                                 const merged = new Set([...prev, ...usedIds]);
-                                const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + 2003).length;
+                                const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 3).length;
                                 setPokedexes(Math.max(0, totalServer - merged.size));
                                 return merged;
                             });
@@ -828,9 +872,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                 });
                                 return unlocked;
                             });
-                        } else if (item.id >= ITEM_OFFSET + 1100 && item.id <= ITEM_OFFSET + 1117) {
+                        } else if (item.id >= ITEM_OFFSET + TYPE_ITEM_OFFSET && item.id <= ITEM_OFFSET + TYPE_ITEM_OFFSET + 17) {
                             const types = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
-                            const typeName = types[item.id - (ITEM_OFFSET + 1100)];
+                            const typeName = types[item.id - (ITEM_OFFSET + TYPE_ITEM_OFFSET)];
                             setTypeUnlocks(prev => new Set(prev).add(typeName));
                             setLogs(prev => [{
                                 id: crypto.randomUUID(),
@@ -839,36 +883,36 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                 text: `Received Type Unlock: ${typeName}`,
                                 parts: [{ text: `Received Type Unlock: ${typeName}`, type: 'color', color: '#10B981' }]
                             }, ...prev.slice(0, 99)]);
-                        } else if (item.id === ITEM_OFFSET + 3001) {
+                        } else if (item.id === ITEM_OFFSET + TRAP_ITEM_OFFSET + 1) {
                             // Small Shuffle Trap
                             setShuffleEndTime(Date.now() + 30000); // 30s
-                        } else if (item.id === ITEM_OFFSET + 3002) {
+                        } else if (item.id === ITEM_OFFSET + TRAP_ITEM_OFFSET + 2) {
                             // Big Shuffle Trap
                             setShuffleEndTime(Date.now() + 150000); // 2m 30s
-                        } else if (item.id === ITEM_OFFSET + 3003) {
+                        } else if (item.id === ITEM_OFFSET + TRAP_ITEM_OFFSET + 3) {
                             // Derpy Mon Trap
                             recalculateItems = true;
-                        } else if (item.id === ITEM_OFFSET + 3004) {
+                        } else if (item.id === ITEM_OFFSET + TRAP_ITEM_OFFSET + 4) {
                             // Release Trap
                             recalculateItems = true;
-                        } else if (item.id === ITEM_OFFSET + 2001 || item.id === ITEM_OFFSET + 2002 || item.id === ITEM_OFFSET + 2003) {
+                        } else if (item.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 1 || item.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 2 || item.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 3) {
                             recalculateItems = true;
                         }
                     });
 
                     if (recalculateItems) {
                         setUsedMasterBalls(used => {
-                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + 2001).length;
+                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 1).length;
                             setMasterBalls(Math.max(0, totalServer - used.size));
                             return used;
                         });
                         setUsedPokegears(used => {
-                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + 2002).length;
+                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 2).length;
                             setPokegears(Math.max(0, totalServer - used.size));
                             return used;
                         });
                         setUsedPokedexes(used => {
-                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + 2003).length;
+                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 3).length;
                             setPokedexes(Math.max(0, totalServer - used.size));
                             return used;
                         });
@@ -876,7 +920,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         // Process Trap items (Derp Mon, Release Trap)
                         // This logic runs to find "unprocessed" trap events safely by comparing server quantities against stored list sizes
                         setDerpyfiedIds(derps => {
-                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + 3003).length;
+                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + TRAP_ITEM_OFFSET + 3).length;
                             if (totalServer > derps.size) {
                                 let newDerps = new Set(derps);
                                 const basePathPokes = allPokemon.filter(p => !newDerps.has(p.id) && derpemonIndex[p.id]);
@@ -931,7 +975,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         });
 
                         setReleasedIds(released => {
-                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + 3004).length;
+                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + TRAP_ITEM_OFFSET + 4).length;
                             if (totalServer > released.size) {
                                 let newReleased = new Set(released);
                                 // Pick from currently checked Pokémon (but not starters 1, 4, 7 for safety and thematic reasons)

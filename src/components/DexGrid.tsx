@@ -67,12 +67,12 @@ export const DexGrid: React.FC = () => {
 
                 const shuffleOrder = new Map<number, number>();
                 if (isShuffled) {
-                    // Seeded random based on time remaining so it jumps around every second
-                    const secondsLeft = Math.ceil((shuffleEndTime - now) / 1000);
+                    // Seeded random based on the trap end time so it stays static for the duration
+                    const seed = shuffleEndTime % 1000000;
                     const shuffleArr = [...pokemonInGen];
                     for (let i = shuffleArr.length - 1; i > 0; i--) {
-                        // pseudo-random using id and time
-                        const j = (i * secondsLeft * 17) % (i + 1);
+                        // pseudo-random using id and constant seed
+                        const j = Math.floor(Math.abs(Math.sin(seed + i) * 10000)) % (i + 1);
                         [shuffleArr[i], shuffleArr[j]] = [shuffleArr[j], shuffleArr[i]];
                     }
                     // Map pokemon id to its new visual index
