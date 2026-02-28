@@ -1,6 +1,6 @@
 # Pokepelago Client
 
-Welcome to the **Pokepelago Client**, the companion React web application for the Archipelago Pokepelago APWorld!
+Welcome to the **[Pokepelago Client](https://dowlle.github.io/PokepelagoClient/)**, the companion React web application for the Archipelago Pokepelago APWorld!
 
 This client allows you to visually track your progress, track your caught Pokémon, and interact with the Archipelago multiworld server in a highly polished, interactive Pokédex interface.
 
@@ -40,7 +40,7 @@ Make sure you have [Node.js](https://nodejs.org/) installed on your machine.
 ## How to Play
 
 1. Start your Archipelago Server with the Pokepelago `.apworld` generated seed.
-2. Open the Pokepelago Client in your browser.
+2. Open the [Pokepelago Client](https://dowlle.github.io/PokepelagoClient/) in your browser.
 3. Enter your **Hostname**, **Port**, and **Slot Name** (e.g., `AshKetchum`) in the connection prompt.
 4. Once connected, your `Oak's Lab` starting items will automatically sync.
 5. Use the input bar at the bottom to "guess" Pokémon names. 
