@@ -642,6 +642,59 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             amount: slotData.goal_count,
                         });
                     }
+
+                    // Setup DataStorage sync for used items
+                    const team = client.players.self.team;
+                    const slot = client.players.self.slot;
+                    const mbKey = `pokepelago_team_${team}_slot_${slot}_used_masterballs`;
+                    const pgKey = `pokepelago_team_${team}_slot_${slot}_used_pokegears`;
+                    const pdKey = `pokepelago_team_${team}_slot_${slot}_used_pokedexes`;
+
+                    client.storage.notify([mbKey, pgKey, pdKey], (key, value) => {
+                        if (!Array.isArray(value)) return;
+                        const usedIds = new Set(value as number[]);
+                        
+                        // Because this callback runs anytime the value changes, update the state and the dynamic counters.
+                        if (key === mbKey) {
+                            setUsedMasterBalls(prev => {
+                                const merged = new Set([...prev, ...usedIds]);
+                                const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + 2001).length;
+                                setMasterBalls(Math.max(0, totalServer - merged.size));
+                                return merged;
+                            });
+                        } else if (key === pgKey) {
+                            setUsedPokegears(prev => {
+                                const merged = new Set([...prev, ...usedIds]);
+                                const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + 2002).length;
+                                setPokegears(Math.max(0, totalServer - merged.size));
+                                return merged;
+                            });
+                        } else if (key === pdKey) {
+                            setUsedPokedexes(prev => {
+                                const merged = new Set([...prev, ...usedIds]);
+                                const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + 2003).length;
+                                setPokedexes(Math.max(0, totalServer - merged.size));
+                                return merged;
+                            });
+                        }
+                    }).then((data) => {
+                        const localMB = new Set(JSON.parse(localStorage.getItem('pokepelago_usedMasterBalls') || '[]'));
+                        const localPG = new Set(JSON.parse(localStorage.getItem('pokepelago_usedPokegears') || '[]'));
+                        const localPD = new Set(JSON.parse(localStorage.getItem('pokepelago_usedPokedexes') || '[]'));
+
+                        const pushUnsynced = (localSet: Set<any>, serverArr: any, key: string) => {
+                            const serverSet = new Set(Array.isArray(serverArr) ? serverArr : []);
+                            // Push items locally used that the server isn't tracking yet
+                            const unsynced = Array.from(localSet).filter(id => !serverSet.has(id));
+                            if (unsynced.length > 0) {
+                                client.storage.prepare(key, []).add(unsynced).commit();
+                            }
+                        };
+
+                        pushUnsynced(localMB, data[mbKey], mbKey);
+                        pushUnsynced(localPG, data[pgKey], pgKey);
+                        pushUnsynced(localPD, data[pdKey], pdKey);
+                    }).catch(console.error);
                 });
 
                 // Handle items via ItemsManager
@@ -850,6 +903,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (masterBalls > 0) {
             setMasterBalls(prev => prev - 1);
             setUsedMasterBalls(prev => new Set(prev).add(pokemonId));
+
+            if (clientRef.current?.authenticated) {
+                const team = clientRef.current.players.self.team;
+                const slot = clientRef.current.players.self.slot;
+                clientRef.current.storage.prepare(`pokepelago_team_${team}_slot_${slot}_used_masterballs`, []).add([pokemonId]).commit();
+            }
+
             checkPokemon(pokemonId);
             addLog({
                 type: 'system',
@@ -862,6 +922,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (pokegears > 0) {
             setPokegears(prev => prev - 1);
             setUsedPokegears(prev => new Set(prev).add(pokemonId));
+
+            if (clientRef.current?.authenticated) {
+                const team = clientRef.current.players.self.team;
+                const slot = clientRef.current.players.self.slot;
+                clientRef.current.storage.prepare(`pokepelago_team_${team}_slot_${slot}_used_pokegears`, []).add([pokemonId]).commit();
+            }
+
             addLog({
                 type: 'system',
                 text: `Used a Pokegear on Pokemon #${pokemonId}!`
@@ -873,6 +940,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (pokedexes > 0) {
             setPokedexes(prev => prev - 1);
             setUsedPokedexes(prev => new Set(prev).add(pokemonId));
+
+            if (clientRef.current?.authenticated) {
+                const team = clientRef.current.players.self.team;
+                const slot = clientRef.current.players.self.slot;
+                clientRef.current.storage.prepare(`pokepelago_team_${team}_slot_${slot}_used_pokedexes`, []).add([pokemonId]).commit();
+            }
+
             addLog({
                 type: 'system',
                 text: `Used a Pokedex on Pokemon #${pokemonId}!`
