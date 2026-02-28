@@ -154,9 +154,9 @@ let STARTER_OFFSET = 500;
 let MILESTONE_OFFSET = 1000;
 let TYPE_MILESTONE_OFFSET = 2000;
 let TYPE_MILESTONE_MULTIPLIER = 50;
-let TYPE_ITEM_OFFSET = 1100;
-let USEFUL_ITEM_OFFSET = 2000;
-let TRAP_ITEM_OFFSET = 3000;
+let TYPE_ITEM_OFFSET = 2000;
+let USEFUL_ITEM_OFFSET = 3000;
+let TRAP_ITEM_OFFSET = 4000;
 
 export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [allPokemon, setAllPokemon] = useState<PokemonRef[]>([]);
