@@ -1,11 +1,32 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
-import { Shield, Globe, Laptop, ArrowRight, Download, Github } from 'lucide-react';
+import { Shield, Globe, Laptop, ArrowRight, Download, Github, BookOpen } from 'lucide-react';
+import { ConnectionManager } from './ConnectionManager';
+import type { GameProfile } from '../services/connectionManagerService';
 
 export const SplashScreen: React.FC = () => {
-    const { setGameMode } = useGame();
+    const { setGameMode, connect, setConnectionInfo, setCurrentProfileId } = useGame();
+    const [isManagerOpen, setIsManagerOpen] = useState(false);
+
+    const handleConnectProfile = async (profile: GameProfile) => {
+        setCurrentProfileId(profile.id);
+        setConnectionInfo({
+            hostname: profile.hostname,
+            port: profile.port,
+            slotName: profile.slotName,
+            password: profile.password || '',
+        });
+        setGameMode('archipelago');
+        await connect({
+            hostname: profile.hostname,
+            port: profile.port,
+            slotName: profile.slotName,
+            password: profile.password,
+        }, profile.id);
+    };
 
     return (
+        <>
         <div className="fixed inset-0 z-[100] bg-gray-950 overflow-y-auto font-sans flex items-center justify-center p-4">
             <div className="max-w-4xl w-full">
                 {/* Hero Section */}
@@ -95,6 +116,17 @@ export const SplashScreen: React.FC = () => {
                     </div>
                 </div>
 
+                {/* Manage Games */}
+                <div className="flex justify-center mb-4 animate-in fade-in duration-700 delay-400">
+                    <button
+                        onClick={() => setIsManagerOpen(true)}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-gray-800/50 hover:bg-gray-800 border border-gray-700 hover:border-gray-500 rounded-2xl text-sm text-gray-400 hover:text-gray-200 font-bold transition-all"
+                    >
+                        <BookOpen size={16} />
+                        Manage Games
+                    </button>
+                </div>
+
                 {/* Footer Info */}
                 <div className="flex flex-wrap justify-center gap-8 text-[10px] font-black uppercase tracking-[0.2em] text-gray-600 animate-in fade-in duration-1000 delay-500">
                     <a href="https://github.com/dowlle/Pokepelago" target="_blank" rel="noreferrer" className="flex items-center gap-2 hover:text-white transition-colors">
@@ -108,5 +140,11 @@ export const SplashScreen: React.FC = () => {
                 </div>
             </div>
         </div>
+        <ConnectionManager
+            isOpen={isManagerOpen}
+            onClose={() => setIsManagerOpen(false)}
+            onConnect={handleConnectProfile}
+        />
+        </>
     );
 };

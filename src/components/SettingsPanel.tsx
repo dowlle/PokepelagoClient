@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
 import { GENERATIONS } from '../types/pokemon';
-import { X, Server, Wifi, LayoutGrid, Maximize, Image, Trash2, Upload, Link2, ChevronDown, Filter, Monitor } from 'lucide-react';
+import { X, Server, Wifi, LayoutGrid, Maximize, Image, Trash2, Upload, Link2, ChevronDown, Filter, Monitor, BookOpen } from 'lucide-react';
 import { importFromFiles, clearAllSprites } from '../services/spriteService';
+import { ConnectionManager } from './ConnectionManager';
+import type { GameProfile } from '../services/connectionManagerService';
 
 interface SettingsPanelProps {
     isOpen: boolean;
@@ -30,11 +32,13 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
         spriteRepoUrl,
         setSpriteRepoUrl,
         connectionQuality,
-        derpemonSpriteCount
+        derpemonSpriteCount,
+        setCurrentProfileId,
     } = useGame();
 
     const [isConnecting, setIsConnecting] = useState(false);
     const [importProgress, setImportProgress] = useState<number | null>(null);
+    const [isManagerOpen, setIsManagerOpen] = useState(false);
 
     const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
         try {
@@ -76,6 +80,24 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
 
     const updateInfo = (updates: Partial<typeof connectionInfo>) => {
         setConnectionInfo(prev => ({ ...prev, ...updates }));
+    };
+
+    const handleConnectProfile = async (profile: GameProfile) => {
+        setCurrentProfileId(profile.id);
+        setConnectionInfo({
+            hostname: profile.hostname,
+            port: profile.port,
+            slotName: profile.slotName,
+            password: profile.password || '',
+        });
+        setIsConnecting(true);
+        await connect({
+            hostname: profile.hostname,
+            port: profile.port,
+            slotName: profile.slotName,
+            password: profile.password,
+        }, profile.id);
+        setIsConnecting(false);
     };
 
     const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -136,6 +158,13 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                 />
                 {openSections['connection'] && (
                     <div className="px-4 py-4 space-y-4 border-t border-gray-800">
+                        <button
+                            onClick={() => setIsManagerOpen(true)}
+                            className="w-full flex items-center justify-center gap-2 py-2 bg-gray-800/50 hover:bg-gray-800 border border-gray-700 hover:border-gray-600 rounded-lg text-xs text-gray-400 hover:text-gray-200 font-bold uppercase tracking-wider transition-colors"
+                        >
+                            <BookOpen size={12} />
+                            Manage Games
+                        </button>
                         {!isConnected ? (
                             gameMode === 'standalone' ? (
                                 <div className="bg-gray-800/40 border border-gray-700 rounded-xl p-4 text-center space-y-3">
@@ -403,11 +432,25 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
         </div>
     );
 
+    const managerModal = (
+        <ConnectionManager
+            isOpen={isManagerOpen}
+            onClose={() => setIsManagerOpen(false)}
+            onConnect={handleConnectProfile}
+        />
+    );
+
     if (isEmbedded) {
-        return <div className="h-full overflow-y-auto custom-scrollbar">{settingsContent}</div>;
+        return (
+            <>
+                <div className="h-full overflow-y-auto custom-scrollbar">{settingsContent}</div>
+                {managerModal}
+            </>
+        );
     }
 
     return (
+        <>
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
             <div className="bg-gray-900 rounded-2xl shadow-2xl w-full max-w-lg border border-gray-800 flex flex-col max-h-[90vh] overflow-hidden">
                 <div className="p-6 border-b border-gray-800 flex justify-between items-center bg-gray-950/50">
@@ -429,5 +472,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                 </div>
             </div>
         </div>
+        {managerModal}
+        </>
     );
 };

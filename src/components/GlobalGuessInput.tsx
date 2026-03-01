@@ -4,7 +4,7 @@ import { getCleanName } from '../utils/pokemon';
 import pokemonNames from '../data/pokemon_names.json';
 
 export const GlobalGuessInput: React.FC = () => {
-    const { allPokemon, checkedIds, checkPokemon, gameMode, isPokemonGuessable, activePokemonLimit, releasedIds, setReleasedIds, toast, showToast } = useGame();
+    const { allPokemon, checkedIds, checkPokemon, gameMode, isPokemonGuessable, activePokemonLimit, releasedIds, setReleasedIds, toast, showToast, STARTER_OFFSET, MILESTONE_OFFSET, goalCount } = useGame();
     const [guess, setGuess] = useState('');
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -20,11 +20,13 @@ export const GlobalGuessInput: React.FC = () => {
 
     const checkedIdsRef = useRef(checkedIds);
     const isPokemonGuessableRef = useRef(isPokemonGuessable);
+    const releasedIdsRef = useRef(releasedIds);
 
     useEffect(() => {
         checkedIdsRef.current = checkedIds;
         isPokemonGuessableRef.current = isPokemonGuessable;
-    }, [checkedIds, isPokemonGuessable]);
+        releasedIdsRef.current = releasedIds;
+    }, [checkedIds, isPokemonGuessable, releasedIds]);
 
     // Expose auto-complete for debug
     useEffect(() => {
@@ -40,7 +42,8 @@ export const GlobalGuessInput: React.FC = () => {
                     if (!(window as any).isAutoCompleting) break;
 
                     const id = p.id;
-                    if (checkedIdsRef.current.has(id)) continue;
+                    // Skip if already checked AND not released (released = must re-guess)
+                    if (checkedIdsRef.current.has(id) && !releasedIdsRef.current.has(id)) continue;
 
                     const guessCheck = isPokemonGuessableRef.current(id);
                     if (!guessCheck.canGuess) continue;
@@ -219,17 +222,23 @@ export const GlobalGuessInput: React.FC = () => {
                     </div>
                 </form>
 
-                {/* Stats: guessed pokémon / active limit */}
+                {/* Stats: guessed pokémon / goal */}
                 {(() => {
-                    const guessedCount = Array.from(checkedIds).filter(id => (id >= 1 && id < 500) || (id >= 520 && id < 1000)).length;
-                    const isGoalMet = guessedCount >= activePokemonLimit;
+                    const guessedCount = Array.from(checkedIds).filter(id =>
+                        id >= 1 && id <= 1025 &&
+                        !(id >= STARTER_OFFSET && id < STARTER_OFFSET + 20) &&
+                        id < MILESTONE_OFFSET &&
+                        !releasedIds.has(id)
+                    ).length;
+                    const displayGoal = goalCount ?? activePokemonLimit;
+                    const isGoalMet = guessedCount >= displayGoal;
                     return (
                         <div className="flex items-center gap-1 text-sm whitespace-nowrap">
                             <span className={`font-bold ${isGoalMet ? 'text-yellow-400' : 'text-green-400'}`}>
                                 {guessedCount}
                             </span>
                             <span className="text-gray-500">/</span>
-                            <span className="text-gray-300">{activePokemonLimit}</span>
+                            <span className="text-gray-300">{displayGoal}</span>
                         </div>
                     );
                 })()}

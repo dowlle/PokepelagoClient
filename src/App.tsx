@@ -18,7 +18,8 @@ const GameContent: React.FC = () => {
     uiSettings, goal, gameMode, isPokemonGuessable,
     typeUnlocks,
     unlockType, lockType, clearAllTypes,
-    setShuffleEndTime, setDerpyfiedIds, setReleasedIds, derpemonIndex, releasedIds, derpyfiedIds, setSpriteRefreshCounter, showToast
+    setShuffleEndTime, setDerpyfiedIds, setReleasedIds, derpemonIndex, releasedIds, derpyfiedIds, setSpriteRefreshCounter, showToast,
+    STARTER_OFFSET, MILESTONE_OFFSET
   } = useGame();
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
   const [sidebarTab, setSidebarTab] = React.useState<'log' | 'settings'>(() => {
@@ -33,16 +34,15 @@ const GameContent: React.FC = () => {
   const [debugType, setDebugType] = React.useState(POKEMON_TYPES[0]);
 
   // Only count Pokémon guess locations (IDs 1-1025).
-  // Excludes Oak's Lab, Milestone, or Type Milestone locations.
-  const { STARTER_OFFSET, MILESTONE_OFFSET } = useGame() as any; // Temporary cast to access hidden constants if needed, or better, exposed ones
-  // Actually, let's use the exposed locationOffset and just assume IDs < 10000 (MILESTONE_OFFSET)
+  // Excludes Oak's Lab, Milestone, Type Milestone, and released (ran away) Pokémon.
   const guessedPokemonCount = React.useMemo(() =>
     Array.from(checkedIds).filter(id =>
       id >= 1 && id <= 1025 &&
-      !(id >= (STARTER_OFFSET || 500) && id < (STARTER_OFFSET || 500) + 20) &&
-      id < (MILESTONE_OFFSET || 1000)
+      !(id >= STARTER_OFFSET && id < STARTER_OFFSET + 20) &&
+      id < MILESTONE_OFFSET &&
+      !releasedIds.has(id)
     ).length,
-    [checkedIds, STARTER_OFFSET, MILESTONE_OFFSET]);
+    [checkedIds, STARTER_OFFSET, MILESTONE_OFFSET, releasedIds]);
 
   // Expose debug toggle to window for GlobalGuessInput to call
   React.useEffect(() => {

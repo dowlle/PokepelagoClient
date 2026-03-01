@@ -6,7 +6,7 @@ import { PokemonSlot } from './PokemonSlot';
 import { Lock } from 'lucide-react';
 
 export const DexGrid: React.FC = () => {
-    const { allPokemon, unlockedIds, checkedIds, hintedIds, shinyIds, generationFilter, uiSettings, gameMode, isPokemonGuessable, shuffleEndTime, releasedIds } = useGame();
+    const { allPokemon, unlockedIds, checkedIds, hintedIds, shinyIds, generationFilter, uiSettings, gameMode, isPokemonGuessable, shuffleEndTime, releasedIds, activeRegions, regionPasses, regionLocksEnabled, startingRegion } = useGame();
 
     const [now, setNow] = useState(Date.now());
 
@@ -82,7 +82,11 @@ export const DexGrid: React.FC = () => {
                 }
 
                 const checkedCount = pokemonInGen.filter(p => checkedIds.has(p.id)).length;
-                const isLocked = false;
+                const isLocked = regionLocksEnabled &&
+                    Object.keys(activeRegions).length > 0 &&
+                    gen.region in activeRegions &&
+                    gen.region !== startingRegion &&
+                    !regionPasses.has(gen.region);
 
                 return (
                     <div
@@ -95,11 +99,18 @@ export const DexGrid: React.FC = () => {
                         `}
                     >
                         <div className="flex justify-between items-baseline mb-3">
-                            <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
-                                {gen.region}
-                                {isLocked && <Lock size={12} className="text-gray-600" />}
-                                {isShuffled && <span className="text-red-500 animate-pulse text-xs lowercase">shuffled! ({Math.ceil((shuffleEndTime - now) / 1000)}s)</span>}
-                            </h3>
+                            <div>
+                                <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
+                                    {gen.region}
+                                    {isLocked && <Lock size={12} className="text-gray-600" />}
+                                    {isShuffled && <span className="text-red-500 animate-pulse text-xs lowercase">shuffled! ({Math.ceil((shuffleEndTime - now) / 1000)}s)</span>}
+                                </h3>
+                                {isLocked && (
+                                    <span className="text-[10px] text-gray-600 font-normal normal-case tracking-normal">
+                                        Need {gen.region} Pass
+                                    </span>
+                                )}
+                            </div>
                             <span className="text-xs font-mono text-gray-600">
                                 {checkedCount} / {pokemonInGen.length}
                             </span>

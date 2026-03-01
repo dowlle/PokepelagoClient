@@ -13,6 +13,7 @@ import { getSprite, countSprites, generateSpriteKey } from '../services/spriteSe
 import { getCleanName } from '../utils/pokemon';
 import { resolveExternalSpriteUrl } from '../utils/pokesprite';
 import { loadDerpemonIndex, getDerpemonUrl, type DerpemonIndex } from '../services/derpemonService';
+import { updateProfile } from '../services/connectionManagerService';
 
 export interface LogEntry {
     id: string;
@@ -60,7 +61,10 @@ interface GameState {
         region?: string;
     };
     goalCount?: number;       // raw count from slot_data (how many Pokémon to guess)
-    activePokemonLimit: number; // max Pokémon index in this generation (151/251/386)
+    activePokemonLimit: number; // max Pokémon index in this generation (legacy compat)
+    activeRegions: Record<string, [number, number]>; // region name -> [low, high] ID range
+    startingRegion: string;
+    regionLocksEnabled: boolean;
     logs: LogEntry[];
     gameMode: 'archipelago' | 'standalone' | null;
     shuffleEndTime: number;
@@ -90,7 +94,7 @@ interface GameContextType extends GameState {
     updateUiSettings: (settings: Partial<UISettings>) => void;
     isConnected: boolean;
     connectionError: string | null;
-    connect: (info: ConnectionInfo) => Promise<void>;
+    connect: (info: ConnectionInfo, profileId?: string) => Promise<void>;
     disconnect: () => void;
     addLog: (entry: Omit<LogEntry, 'id' | 'timestamp'>) => void;
     say: (text: string) => void;
@@ -133,6 +137,9 @@ interface GameContextType extends GameState {
     clearAllTypes: () => void;
     goalCount: number | undefined;
     activePokemonLimit: number;
+    activeRegions: Record<string, [number, number]>;
+    startingRegion: string;
+    regionLocksEnabled: boolean;
     shuffleEndTime: number;
     derpyfiedIds: Set<number>;
     releasedIds: Set<number>;
@@ -146,6 +153,9 @@ interface GameContextType extends GameState {
     locationOffset: number;
     STARTER_OFFSET: number;
     MILESTONE_OFFSET: number;
+    detectedApWorldVersion: 'legacy' | 'new' | 'unknown';
+    currentProfileId: string | null;
+    setCurrentProfileId: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -160,6 +170,8 @@ let TYPE_MILESTONE_MULTIPLIER = 50;
 let TYPE_ITEM_OFFSET = 2000;
 let USEFUL_ITEM_OFFSET = 3000;
 let TRAP_ITEM_OFFSET = 4000;
+const REGION_PASS_OFFSET = 5000; // ITEM_OFFSET + 5000 + region_index
+const GAME_REGIONS_ORDER = ["Kanto", "Johto", "Hoenn", "Sinnoh", "Unova", "Kalos", "Alola", "Galar", "Hisui", "Paldea"];
 
 export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [allPokemon, setAllPokemon] = useState<PokemonRef[]>([]);
@@ -176,7 +188,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [legendaryGating, setLegendaryGating] = useState(0);
     const [regionPasses, setRegionPasses] = useState<Set<string>>(new Set());
     const [typeUnlocks, setTypeUnlocks] = useState<Set<string>>(new Set());
-    const [activePokemonLimit, setActivePokemonLimit] = useState<number>(386); // default to Gen 3
+    const [activePokemonLimit, setActivePokemonLimit] = useState<number>(386); // legacy compat
+    const [activeRegions, setActiveRegions] = useState<Record<string, [number, number]>>({});
+    const [startingRegion, setStartingRegion] = useState<string>("");
+    const [regionLocksEnabled, setRegionLocksEnabled] = useState<boolean>(false);
     const [goalCount, setGoalCount] = useState<number | undefined>(undefined);
 
     const [shuffleEndTime, setShuffleEndTime] = useState<number>(0);
@@ -184,6 +199,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [releasedIds, setReleasedIds] = useState<Set<number>>(new Set());
     const [spriteRefreshCounter, setSpriteRefreshCounter] = useState<number>(0);
     const [toast, setToast] = useState<ToastMessage | null>(null);
+    const [detectedApWorldVersion, setDetectedApWorldVersion] = useState<'legacy' | 'new' | 'unknown'>('unknown');
+    const [currentProfileId, setCurrentProfileId] = useState<string | null>(null);
+    const isNewApWorldRef = useRef(false);
 
     const showToast = useCallback((type: ToastMessage['type'], message: string) => {
         setToast({ type, message, id: Date.now() });
@@ -542,33 +560,35 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
             });
 
-            // 2. Type-Specific Milestones (TYPE_MILESTONE_OFFSET + (index * TYPE_MILESTONE_MULTIPLIER) + step)
-            const typesList = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
-            const typeSteps = [1, 2, 5, 10, 20, 35, 50];
+            // 2. Type-Specific Milestones — only for legacy APWorld (removed in new APWorld)
+            if (!isNewApWorldRef.current) {
+                const typesList = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
+                const typeSteps = [1, 2, 5, 10, 20, 35, 50];
 
-            // Starter type offsets: Bulbasaur (Grass/Poison), Charmander (Fire), Squirtle (Water)
-            const starterTypeOffsets: Record<string, number> = {
-                "Grass": 1,
-                "Poison": 1,
-                "Fire": 1,
-                "Water": 1
-            };
+                // Starter type offsets: Bulbasaur (Grass/Poison), Charmander (Fire), Squirtle (Water)
+                const starterTypeOffsets: Record<string, number> = {
+                    "Grass": 1,
+                    "Poison": 1,
+                    "Fire": 1,
+                    "Water": 1
+                };
 
-            typesList.forEach((typeName, index) => {
-                const rawCount = typeCounts[typeName] || 0;
-                const offset = starterTypeOffsets[typeName] || 0;
+                typesList.forEach((typeName, index) => {
+                    const rawCount = typeCounts[typeName] || 0;
+                    const offset = starterTypeOffsets[typeName] || 0;
 
-                typeSteps.forEach(step => {
-                    if (rawCount >= step + offset) {
-                        const apLocationId = LOCATION_OFFSET + TYPE_MILESTONE_OFFSET + (index * TYPE_MILESTONE_MULTIPLIER) + step;
-                        const localId = apLocationId - LOCATION_OFFSET;
-                        if (!checkedIds.has(localId)) {
-                            clientRef.current?.check(apLocationId);
-                            setCheckedIds(prev => new Set(prev).add(localId));
+                    typeSteps.forEach(step => {
+                        if (rawCount >= step + offset) {
+                            const apLocationId = LOCATION_OFFSET + TYPE_MILESTONE_OFFSET + (index * TYPE_MILESTONE_MULTIPLIER) + step;
+                            const localId = apLocationId - LOCATION_OFFSET;
+                            if (!checkedIds.has(localId)) {
+                                clientRef.current?.check(apLocationId);
+                                setCheckedIds(prev => new Set(prev).add(localId));
+                            }
                         }
-                    }
+                    });
                 });
-            });
+            }
         };
 
         checkExtendedLocations();
@@ -588,22 +608,41 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         // --- ARCHIPELAGO PROGRESSION ---
-        // 0. Generation range check — Pokemon beyond the active gen are never guessable.
-        if (id > activePokemonLimit) {
+        // 0. Region check — is this Pokemon in an active region?
+        if (Object.keys(activeRegions).length > 0) {
+            const inActiveRegion = Object.values(activeRegions).some(([low, high]) => id >= low && id <= high);
+            if (!inActiveRegion) {
+                return { canGuess: false, reason: 'This Pokemon is not in your active region.' };
+            }
+            // Region lock check — non-starting regions need a Region Pass
+            if (regionLocksEnabled) {
+                let pokemonRegion = "";
+                for (const [region, [low, high]] of Object.entries(activeRegions)) {
+                    if (id >= low && id <= high) { pokemonRegion = region; break; }
+                }
+                if (pokemonRegion && pokemonRegion !== startingRegion && !regionPasses.has(pokemonRegion)) {
+                    return {
+                        canGuess: false,
+                        reason: `Need ${pokemonRegion} Pass to access this Pokemon.`,
+                        missingRegion: pokemonRegion
+                    };
+                }
+            }
+        } else if (id > activePokemonLimit) {
+            // Legacy APWorld: fall back to limit-based check
             return { canGuess: false, reason: 'This Pokemon is not in your active generation.' };
         }
 
-        // 1. Pokemon Unlock Check (dexsanity=on only)
-        // When dexsanity is off, no per-Pokemon unlock items exist — skip this check.
-        if (dexsanityEnabled && !unlockedIds.has(id)) {
-            return {
-                canGuess: false,
-                reason: 'You have not found this Pokemon yet!',
-                missingPokemon: true
-            };
+        // 1a. Legacy dexsanity unlock check.
+        // In v0.2.1 APWorld, each Pokemon had a "{Name} Unlock" item that must be received
+        // before the player can guess it. The new APWorld removed these items entirely.
+        if (gameMode === 'archipelago' && detectedApWorldVersion === 'legacy') {
+            if (!unlockedIds.has(id)) {
+                return { canGuess: false, reason: 'Waiting for this Pokémon\'s Unlock item.', missingPokemon: true };
+            }
         }
 
-        // 2. Type Locks Check (applies regardless of dexsanity)
+        // 1b. Type Locks Check (applies regardless of dexsanity)
         // With dexsanity=off, Type Keys still gate guessing Pokemon of that type, providing
         // the same type-based progression as dexsanity=on.
         if (typeLocksEnabled) {
@@ -622,7 +661,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         return { canGuess: true };
-    }, [gameMode, generationFilter, activePokemonLimit, typeLocksEnabled, dexsanityEnabled, typeUnlocks, unlockedIds, pokemonMetadata]);
+    }, [gameMode, generationFilter, activePokemonLimit, activeRegions, startingRegion, regionLocksEnabled, regionPasses, typeLocksEnabled, typeUnlocks, pokemonMetadata, detectedApWorldVersion, unlockedIds]);
 
     useEffect(() => {
         isPokemonGuessableRef.current = isPokemonGuessable;
@@ -634,18 +673,22 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (goalCount === undefined) return;
 
         // Count Pokémon guess locations only (IDs 1–1025)
-        // Excludes Oak's Lab, Milestone, or Type Milestone locations by checking the offset.
+        // Excludes Oak's Lab, Milestone, Type Milestone, and released (ran away) Pokémon.
         const guessedCount = Array.from(checkedIds).filter(id => {
             if (id >= STARTER_OFFSET && id < STARTER_OFFSET + 20) return false;
             if (id >= MILESTONE_OFFSET) return false;
+            if (releasedIds.has(id)) return false;
             return id >= 1 && id <= 1025;
         }).length;
 
         if (guessedCount >= goalCount) {
             console.log(`Goal met! ${guessedCount}/${goalCount} Pokémon guessed. Sending CLIENT_GOAL.`);
             clientRef.current.updateStatus(30); // 30 = ClientStatus.CLIENT_GOAL
+            if (currentProfileId) {
+                updateProfile(currentProfileId, { isGoaled: true, goaledAt: Date.now() });
+            }
         }
-    }, [checkedIds, isConnected, gameMode, goalCount]);
+    }, [checkedIds, isConnected, gameMode, goalCount, releasedIds, currentProfileId]);
 
     const addLog = useCallback((entry: Omit<LogEntry, 'id' | 'timestamp'>) => {
         setLogs(prev => [
@@ -664,7 +707,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, [isConnected]);
 
-    const connect = async (info: ConnectionInfo) => {
+    const connect = async (info: ConnectionInfo, profileId?: string) => {
         if (isConnectingRef.current) {
             console.log('Already connecting, ignoring request.');
             return;
@@ -673,6 +716,17 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isConnectingRef.current = true;
         setConnectionError(null);
         setIsConnected(false);
+
+        // Stop any active ping interval — we'll restart it after a successful login.
+        // Do NOT manually disconnect the old client here: the server will kick the old
+        // session once the new connection authenticates. Manually disconnecting first
+        // and immediately reconnecting causes the server to close the new WebSocket while
+        // it's still tearing down the previous session. The orphan guard on the
+        // 'disconnected' handler below prevents the kicked client from clobbering state.
+        if (pingTimeoutRef.current) {
+            clearInterval(pingTimeoutRef.current as any);
+            pingTimeoutRef.current = null;
+        }
 
         const protocolsToTry = info.hostname.includes('://') ? [''] : ['wss://', 'ws://'];
         let lastError: any = null;
@@ -686,7 +740,19 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                 // Socket Event Handlers
                 client.socket.on('connectionRefused', (packet: ConnectionRefusedPacket) => {
-                    setConnectionError(`Connection refused: ${packet.errors?.join(', ') || 'Unknown error'}`);
+                    const errors = packet.errors || [];
+                    let msg = 'Connection refused.';
+                    if (errors.includes('InvalidSlot'))
+                        msg = `Slot "${info.slotName}" not found. Check that your name matches the YAML exactly.`;
+                    else if (errors.includes('InvalidPassword'))
+                        msg = 'Incorrect password.';
+                    else if (errors.includes('InvalidGame'))
+                        msg = `Slot "${info.slotName}" is not a Pokepelago game.`;
+                    else if (errors.includes('IncompatibleVersion'))
+                        msg = 'Archipelago version incompatible with this client.';
+                    else if (errors.length > 0)
+                        msg = `Connection refused: ${errors.join(', ')}`;
+                    setConnectionError(msg);
                     setIsConnected(false);
                     if (pingTimeoutRef.current) clearInterval(pingTimeoutRef.current);
                 });
@@ -700,7 +766,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                 // Properly detect disconnects using the library's built-in event.
                 // This fires whether the server drops us or we lose network.
+                // Guard against orphaned clients: when a new connect() supersedes this one,
+                // clientRef.current is updated to the new client. If this old client later
+                // gets kicked by the server, ignore the event so it can't clobber new state.
                 client.socket.on('disconnected', () => {
+                    if (clientRef.current !== client) return;
                     console.log('[GameContext] Disconnected from Archipelago server.');
                     setIsConnected(false);
                     setConnectionQuality('dead');
@@ -726,6 +796,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     const isNewVersion =
                         (typeof packet.slot_data === 'object' && packet.slot_data !== null && 'dexsanity' in packet.slot_data) ||
                         allLocs.some((id: number) => (id >= 8560000 && id < 8570000) || id >= 8660000);
+                    isNewApWorldRef.current = isNewVersion;
                     if (isNewVersion) {
                         LOCATION_OFFSET = 8560000;
                         STARTER_OFFSET = 100_000;
@@ -735,6 +806,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         TYPE_ITEM_OFFSET = 2000;
                         USEFUL_ITEM_OFFSET = 3000;
                         TRAP_ITEM_OFFSET = 4000;
+                        setDetectedApWorldVersion('new');
                         console.log('[GameContext] Detected Gen 9+ APWorld (Location Offset: 8560000)');
                     } else {
                         LOCATION_OFFSET = 8571000;
@@ -745,7 +817,16 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         TYPE_ITEM_OFFSET = 1100;
                         USEFUL_ITEM_OFFSET = 2000;
                         TRAP_ITEM_OFFSET = 3000;
+                        setDetectedApWorldVersion('legacy');
                         console.log('[GameContext] Detected Legacy APWorld (Location Offset: 8571000)');
+                        // Warn in log that legacy APWorld has limited feature support
+                        setLogs(prev => [{
+                            id: crypto.randomUUID(),
+                            timestamp: Date.now(),
+                            type: 'system',
+                            text: '⚠ Connected to a Legacy APWorld. Some features (region locks, type key system) may not be available.',
+                            color: '#F59E0B'
+                        }, ...prev.slice(0, 99)]);
                     }
 
                     // Sync already checked locations
@@ -785,6 +866,16 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     });
                     setTypeUnlocks(newTypeUnlocks);
 
+                    // Reconstruct Region Pass unlocks
+                    const newRegionPasses = new Set<string>();
+                    receivedItems.forEach(item => {
+                        const idx = item.id - (ITEM_OFFSET + REGION_PASS_OFFSET);
+                        if (idx >= 0 && idx < GAME_REGIONS_ORDER.length) {
+                            newRegionPasses.add(GAME_REGIONS_ORDER[idx]);
+                        }
+                    });
+                    setRegionPasses(newRegionPasses);
+
                     // Handle slot data for settings
                     const slotData = packet.slot_data as any || {};
 
@@ -797,8 +888,28 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     setDexsanityEnabled(slotData.dexsanity !== undefined ? !!slotData.dexsanity : true);
                     setLegendaryGating(slotData.legendary_gating ?? 0);
 
-                    // Generation scaling
-                    if (slotData.pokemon_generations !== undefined) {
+                    // Region settings (new APWorld: active_regions replaces pokemon_generations)
+                    setRegionLocksEnabled(!!slotData.region_locks);
+                    if (slotData.active_regions !== undefined) {
+                        const ar = slotData.active_regions as Record<string, [number, number]>;
+                        setActiveRegions(ar);
+                        setStartingRegion(slotData.starting_region ?? "");
+                        // Derive generationFilter from active region names for UI tab display
+                        const regionToGenIdx: Record<string, number> = {
+                            Kanto: 0, Johto: 1, Hoenn: 2, Sinnoh: 3, Unova: 4,
+                            Kalos: 5, Alola: 6, Galar: 7, Hisui: 7, Paldea: 8,
+                        };
+                        const genIdxSet = new Set<number>();
+                        for (const r of Object.keys(ar)) {
+                            const idx = regionToGenIdx[r];
+                            if (idx !== undefined) genIdxSet.add(idx);
+                        }
+                        setGenerationFilter(Array.from(genIdxSet).sort());
+                        // Set activePokemonLimit to max ID for backward compat
+                        const maxId = Math.max(...Object.values(ar).map(([, hi]) => hi));
+                        setActivePokemonLimit(maxId);
+                    } else if (slotData.pokemon_generations !== undefined) {
+                        // Legacy APWorld: map cumulative gen number to limit
                         const gens = slotData.pokemon_generations;
                         if (gens === 0) { setGenerationFilter([0]); setActivePokemonLimit(151); }
                         else if (gens === 1) { setGenerationFilter([0, 1]); setActivePokemonLimit(251); }
@@ -818,6 +929,20 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         setGoal({
                             type: 'any_pokemon',
                             amount: slotData.goal_count,
+                        });
+                    }
+
+                    // Update game profile with confirmed connection details.
+                    // Done here (not in handleConnectProfile/handleConnect) so we use
+                    // the values from THIS connection, not the previous one.
+                    if (profileId) {
+                        updateProfile(profileId, {
+                            lastConnected: Date.now(),
+                            apworldVersion: isNewVersion ? 'new' : 'legacy',
+                            goalCount: slotData.goal_count,
+                            activeRegionNames: slotData.active_regions
+                                ? Object.keys(slotData.active_regions)
+                                : undefined,
                         });
                     }
 
@@ -917,6 +1042,16 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                 type: 'system',
                                 text: `Received Type Unlock: ${typeName}`,
                                 parts: [{ text: `Received Type Unlock: ${typeName}`, type: 'color', color: '#10B981' }]
+                            }, ...prev.slice(0, 99)]);
+                        } else if (item.id >= ITEM_OFFSET + REGION_PASS_OFFSET && item.id < ITEM_OFFSET + REGION_PASS_OFFSET + GAME_REGIONS_ORDER.length) {
+                            const regionName = GAME_REGIONS_ORDER[item.id - (ITEM_OFFSET + REGION_PASS_OFFSET)];
+                            setRegionPasses(prev => new Set(prev).add(regionName));
+                            setLogs(prev => [{
+                                id: crypto.randomUUID(),
+                                timestamp: Date.now(),
+                                type: 'system',
+                                text: `Received ${regionName} Pass!`,
+                                parts: [{ text: `Received ${regionName} Pass!`, type: 'color', color: '#F59E0B' }]
                             }, ...prev.slice(0, 99)]);
                         } else if (item.id === ITEM_OFFSET + TRAP_ITEM_OFFSET + 1) {
                             // Small Shuffle Trap
@@ -1177,7 +1312,23 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         console.error('All connection attempts failed', lastError);
-        setConnectionError(lastError?.message || 'Failed to connect. The host may be offline or you might have a secure connection issue.');
+        const rawMsg = lastError?.message || String(lastError || '');
+        let friendlyMsg: string;
+        if (rawMsg.includes('refused') || rawMsg.includes('ECONNREFUSED') || rawMsg.includes('ENOTFOUND') || rawMsg.includes('timed out'))
+            friendlyMsg = 'Server is offline or unreachable. Check the host and port.';
+        else if (rawMsg.includes('SSL') || rawMsg.includes('ERR_SSL') || rawMsg.includes('wss'))
+            friendlyMsg = 'Secure connection failed. Try using ws:// instead of wss://.';
+        else if (rawMsg.includes('Invalid Slot') || rawMsg.includes('InvalidSlot'))
+            friendlyMsg = `Slot "${info.slotName}" not found. Check that your name matches the YAML exactly.`;
+        else if (rawMsg.includes('Invalid Password') || rawMsg.includes('InvalidPassword'))
+            friendlyMsg = 'Incorrect password.';
+        else if (rawMsg.includes('Invalid Game') || rawMsg.includes('InvalidGame'))
+            friendlyMsg = `Slot "${info.slotName}" is not a Pokepelago game.`;
+        else if (rawMsg)
+            friendlyMsg = rawMsg;
+        else
+            friendlyMsg = 'Failed to connect. The host may be offline or you might have a secure connection issue.';
+        setConnectionError(friendlyMsg);
         setIsConnected(false);
         isConnectingRef.current = false;
     };
@@ -1374,6 +1525,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setGameMode,
             goalCount,
             activePokemonLimit,
+            activeRegions,
+            startingRegion,
+            regionLocksEnabled,
             unlockRegion,
             lockRegion,
             clearAllRegions,
@@ -1393,7 +1547,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             showToast,
             locationOffset: LOCATION_OFFSET,
             STARTER_OFFSET,
-            MILESTONE_OFFSET
+            MILESTONE_OFFSET,
+            detectedApWorldVersion,
+            currentProfileId,
+            setCurrentProfileId,
         }}>
             {children}
         </GameContext.Provider>
