@@ -47,6 +47,7 @@ interface GameState {
     shadowsEnabled: boolean;
     shinyIds: Set<number>;
     typeLocksEnabled: boolean;
+    dexsanityEnabled: boolean;
     legendaryGating: number;
     regionPasses: Set<string>;
     typeUnlocks: Set<string>;
@@ -171,6 +172,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [logs, setLogs] = useState<LogEntry[]>([]);
     const [selectedPokemonId, setSelectedPokemonId] = useState<number | null>(null);
     const [typeLocksEnabled, setTypeLocksEnabled] = useState(false);
+    const [dexsanityEnabled, setDexsanityEnabled] = useState(true);
     const [legendaryGating, setLegendaryGating] = useState(0);
     const [regionPasses, setRegionPasses] = useState<Set<string>>(new Set());
     const [typeUnlocks, setTypeUnlocks] = useState<Set<string>>(new Set());
@@ -424,6 +426,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return next;
         });
 
+        // With dexsanity=off there are no per-Pokemon AP locations, so only update local state.
+        // Milestone counting reads from checkedIds, so the count still works correctly.
+        if (!dexsanityEnabled) return;
+
         const locationId = LOCATION_OFFSET + id;
 
         // Use the library's proper `authenticated` property — this checks both socket connection and AP login
@@ -456,7 +462,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
         };
         doReconnect();
-    }, [isConnected]);
+    }, [isConnected, dexsanityEnabled]);
 
 
 
@@ -582,6 +588,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         // --- ARCHIPELAGO PROGRESSION ---
+        // When dexsanity is off, there are no per-Pokemon unlock items or locations.
+        // All Pokemon within the active generation are freely guessable.
+        // Type locks only gate type-milestone location checks, not individual guessing.
+        if (!dexsanityEnabled) {
+            return { canGuess: true };
+        }
+
         // 1. Missing Pokemon Unlock Check
         if (!unlockedIds.has(id)) {
             return {
@@ -608,7 +621,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         return { canGuess: true };
-    }, [gameMode, generationFilter, typeLocksEnabled, typeUnlocks, unlockedIds, pokemonMetadata]);
+    }, [gameMode, generationFilter, typeLocksEnabled, dexsanityEnabled, typeUnlocks, unlockedIds, pokemonMetadata]);
 
     useEffect(() => {
         isPokemonGuessableRef.current = isPokemonGuessable;
@@ -774,6 +787,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                     // Logic settings
                     setTypeLocksEnabled(!!slotData.type_locks);
+                    // dexsanity defaults to true for older APWorld versions that don't send the field
+                    setDexsanityEnabled(slotData.dexsanity !== undefined ? !!slotData.dexsanity : true);
                     setLegendaryGating(slotData.legendary_gating ?? 0);
 
                     // Generation scaling
@@ -1328,6 +1343,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setSelectedPokemonId,
             getLocationName,
             typeLocksEnabled,
+            dexsanityEnabled,
             legendaryGating,
             regionPasses,
             typeUnlocks,
