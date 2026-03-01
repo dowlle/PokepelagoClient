@@ -588,15 +588,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         // --- ARCHIPELAGO PROGRESSION ---
-        // When dexsanity is off, there are no per-Pokemon unlock items or locations.
-        // All Pokemon within the active generation are freely guessable.
-        // Type locks only gate type-milestone location checks, not individual guessing.
-        if (!dexsanityEnabled) {
-            return { canGuess: true };
-        }
-
-        // 1. Missing Pokemon Unlock Check
-        if (!unlockedIds.has(id)) {
+        // 1. Pokemon Unlock Check (dexsanity=on only)
+        // When dexsanity is off, no per-Pokemon unlock items exist — skip this check.
+        if (dexsanityEnabled && !unlockedIds.has(id)) {
             return {
                 canGuess: false,
                 reason: 'You have not found this Pokemon yet!',
@@ -604,7 +598,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             };
         }
 
-        // 2. Type Locks Check
+        // 2. Type Locks Check (applies regardless of dexsanity)
+        // With dexsanity=off, Type Keys still gate guessing Pokemon of that type, providing
+        // the same type-based progression as dexsanity=on.
         if (typeLocksEnabled) {
             const missingTypes = data.types.filter((t: string) => {
                 const cType = t.charAt(0).toUpperCase() + t.slice(1);
