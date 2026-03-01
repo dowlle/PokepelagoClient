@@ -472,7 +472,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         let sentChecks = false;
         const newChecked = new Set<number>();
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < 8; i++) {
             const localId = STARTER_OFFSET + i;
             if (!checkedIds.has(localId)) {
                 clientRef.current.check(LOCATION_OFFSET + localId);
@@ -588,6 +588,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         // --- ARCHIPELAGO PROGRESSION ---
+        // 0. Generation range check — Pokemon beyond the active gen are never guessable.
+        if (id > activePokemonLimit) {
+            return { canGuess: false, reason: 'This Pokemon is not in your active generation.' };
+        }
+
         // 1. Pokemon Unlock Check (dexsanity=on only)
         // When dexsanity is off, no per-Pokemon unlock items exist — skip this check.
         if (dexsanityEnabled && !unlockedIds.has(id)) {
@@ -617,7 +622,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         return { canGuess: true };
-    }, [gameMode, generationFilter, typeLocksEnabled, dexsanityEnabled, typeUnlocks, unlockedIds, pokemonMetadata]);
+    }, [gameMode, generationFilter, activePokemonLimit, typeLocksEnabled, dexsanityEnabled, typeUnlocks, unlockedIds, pokemonMetadata]);
 
     useEffect(() => {
         isPokemonGuessableRef.current = isPokemonGuessable;
@@ -714,8 +719,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         ...(packet.missing_locations || []),
                         ...(packet.checked_locations || [])
                     ];
-                    // The new offset is 8560000, so any location ID between 8560000 and 8569999 means it's the new apworld
-                    const isNewVersion = allLocs.some((id: number) => id >= 8560000 && id < 8570000);
+                    // New APWorld always sends 'dexsanity' in slot_data (reliable signal).
+                    // Also check location ID ranges: new Pokemon Guess locs are 8560001-8561025,
+                    // new starting locs are 8660000+. Dexsanity=off has no Guess locs but will
+                    // always have starting or milestone locs outside the old legacy range.
+                    const isNewVersion =
+                        (typeof packet.slot_data === 'object' && packet.slot_data !== null && 'dexsanity' in packet.slot_data) ||
+                        allLocs.some((id: number) => (id >= 8560000 && id < 8570000) || id >= 8660000);
                     if (isNewVersion) {
                         LOCATION_OFFSET = 8560000;
                         STARTER_OFFSET = 100_000;
