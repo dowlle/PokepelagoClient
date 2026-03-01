@@ -143,6 +143,8 @@ interface GameContextType extends GameState {
     toast: ToastMessage | null;
     showToast: (type: ToastMessage['type'], message: string) => void;
     locationOffset: number;
+    STARTER_OFFSET: number;
+    MILESTONE_OFFSET: number;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -491,31 +493,40 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             let totalCatches = 0;
 
             // Count everything we've guessed so far (Checked Locations)
+            // Valid Pokémon IDs are from 1 up to 1025.
+            // We avoid counting Milestone and Type Milestone locations by checking the offset.
             Array.from(checkedIds).forEach(id => {
-                if (id >= STARTER_OFFSET && id < STARTER_OFFSET + 20) return; // Skip Oak's Lab starting items
-                if (id >= MILESTONE_OFFSET && id < MILESTONE_OFFSET + 2000) return; // Skip Global Milestones
-                if (id >= TYPE_MILESTONE_OFFSET) return; // Skip Type Milestones
+                // Skip Oak's Lab/Starters range (STARTER_OFFSET to STARTER_OFFSET + 20)
+                if (id >= STARTER_OFFSET && id < STARTER_OFFSET + 20) return;
 
-                totalCatches++;
-                const data = (pokemonMetadata as any)[id];
-                if (!data) return;
+                // Skip Milestones and Type Milestones based on detected offsets
+                if (id >= MILESTONE_OFFSET) return;
 
-                // Types
-                data.types.forEach((t: string) => {
-                    const cType = t.charAt(0).toUpperCase() + t.slice(1);
-                    typeCounts[cType] = (typeCounts[cType] || 0) + 1;
-                });
+                // If ID is a valid Pokemon ID (1-1025)
+                if (id >= 1 && id <= 1025) {
+                    totalCatches++;
+                    const data = (pokemonMetadata as any)[id];
+                    if (!data) return;
+
+                    // Count types for type milestones
+                    data.types.forEach((t: string) => {
+                        const cType = t.charAt(0).toUpperCase() + t.slice(1);
+                        typeCounts[cType] = (typeCounts[cType] || 0) + 1;
+                    });
+                }
             });
 
-            // 1. Global Milestone Locations (1000 + count)
+            // 1. Global Milestone Locations (MILESTONE_OFFSET + count)
+            // This list should match Locations.py exactly.
             const globalMilestones = [
-                1, 5, 10,
-                ...Array.from({ length: 37 }, (_, i) => (i + 2) * 10), // 20, 30, ..., 380
-                148, 248, 383
+                1, 2, 5, 10, 15, 20, 30, 40, 50, 60, 70, 80, 90, 100, 150, 250, 400, 600, 800, 1000,
+                148, 248, 383, 490, 646, 718, 806, 895, 1022
             ].filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b);
+
             globalMilestones.forEach(count => {
-                const newCatches = Math.max(0, totalCatches - 3);
-                if (newCatches >= count) {
+                // Rules.py uses Has("Caught Pokemon", count + STARTER_OFFSET)
+                // totalCatches and rawCount already include the starters (pre-collected).
+                if (totalCatches >= count) {
                     const apLocationId = LOCATION_OFFSET + MILESTONE_OFFSET + count;
                     const localId = apLocationId - LOCATION_OFFSET;
                     if (!checkedIds.has(localId)) {
@@ -525,11 +536,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
             });
 
-            // 2. Type-Specific Milestones (2000 + (index * 50) + step)
+            // 2. Type-Specific Milestones (TYPE_MILESTONE_OFFSET + (index * TYPE_MILESTONE_MULTIPLIER) + step)
             const typesList = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
-            const typeSteps = [1, 2, 5, 10, 15, 20, 30, 40, 50];
+            const typeSteps = [1, 2, 5, 10, 20, 35, 50];
 
-            const starterTypeCounts: Record<string, number> = {
+            // Starter type offsets: Bulbasaur (Grass/Poison), Charmander (Fire), Squirtle (Water)
+            const starterTypeOffsets: Record<string, number> = {
                 "Grass": 1,
                 "Poison": 1,
                 "Fire": 1,
@@ -537,14 +549,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             };
 
             typesList.forEach((typeName, index) => {
-                // Archipelago Logic restricts type milestones until you have the Type Key natively
-                if (typeLocksEnabled && !typeUnlocks.has(typeName)) return;
-
                 const rawCount = typeCounts[typeName] || 0;
-                const newTypeCatches = Math.max(0, rawCount - (starterTypeCounts[typeName] || 0));
+                const offset = starterTypeOffsets[typeName] || 0;
 
                 typeSteps.forEach(step => {
-                    if (newTypeCatches >= step) {
+                    if (rawCount >= step + offset) {
                         const apLocationId = LOCATION_OFFSET + TYPE_MILESTONE_OFFSET + (index * TYPE_MILESTONE_MULTIPLIER) + step;
                         const localId = apLocationId - LOCATION_OFFSET;
                         if (!checkedIds.has(localId)) {
@@ -610,9 +619,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!clientRef.current || !isConnected || gameMode !== 'archipelago') return;
         if (goalCount === undefined) return;
 
-        // Count Pokémon guess locations only (IDs 1–1025, excluding Oak's Lab 500-519 and milestones 1000+)
-        const guessedCount = Array.from(checkedIds).filter(id => id >= 1 && id < 500).length
-            + Array.from(checkedIds).filter(id => id >= 520 && id < 1000).length;
+        // Count Pokémon guess locations only (IDs 1–1025)
+        // Excludes Oak's Lab, Milestone, or Type Milestone locations by checking the offset.
+        const guessedCount = Array.from(checkedIds).filter(id => {
+            if (id >= STARTER_OFFSET && id < STARTER_OFFSET + 20) return false;
+            if (id >= MILESTONE_OFFSET) return false;
+            return id >= 1 && id <= 1025;
+        }).length;
 
         if (guessedCount >= goalCount) {
             console.log(`Goal met! ${guessedCount}/${goalCount} Pokémon guessed. Sending CLIENT_GOAL.`);
@@ -1356,7 +1369,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setSpriteRefreshCounter,
             toast,
             showToast,
-            locationOffset: LOCATION_OFFSET
+            locationOffset: LOCATION_OFFSET,
+            STARTER_OFFSET,
+            MILESTONE_OFFSET
         }}>
             {children}
         </GameContext.Provider>

@@ -32,11 +32,17 @@ const GameContent: React.FC = () => {
   const [isDebugVisible, setIsDebugVisible] = React.useState(false);
   const [debugType, setDebugType] = React.useState(POKEMON_TYPES[0]);
 
-  // Only count Pokémon guess locations (IDs 1-499 and 520-999).
-  // Excludes Oak's Lab freebie locations (500-519) and milestone locations (1000+).
+  // Only count Pokémon guess locations (IDs 1-1025).
+  // Excludes Oak's Lab, Milestone, or Type Milestone locations.
+  const { STARTER_OFFSET, MILESTONE_OFFSET } = useGame() as any; // Temporary cast to access hidden constants if needed, or better, exposed ones
+  // Actually, let's use the exposed locationOffset and just assume IDs < 10000 (MILESTONE_OFFSET)
   const guessedPokemonCount = React.useMemo(() =>
-    Array.from(checkedIds).filter(id => (id >= 1 && id < 500) || (id >= 520 && id < 1000)).length,
-    [checkedIds]);
+    Array.from(checkedIds).filter(id =>
+      id >= 1 && id <= 1025 &&
+      !(id >= (STARTER_OFFSET || 500) && id < (STARTER_OFFSET || 500) + 20) &&
+      id < (MILESTONE_OFFSET || 1000)
+    ).length,
+    [checkedIds, STARTER_OFFSET, MILESTONE_OFFSET]);
 
   // Expose debug toggle to window for GlobalGuessInput to call
   React.useEffect(() => {
@@ -199,10 +205,10 @@ const GameContent: React.FC = () => {
         {/* Debug Controls - inside Main/Sidebar container to be positioned at bottom of viewport */}
         {isDebugVisible && (
           <div className="absolute bottom-0 left-0 right-0 z-20 bg-gray-900/95 backdrop-blur-sm border-t border-gray-800 transition-all duration-300" style={{ right: isSidebarOpen ? '320px' : '0' }}>
-            <div className="max-w-screen-xl mx-auto flex flex-col gap-2 px-4 py-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-500 uppercase tracking-wider font-bold">Debug Controls</span>
-                <div className="flex gap-2">
+            <div className="max-w-screen-xl mx-auto flex flex-col gap-3 px-4 py-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="text-xs text-gray-500 uppercase tracking-wider font-bold shrink-0">Debug Controls</span>
+                <div className="flex flex-wrap gap-2">
                   <button onClick={() => (window as any).runAutoComplete?.()} className="px-3 py-1 bg-green-900/50 hover:bg-green-900/80 text-green-200 rounded text-xs border border-green-700/50 whitespace-nowrap">Auto-Complete Start</button>
                   <button onClick={() => (window as any).stopAutoComplete?.()} className="px-3 py-1 bg-red-900/50 hover:bg-red-900/80 text-red-200 rounded text-xs border border-red-700/50 whitespace-nowrap">Auto-Complete Stop</button>
                   <button onClick={unlockRandom} className="px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded text-xs border border-gray-700 whitespace-nowrap">Unlock 1</button>

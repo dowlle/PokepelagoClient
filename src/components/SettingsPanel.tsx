@@ -225,7 +225,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                             </div>
                         )}
                         <div className={`grid gap-2 ${isEmbedded ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'}`}>
-                            {GENERATIONS.slice(0, 3).map((gen, index) => {
+                            {GENERATIONS.map((gen, index) => {
                                 const isSelected = generationFilter.includes(index);
                                 return (
                                     <button
