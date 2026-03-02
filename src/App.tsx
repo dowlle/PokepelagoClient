@@ -8,6 +8,7 @@ import { ArchipelagoLog } from './components/ArchipelagoLog';
 import { PokemonDetails } from './components/PokemonDetails';
 import { TypeStatus } from './components/TypeStatus';
 import { SplashScreen } from './components/SplashScreen';
+import { StartGameOverlay } from './components/StartGameOverlay';
 import { getCleanName } from './utils/pokemon';
 
 const POKEMON_TYPES = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
@@ -19,8 +20,15 @@ const GameContent: React.FC = () => {
     typeUnlocks,
     unlockType, lockType, clearAllTypes,
     setShuffleEndTime, setDerpyfiedIds, setReleasedIds, derpemonIndex, releasedIds, derpyfiedIds, setSpriteRefreshCounter, showToast,
-    STARTER_OFFSET, MILESTONE_OFFSET
+    STARTER_OFFSET, MILESTONE_OFFSET,
+    startingLocationsEnabled, gameStarted, connectionKey,
   } = useGame();
+
+  const [adventureOverlayDismissed, setAdventureOverlayDismissed] = React.useState(false);
+  // Reset on every new connection (covers both disconnect→reconnect and game-switching).
+  React.useEffect(() => {
+    setAdventureOverlayDismissed(false);
+  }, [connectionKey]);
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
   const [sidebarTab, setSidebarTab] = React.useState<'log' | 'settings'>(() => {
     const defaultTab = localStorage.getItem('pokepelago_defaultTab') as 'log' | 'settings';
@@ -250,6 +258,10 @@ const GameContent: React.FC = () => {
       </div>
 
       <PokemonDetails />
+
+      {isConnected && gameMode === 'archipelago' && startingLocationsEnabled && !gameStarted && !adventureOverlayDismissed && (
+        <StartGameOverlay onDismiss={() => setAdventureOverlayDismissed(true)} />
+      )}
     </div>
   );
 };
