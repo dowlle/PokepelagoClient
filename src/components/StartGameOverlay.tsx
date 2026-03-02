@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { WifiOff, BookOpen } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { ConnectionManager } from './ConnectionManager';
