@@ -176,6 +176,7 @@ let TYPE_ITEM_OFFSET = 2000;
 let USEFUL_ITEM_OFFSET = 3000;
 let TRAP_ITEM_OFFSET = 4000;
 const REGION_PASS_OFFSET = 5000; // ITEM_OFFSET + 5000 + region_index
+let STARTER_COUNT = 8; // 8 for new APWorld, 20 for legacy
 const GAME_REGIONS_ORDER = ["Kanto", "Johto", "Hoenn", "Sinnoh", "Unova", "Kalos", "Alola", "Galar", "Hisui", "Paldea"];
 
 export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -504,7 +505,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const startGame = useCallback(() => {
         if (!clientRef.current || !isConnected || gameMode !== 'archipelago') return;
         const newChecked = new Set<number>();
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < STARTER_COUNT; i++) {
             const localId = STARTER_OFFSET + i;
             if (!checkedIds.has(localId)) {
                 clientRef.current.check(LOCATION_OFFSET + localId);
@@ -820,6 +821,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         TYPE_ITEM_OFFSET = 2000;
                         USEFUL_ITEM_OFFSET = 3000;
                         TRAP_ITEM_OFFSET = 4000;
+                        STARTER_COUNT = 8;
                         setDetectedApWorldVersion('new');
                         console.log('[GameContext] Detected Gen 9+ APWorld (Location Offset: 8560000)');
                     } else {
@@ -831,6 +833,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         TYPE_ITEM_OFFSET = 1100;
                         USEFUL_ITEM_OFFSET = 2000;
                         TRAP_ITEM_OFFSET = 3000;
+                        STARTER_COUNT = 20;
                         setDetectedApWorldVersion('legacy');
                         console.log('[GameContext] Detected Legacy APWorld (Location Offset: 8571000)');
                         // Warn in log that legacy APWorld has limited feature support
@@ -1521,7 +1524,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // gameStarted: true if starting locations are disabled OR any starter location already checked
     const gameStarted = !startingLocationsEnabled ||
-        [0, 1, 2, 3, 4, 5, 6, 7].some(i => checkedIds.has(STARTER_OFFSET + i));
+        Array.from({ length: STARTER_COUNT }, (_, i) => i).some(i => checkedIds.has(STARTER_OFFSET + i));
 
     // isPokemonGuessable moved up
     return (
