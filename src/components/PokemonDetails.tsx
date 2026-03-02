@@ -30,7 +30,8 @@ export const PokemonDetails: React.FC = () => {
         scoutLocation,
         isConnected,
         derpyfiedIds,
-        spriteRefreshCounter
+        spriteRefreshCounter,
+        locationOffset
     } = useGame();
 
     const [details, setDetails] = useState<any>(null);
@@ -40,6 +41,9 @@ export const PokemonDetails: React.FC = () => {
     const [itemCooldown, setItemCooldown] = useState<string | null>(null);
     const [spriteUrl, setSpriteUrl] = useState<string | null>(null);
     const [scoutedItem, setScoutedItem] = useState<{ itemName: string, playerName: string } | null>(null);
+    const [gearSpriteLoaded, setGearSpriteLoaded] = useState(false);
+    const [masterBallSpriteLoaded, setMasterBallSpriteLoaded] = useState(false);
+    const [pokedexSpriteLoaded, setPokedexSpriteLoaded] = useState(false);
     const gifRef = useRef<HTMLImageElement>(null);
 
     const pokemon = allPokemon.find(p => p.id === selectedPokemonId);
@@ -91,7 +95,7 @@ export const PokemonDetails: React.FC = () => {
 
             // Scout item contents
             if (isChecked && isConnected) {
-                scoutLocation(selectedPokemonId + 8571000).then(res => {
+                scoutLocation(selectedPokemonId + locationOffset).then(res => {
                     if (res) setScoutedItem(res);
                 }).catch(e => console.warn('Failed to scout location', e));
             }
@@ -99,7 +103,7 @@ export const PokemonDetails: React.FC = () => {
             setDetails(null);
             setSpriteUrl(null);
         }
-    }, [selectedPokemonId, uiSettings.spriteSet, allPokemon, isChecked, isConnected, scoutLocation, shinyIds, getSpriteUrl, spriteRefreshCounter]);
+    }, [selectedPokemonId, uiSettings.spriteSet, allPokemon, isChecked, isConnected, scoutLocation, shinyIds, getSpriteUrl, spriteRefreshCounter, locationOffset]);
 
     if (!selectedPokemonId || !pokemon) return null;
 
@@ -136,8 +140,8 @@ export const PokemonDetails: React.FC = () => {
         displayName = pokemon.name.slice(0, 3).toUpperCase() + '...';
     }
 
-    // Location ID = National Dex ID + 8571000
-    const unlockLocationName = getLocationName(selectedPokemonId + 8571000);
+    // Location ID = National Dex ID + locationOffset
+    const unlockLocationName = getLocationName(selectedPokemonId + locationOffset);
 
     // Derpemon credit (shown for all unlocked Pokémon when Derpemon set is active OR if hit by Derp Trap)
     const derpemonCreator = (uiSettings.spriteSet === 'derpemon' || derpyfiedIds.has(selectedPokemonId))
@@ -145,8 +149,8 @@ export const PokemonDetails: React.FC = () => {
         : null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-300">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setSelectedPokemonId(null)}>
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
                 {/* Header */}
                 <div className="absolute top-4 right-4 z-10">
                     <button
@@ -373,7 +377,7 @@ export const PokemonDetails: React.FC = () => {
                                         `}
                                     >
                                         <div className="w-10 h-10 flex items-center justify-center mb-1">
-                                            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-gear.png" className="w-8 h-8 object-contain" alt="Pokegear" />
+                                            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-radar.png" style={{ imageRendering: 'pixelated' }} className={`w-8 h-8 object-contain transition-opacity duration-200 ${gearSpriteLoaded ? 'opacity-100' : 'opacity-0'}`} alt="Poke Radar" onLoad={() => setGearSpriteLoaded(true)} />
                                         </div>
                                         <span className="text-[10px] font-black uppercase tracking-tighter text-gray-300">Gear</span>
                                         <div className="absolute -top-2 -right-2 w-6 h-6 bg-indigo-600 rounded-full border-2 border-gray-900 flex items-center justify-center text-[10px] font-black text-white shadow-lg">
@@ -393,7 +397,7 @@ export const PokemonDetails: React.FC = () => {
                                         `}
                                     >
                                         <div className="w-10 h-10 flex items-center justify-center mb-1">
-                                            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/pokedex.png" className="w-8 h-8 object-contain" alt="Pokedex" />
+                                            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/ss-ticket.png" style={{ imageRendering: 'pixelated' }} className={`w-8 h-8 object-contain transition-opacity duration-200 ${pokedexSpriteLoaded ? 'opacity-100' : 'opacity-0'}`} alt="SS Ticket" onLoad={() => setPokedexSpriteLoaded(true)} />
                                         </div>
                                         <span className="text-[10px] font-black uppercase tracking-tighter text-gray-300">Hints</span>
                                         <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-600 rounded-full border-2 border-gray-900 flex items-center justify-center text-[10px] font-black text-white shadow-lg">
@@ -408,7 +412,7 @@ export const PokemonDetails: React.FC = () => {
                                         className="group relative flex flex-col items-center justify-center p-3 rounded-2xl border bg-gray-800/40 border-gray-700/50 hover:bg-red-900/20 hover:border-red-500/40 active:scale-95 disabled:opacity-30 disabled:grayscale disabled:hover:bg-gray-800/40 transition-all"
                                     >
                                         <div className="w-10 h-10 flex items-center justify-center mb-1">
-                                            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/master-ball.png" className="w-8 h-8 object-contain" alt="Master Ball" />
+                                            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/master-ball.png" style={{ imageRendering: 'pixelated' }} className={`w-8 h-8 object-contain transition-opacity duration-200 ${masterBallSpriteLoaded ? 'opacity-100' : 'opacity-0'}`} alt="Master Ball" onLoad={() => setMasterBallSpriteLoaded(true)} />
                                         </div>
                                         <span className="text-[10px] font-black uppercase tracking-tighter text-gray-300">Reveal</span>
                                         <div className="absolute -top-2 -right-2 w-6 h-6 bg-red-600 rounded-full border-2 border-gray-900 flex items-center justify-center text-[10px] font-black text-white shadow-lg">

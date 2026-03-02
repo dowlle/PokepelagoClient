@@ -13,6 +13,7 @@ import { getSprite, countSprites, generateSpriteKey } from '../services/spriteSe
 import { getCleanName } from '../utils/pokemon';
 import { resolveExternalSpriteUrl } from '../utils/pokesprite';
 import { loadDerpemonIndex, getDerpemonUrl, type DerpemonIndex } from '../services/derpemonService';
+import { updateProfile } from '../services/connectionManagerService';
 
 export interface LogEntry {
     id: string;
@@ -47,6 +48,7 @@ interface GameState {
     shadowsEnabled: boolean;
     shinyIds: Set<number>;
     typeLocksEnabled: boolean;
+    dexsanityEnabled: boolean;
     legendaryGating: number;
     regionPasses: Set<string>;
     typeUnlocks: Set<string>;
@@ -59,9 +61,13 @@ interface GameState {
         region?: string;
     };
     goalCount?: number;       // raw count from slot_data (how many Pokémon to guess)
-    activePokemonLimit: number; // max Pokémon index in this generation (151/251/386)
+    activePokemonLimit: number; // max Pokémon index in this generation (legacy compat)
+    activeRegions: Record<string, [number, number]>; // region name -> [low, high] ID range
+    startingRegion: string;
+    regionLocksEnabled: boolean;
     logs: LogEntry[];
     gameMode: 'archipelago' | 'standalone' | null;
+    startingLocationsEnabled: boolean;
     shuffleEndTime: number;
     derpyfiedIds: Set<number>;
     releasedIds: Set<number>;
@@ -89,7 +95,7 @@ interface GameContextType extends GameState {
     updateUiSettings: (settings: Partial<UISettings>) => void;
     isConnected: boolean;
     connectionError: string | null;
-    connect: (info: ConnectionInfo) => Promise<void>;
+    connect: (info: ConnectionInfo, profileId?: string) => Promise<void>;
     disconnect: () => void;
     addLog: (entry: Omit<LogEntry, 'id' | 'timestamp'>) => void;
     say: (text: string) => void;
@@ -132,6 +138,13 @@ interface GameContextType extends GameState {
     clearAllTypes: () => void;
     goalCount: number | undefined;
     activePokemonLimit: number;
+    activeRegions: Record<string, [number, number]>;
+    startingRegion: string;
+    regionLocksEnabled: boolean;
+    startingLocationsEnabled: boolean;
+    gameStarted: boolean;
+    startGame: () => void;
+    connectionKey: number;
     shuffleEndTime: number;
     derpyfiedIds: Set<number>;
     releasedIds: Set<number>;
@@ -142,13 +155,28 @@ interface GameContextType extends GameState {
     setSpriteRefreshCounter: React.Dispatch<React.SetStateAction<number>>;
     toast: ToastMessage | null;
     showToast: (type: ToastMessage['type'], message: string) => void;
+    locationOffset: number;
+    STARTER_OFFSET: number;
+    MILESTONE_OFFSET: number;
+    detectedApWorldVersion: 'legacy' | 'new' | 'unknown';
+    currentProfileId: string | null;
+    setCurrentProfileId: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
 // ID Offsets (must match apworld)
-const ITEM_OFFSET = 8574000;
-const LOCATION_OFFSET = 8571000;
+let ITEM_OFFSET = 8574000;
+let LOCATION_OFFSET = 8571000;
+let STARTER_OFFSET = 500;
+let MILESTONE_OFFSET = 1000;
+let TYPE_MILESTONE_OFFSET = 2000;
+let TYPE_MILESTONE_MULTIPLIER = 50;
+let TYPE_ITEM_OFFSET = 2000;
+let USEFUL_ITEM_OFFSET = 3000;
+let TRAP_ITEM_OFFSET = 4000;
+const REGION_PASS_OFFSET = 5000; // ITEM_OFFSET + 5000 + region_index
+const GAME_REGIONS_ORDER = ["Kanto", "Johto", "Hoenn", "Sinnoh", "Unova", "Kalos", "Alola", "Galar", "Hisui", "Paldea"];
 
 export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [allPokemon, setAllPokemon] = useState<PokemonRef[]>([]);
@@ -161,17 +189,26 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [logs, setLogs] = useState<LogEntry[]>([]);
     const [selectedPokemonId, setSelectedPokemonId] = useState<number | null>(null);
     const [typeLocksEnabled, setTypeLocksEnabled] = useState(false);
+    const [dexsanityEnabled, setDexsanityEnabled] = useState(true);
     const [legendaryGating, setLegendaryGating] = useState(0);
     const [regionPasses, setRegionPasses] = useState<Set<string>>(new Set());
     const [typeUnlocks, setTypeUnlocks] = useState<Set<string>>(new Set());
-    const [activePokemonLimit, setActivePokemonLimit] = useState<number>(386); // default to Gen 3
+    const [activePokemonLimit, setActivePokemonLimit] = useState<number>(386); // legacy compat
+    const [activeRegions, setActiveRegions] = useState<Record<string, [number, number]>>({});
+    const [startingRegion, setStartingRegion] = useState<string>("");
+    const [regionLocksEnabled, setRegionLocksEnabled] = useState<boolean>(false);
     const [goalCount, setGoalCount] = useState<number | undefined>(undefined);
+    const [startingLocationsEnabled, setStartingLocationsEnabled] = useState(true);
+    const [connectionKey, setConnectionKey] = useState(0);
 
     const [shuffleEndTime, setShuffleEndTime] = useState<number>(0);
     const [derpyfiedIds, setDerpyfiedIds] = useState<Set<number>>(new Set());
     const [releasedIds, setReleasedIds] = useState<Set<number>>(new Set());
     const [spriteRefreshCounter, setSpriteRefreshCounter] = useState<number>(0);
     const [toast, setToast] = useState<ToastMessage | null>(null);
+    const [detectedApWorldVersion, setDetectedApWorldVersion] = useState<'legacy' | 'new' | 'unknown'>('unknown');
+    const [currentProfileId, setCurrentProfileId] = useState<string | null>(null);
+    const isNewApWorldRef = useRef(false);
 
     const showToast = useCallback((type: ToastMessage['type'], message: string) => {
         setToast({ type, message, id: Date.now() });
@@ -298,8 +335,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             name = clientRef.current.package.lookupLocationName(clientRef.current.game, locationId, false);
         }
 
-        if (!name && locationId > 8571000 && locationId <= 8572025) {
-            const pkmnId = locationId - 8571000;
+        if (!name && locationId > LOCATION_OFFSET && locationId <= LOCATION_OFFSET + Math.max(1050, MILESTONE_OFFSET)) {
+            const pkmnId = locationId - LOCATION_OFFSET;
             const pkmn = allPokemon.find(p => p.id === pkmnId);
             if (pkmn) {
                 name = `Pokémon #${pkmnId} (${getCleanName(pkmn.name)})`;
@@ -342,6 +379,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const clientRef = useRef<Client | null>(null);
     const isConnectingRef = useRef<boolean>(false);
+    const storageReadyRef = useRef(false);
     const checkedIdsRef = useRef<Set<number>>(checkedIds);
     const isPokemonGuessableRef = useRef<any>(null); // To avoid dependency cycle in useEffect
 
@@ -414,6 +452,18 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return next;
         });
 
+        // With dexsanity=off there are no per-Pokemon AP locations, so only update local state.
+        // Milestone counting reads from checkedIds, so the count still works correctly.
+        // Persist the guess to DataStorage so it survives reconnects.
+        if (!dexsanityEnabled) {
+            if (clientRef.current?.authenticated && id >= 1 && id <= 1025) {
+                const team = clientRef.current.players.self.team;
+                const slot = clientRef.current.players.self.slot;
+                clientRef.current.storage.prepare(`pokepelago_team_${team}_slot_${slot}_caught`, []).add([id]).commit();
+            }
+            return;
+        }
+
         const locationId = LOCATION_OFFSET + id;
 
         // Use the library's proper `authenticated` property — this checks both socket connection and AP login
@@ -446,25 +496,22 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
         };
         doReconnect();
-    }, [isConnected]);
+    }, [isConnected, dexsanityEnabled]);
 
 
 
-    // --- Auto-check Oak's Lab (Starting Items) ---
-    useEffect(() => {
+    // --- startGame: sends Oak's Lab (starting location) checks on player request ---
+    const startGame = useCallback(() => {
         if (!clientRef.current || !isConnected || gameMode !== 'archipelago') return;
-
-        let sentChecks = false;
         const newChecked = new Set<number>();
-        for (let i = 500; i < 520; i++) {
-            if (!checkedIds.has(i)) {
-                clientRef.current.check(LOCATION_OFFSET + i);
-                newChecked.add(i);
-                sentChecks = true;
+        for (let i = 0; i < 8; i++) {
+            const localId = STARTER_OFFSET + i;
+            if (!checkedIds.has(localId)) {
+                clientRef.current.check(LOCATION_OFFSET + localId);
+                newChecked.add(localId);
             }
         }
-
-        if (sentChecks) {
+        if (newChecked.size > 0) {
             setCheckedIds(prev => {
                 const next = new Set(prev);
                 newChecked.forEach(id => next.add(id));
@@ -482,31 +529,41 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             let totalCatches = 0;
 
             // Count everything we've guessed so far (Checked Locations)
+            // Valid Pokémon IDs are from 1 up to 1025.
+            // We avoid counting Milestone and Type Milestone locations by checking the offset.
             Array.from(checkedIds).forEach(id => {
-                if (id >= 500 && id < 520) return; // Skip Oak's Lab starting items
-                if (id >= 1000) return; // Skip Milestones
+                // Skip Oak's Lab/Starters range (STARTER_OFFSET to STARTER_OFFSET + 20)
+                if (id >= STARTER_OFFSET && id < STARTER_OFFSET + 20) return;
 
-                totalCatches++;
-                const data = (pokemonMetadata as any)[id];
-                if (!data) return;
+                // Skip Milestones and Type Milestones based on detected offsets
+                if (id >= MILESTONE_OFFSET) return;
 
-                // Types
-                data.types.forEach((t: string) => {
-                    const cType = t.charAt(0).toUpperCase() + t.slice(1);
-                    typeCounts[cType] = (typeCounts[cType] || 0) + 1;
-                });
+                // If ID is a valid Pokemon ID (1-1025)
+                if (id >= 1 && id <= 1025) {
+                    totalCatches++;
+                    const data = (pokemonMetadata as any)[id];
+                    if (!data) return;
+
+                    // Count types for type milestones
+                    data.types.forEach((t: string) => {
+                        const cType = t.charAt(0).toUpperCase() + t.slice(1);
+                        typeCounts[cType] = (typeCounts[cType] || 0) + 1;
+                    });
+                }
             });
 
-            // 1. Global Milestone Locations (1000 + count)
+            // 1. Global Milestone Locations (MILESTONE_OFFSET + count)
+            // This list should match Locations.py exactly.
             const globalMilestones = [
-                1, 5, 10,
-                ...Array.from({ length: 37 }, (_, i) => (i + 2) * 10), // 20, 30, ..., 380
-                148, 248, 383
+                1, 2, 5, 10, 15, 20, 30, 40, 50, 60, 70, 80, 90, 100, 150, 250, 400, 600, 800, 1000,
+                148, 248, 383, 490, 646, 718, 806, 895, 1022
             ].filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b);
+
             globalMilestones.forEach(count => {
-                const newCatches = Math.max(0, totalCatches - 3);
-                if (newCatches >= count) {
-                    const apLocationId = LOCATION_OFFSET + 1000 + count;
+                // Rules.py uses Has("Caught Pokemon", count + STARTER_OFFSET)
+                // totalCatches and rawCount already include the starters (pre-collected).
+                if (totalCatches >= count) {
+                    const apLocationId = LOCATION_OFFSET + MILESTONE_OFFSET + count;
                     const localId = apLocationId - LOCATION_OFFSET;
                     if (!checkedIds.has(localId)) {
                         clientRef.current?.check(apLocationId);
@@ -515,35 +572,35 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
             });
 
-            // 2. Type-Specific Milestones (2000 + (index * 50) + step)
-            const typesList = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
-            const typeSteps = [1, 2, 5, 10, 15, 20, 30, 40, 50];
+            // 2. Type-Specific Milestones — only for legacy APWorld (removed in new APWorld)
+            if (!isNewApWorldRef.current) {
+                const typesList = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
+                const typeSteps = [1, 2, 5, 10, 20, 35, 50];
 
-            const starterTypeCounts: Record<string, number> = {
-                "Grass": 1,
-                "Poison": 1,
-                "Fire": 1,
-                "Water": 1
-            };
+                // Starter type offsets: Bulbasaur (Grass/Poison), Charmander (Fire), Squirtle (Water)
+                const starterTypeOffsets: Record<string, number> = {
+                    "Grass": 1,
+                    "Poison": 1,
+                    "Fire": 1,
+                    "Water": 1
+                };
 
-            typesList.forEach((typeName, index) => {
-                // Archipelago Logic restricts type milestones until you have the Type Key natively
-                if (typeLocksEnabled && !typeUnlocks.has(typeName)) return;
+                typesList.forEach((typeName, index) => {
+                    const rawCount = typeCounts[typeName] || 0;
+                    const offset = starterTypeOffsets[typeName] || 0;
 
-                const rawCount = typeCounts[typeName] || 0;
-                const newTypeCatches = Math.max(0, rawCount - (starterTypeCounts[typeName] || 0));
-
-                typeSteps.forEach(step => {
-                    if (newTypeCatches >= step) {
-                        const apLocationId = LOCATION_OFFSET + 2000 + (index * 50) + step;
-                        const localId = apLocationId - LOCATION_OFFSET;
-                        if (!checkedIds.has(localId)) {
-                            clientRef.current?.check(apLocationId);
-                            setCheckedIds(prev => new Set(prev).add(localId));
+                    typeSteps.forEach(step => {
+                        if (rawCount >= step + offset) {
+                            const apLocationId = LOCATION_OFFSET + TYPE_MILESTONE_OFFSET + (index * TYPE_MILESTONE_MULTIPLIER) + step;
+                            const localId = apLocationId - LOCATION_OFFSET;
+                            if (!checkedIds.has(localId)) {
+                                clientRef.current?.check(apLocationId);
+                                setCheckedIds(prev => new Set(prev).add(localId));
+                            }
                         }
-                    }
+                    });
                 });
-            });
+            }
         };
 
         checkExtendedLocations();
@@ -563,16 +620,43 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         // --- ARCHIPELAGO PROGRESSION ---
-        // 1. Missing Pokemon Unlock Check
-        if (!unlockedIds.has(id)) {
-            return {
-                canGuess: false,
-                reason: 'You have not found this Pokemon yet!',
-                missingPokemon: true
-            };
+        // 0. Region check — is this Pokemon in an active region?
+        if (Object.keys(activeRegions).length > 0) {
+            const inActiveRegion = Object.values(activeRegions).some(([low, high]) => id >= low && id <= high);
+            if (!inActiveRegion) {
+                return { canGuess: false, reason: 'This Pokemon is not in your active region.' };
+            }
+            // Region lock check — non-starting regions need a Region Pass
+            if (regionLocksEnabled) {
+                let pokemonRegion = "";
+                for (const [region, [low, high]] of Object.entries(activeRegions)) {
+                    if (id >= low && id <= high) { pokemonRegion = region; break; }
+                }
+                if (pokemonRegion && pokemonRegion !== startingRegion && !regionPasses.has(pokemonRegion)) {
+                    return {
+                        canGuess: false,
+                        reason: `Need ${pokemonRegion} Pass to access this Pokemon.`,
+                        missingRegion: pokemonRegion
+                    };
+                }
+            }
+        } else if (id > activePokemonLimit) {
+            // Legacy APWorld: fall back to limit-based check
+            return { canGuess: false, reason: 'This Pokemon is not in your active generation.' };
         }
 
-        // 2. Type Locks Check
+        // 1a. Legacy dexsanity unlock check.
+        // In v0.2.1 APWorld, each Pokemon had a "{Name} Unlock" item that must be received
+        // before the player can guess it. The new APWorld removed these items entirely.
+        if (gameMode === 'archipelago' && detectedApWorldVersion === 'legacy') {
+            if (!unlockedIds.has(id)) {
+                return { canGuess: false, reason: 'Waiting for this Pokémon\'s Unlock item.', missingPokemon: true };
+            }
+        }
+
+        // 1b. Type Locks Check (applies regardless of dexsanity)
+        // With dexsanity=off, Type Keys still gate guessing Pokemon of that type, providing
+        // the same type-based progression as dexsanity=on.
         if (typeLocksEnabled) {
             const missingTypes = data.types.filter((t: string) => {
                 const cType = t.charAt(0).toUpperCase() + t.slice(1);
@@ -589,7 +673,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         return { canGuess: true };
-    }, [gameMode, generationFilter, typeLocksEnabled, typeUnlocks, unlockedIds, pokemonMetadata]);
+    }, [gameMode, generationFilter, activePokemonLimit, activeRegions, startingRegion, regionLocksEnabled, regionPasses, typeLocksEnabled, typeUnlocks, pokemonMetadata, detectedApWorldVersion, unlockedIds]);
 
     useEffect(() => {
         isPokemonGuessableRef.current = isPokemonGuessable;
@@ -600,15 +684,23 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!clientRef.current || !isConnected || gameMode !== 'archipelago') return;
         if (goalCount === undefined) return;
 
-        // Count Pokémon guess locations only (IDs 1–1025, excluding Oak's Lab 500-519 and milestones 1000+)
-        const guessedCount = Array.from(checkedIds).filter(id => id >= 1 && id < 500).length
-            + Array.from(checkedIds).filter(id => id >= 520 && id < 1000).length;
+        // Count Pokémon guess locations only (IDs 1–1025)
+        // Excludes Oak's Lab, Milestone, Type Milestone, and released (ran away) Pokémon.
+        const guessedCount = Array.from(checkedIds).filter(id => {
+            if (id >= STARTER_OFFSET && id < STARTER_OFFSET + 20) return false;
+            if (id >= MILESTONE_OFFSET) return false;
+            if (releasedIds.has(id)) return false;
+            return id >= 1 && id <= 1025;
+        }).length;
 
         if (guessedCount >= goalCount) {
             console.log(`Goal met! ${guessedCount}/${goalCount} Pokémon guessed. Sending CLIENT_GOAL.`);
             clientRef.current.updateStatus(30); // 30 = ClientStatus.CLIENT_GOAL
+            if (currentProfileId) {
+                updateProfile(currentProfileId, { isGoaled: true, goaledAt: Date.now() });
+            }
         }
-    }, [checkedIds, isConnected, gameMode, goalCount]);
+    }, [checkedIds, isConnected, gameMode, goalCount, releasedIds, currentProfileId]);
 
     const addLog = useCallback((entry: Omit<LogEntry, 'id' | 'timestamp'>) => {
         setLogs(prev => [
@@ -627,18 +719,31 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, [isConnected]);
 
-    const connect = async (info: ConnectionInfo) => {
+    const connect = async (info: ConnectionInfo, profileId?: string) => {
         if (isConnectingRef.current) {
             console.log('Already connecting, ignoring request.');
             return;
         }
 
         isConnectingRef.current = true;
+        storageReadyRef.current = false;
         setConnectionError(null);
         setIsConnected(false);
 
+        // Stop any active ping interval — we'll restart it after a successful login.
+        // Do NOT manually disconnect the old client here: the server will kick the old
+        // session once the new connection authenticates. Manually disconnecting first
+        // and immediately reconnecting causes the server to close the new WebSocket while
+        // it's still tearing down the previous session. The orphan guard on the
+        // 'disconnected' handler below prevents the kicked client from clobbering state.
+        if (pingTimeoutRef.current) {
+            clearInterval(pingTimeoutRef.current as any);
+            pingTimeoutRef.current = null;
+        }
+
         const protocolsToTry = info.hostname.includes('://') ? [''] : ['wss://', 'ws://'];
         let lastError: any = null;
+        const oldClient = clientRef.current;
 
         for (const protocol of protocolsToTry) {
             try {
@@ -649,7 +754,19 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                 // Socket Event Handlers
                 client.socket.on('connectionRefused', (packet: ConnectionRefusedPacket) => {
-                    setConnectionError(`Connection refused: ${packet.errors?.join(', ') || 'Unknown error'}`);
+                    const errors = packet.errors || [];
+                    let msg = 'Connection refused.';
+                    if (errors.includes('InvalidSlot'))
+                        msg = `Slot "${info.slotName}" not found. Check that your name matches the YAML exactly.`;
+                    else if (errors.includes('InvalidPassword'))
+                        msg = 'Incorrect password.';
+                    else if (errors.includes('InvalidGame'))
+                        msg = `Slot "${info.slotName}" is not a Pokepelago game.`;
+                    else if (errors.includes('IncompatibleVersion'))
+                        msg = 'Archipelago version incompatible with this client.';
+                    else if (errors.length > 0)
+                        msg = `Connection refused: ${errors.join(', ')}`;
+                    setConnectionError(msg);
                     setIsConnected(false);
                     if (pingTimeoutRef.current) clearInterval(pingTimeoutRef.current);
                 });
@@ -663,7 +780,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                 // Properly detect disconnects using the library's built-in event.
                 // This fires whether the server drops us or we lose network.
+                // Guard against orphaned clients: when a new connect() supersedes this one,
+                // clientRef.current is updated to the new client. If this old client later
+                // gets kicked by the server, ignore the event so it can't clobber new state.
                 client.socket.on('disconnected', () => {
+                    if (clientRef.current !== client) return;
                     console.log('[GameContext] Disconnected from Archipelago server.');
                     setIsConnected(false);
                     setConnectionQuality('dead');
@@ -677,15 +798,61 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 client.socket.on('connected', (packet: ConnectedPacket) => {
                     console.log(`Connected to Archipelago via ${protocol || '(explicit protocol)'}!`, packet);
 
+                    // Detect APVersion based on offset
+                    const allLocs = [
+                        ...(packet.missing_locations || []),
+                        ...(packet.checked_locations || [])
+                    ];
+                    // New APWorld always sends 'dexsanity' in slot_data (reliable signal).
+                    // Also check location ID ranges: new Pokemon Guess locs are 8560001-8561025,
+                    // new starting locs are 8660000+. Dexsanity=off has no Guess locs but will
+                    // always have starting or milestone locs outside the old legacy range.
+                    const isNewVersion =
+                        (typeof packet.slot_data === 'object' && packet.slot_data !== null && 'dexsanity' in packet.slot_data) ||
+                        allLocs.some((id: number) => (id >= 8560000 && id < 8570000) || id >= 8660000);
+                    isNewApWorldRef.current = isNewVersion;
+                    if (isNewVersion) {
+                        LOCATION_OFFSET = 8560000;
+                        STARTER_OFFSET = 100_000;
+                        MILESTONE_OFFSET = 10_000;
+                        TYPE_MILESTONE_OFFSET = 20_000;
+                        TYPE_MILESTONE_MULTIPLIER = 1000;
+                        TYPE_ITEM_OFFSET = 2000;
+                        USEFUL_ITEM_OFFSET = 3000;
+                        TRAP_ITEM_OFFSET = 4000;
+                        setDetectedApWorldVersion('new');
+                        console.log('[GameContext] Detected Gen 9+ APWorld (Location Offset: 8560000)');
+                    } else {
+                        LOCATION_OFFSET = 8571000;
+                        STARTER_OFFSET = 500;
+                        MILESTONE_OFFSET = 1000;
+                        TYPE_MILESTONE_OFFSET = 2000;
+                        TYPE_MILESTONE_MULTIPLIER = 50;
+                        TYPE_ITEM_OFFSET = 1100;
+                        USEFUL_ITEM_OFFSET = 2000;
+                        TRAP_ITEM_OFFSET = 3000;
+                        setDetectedApWorldVersion('legacy');
+                        console.log('[GameContext] Detected Legacy APWorld (Location Offset: 8571000)');
+                        // Warn in log that legacy APWorld has limited feature support
+                        setLogs(prev => [{
+                            id: crypto.randomUUID(),
+                            timestamp: Date.now(),
+                            type: 'system',
+                            text: '⚠ Connected to a Legacy APWorld. Some features (region locks, type key system) may not be available.',
+                            color: '#F59E0B'
+                        }, ...prev.slice(0, 99)]);
+                    }
+
                     // Sync already checked locations
                     const checkedLocs = packet.checked_locations || [];
                     const newChecked = new Set<number>();
                     checkedLocs.forEach((locId: number) => {
-                        if (locId >= LOCATION_OFFSET && locId < LOCATION_OFFSET + 2000) {
+                        if (locId >= LOCATION_OFFSET && locId <= LOCATION_OFFSET + 200_000) {
                             newChecked.add(locId - LOCATION_OFFSET);
                         }
                     });
                     setCheckedIds(newChecked);
+                    setConnectionKey(k => k + 1);
 
                     // Sync already received items (fully reconstruct unlockedIds)
                     const receivedItems = client.items.received;
@@ -708,11 +875,21 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     const newTypeUnlocks = new Set<string>();
                     const typesMap = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
                     receivedItems.forEach(item => {
-                        if (item.id >= ITEM_OFFSET + 1100 && item.id <= ITEM_OFFSET + 1117) {
-                            newTypeUnlocks.add(typesMap[item.id - (ITEM_OFFSET + 1100)]);
+                        if (item.id >= ITEM_OFFSET + TYPE_ITEM_OFFSET && item.id <= ITEM_OFFSET + TYPE_ITEM_OFFSET + 17) {
+                            newTypeUnlocks.add(typesMap[item.id - (ITEM_OFFSET + TYPE_ITEM_OFFSET)]);
                         }
                     });
                     setTypeUnlocks(newTypeUnlocks);
+
+                    // Reconstruct Region Pass unlocks
+                    const newRegionPasses = new Set<string>();
+                    receivedItems.forEach(item => {
+                        const idx = item.id - (ITEM_OFFSET + REGION_PASS_OFFSET);
+                        if (idx >= 0 && idx < GAME_REGIONS_ORDER.length) {
+                            newRegionPasses.add(GAME_REGIONS_ORDER[idx]);
+                        }
+                    });
+                    setRegionPasses(newRegionPasses);
 
                     // Handle slot data for settings
                     const slotData = packet.slot_data as any || {};
@@ -722,14 +899,42 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                     // Logic settings
                     setTypeLocksEnabled(!!slotData.type_locks);
+                    // dexsanity defaults to true for older APWorld versions that don't send the field
+                    setDexsanityEnabled(slotData.dexsanity !== undefined ? !!slotData.dexsanity : true);
                     setLegendaryGating(slotData.legendary_gating ?? 0);
 
-                    // Generation scaling
-                    if (slotData.pokemon_generations !== undefined) {
+                    // Region settings (new APWorld: active_regions replaces pokemon_generations)
+                    setRegionLocksEnabled(!!slotData.region_locks);
+                    if (slotData.active_regions !== undefined) {
+                        const ar = slotData.active_regions as Record<string, [number, number]>;
+                        setActiveRegions(ar);
+                        setStartingRegion(slotData.starting_region ?? "");
+                        // Derive generationFilter from active region names for UI tab display
+                        const regionToGenIdx: Record<string, number> = {
+                            Kanto: 0, Johto: 1, Hoenn: 2, Sinnoh: 3, Unova: 4,
+                            Kalos: 5, Alola: 6, Galar: 7, Hisui: 8, Paldea: 9,
+                        };
+                        const genIdxSet = new Set<number>();
+                        for (const r of Object.keys(ar)) {
+                            const idx = regionToGenIdx[r];
+                            if (idx !== undefined) genIdxSet.add(idx);
+                        }
+                        setGenerationFilter(Array.from(genIdxSet).sort());
+                        // Set activePokemonLimit to max ID for backward compat
+                        const maxId = Math.max(...Object.values(ar).map(([, hi]) => hi));
+                        setActivePokemonLimit(maxId);
+                    } else if (slotData.pokemon_generations !== undefined) {
+                        // Legacy APWorld: map cumulative gen number to limit
                         const gens = slotData.pokemon_generations;
                         if (gens === 0) { setGenerationFilter([0]); setActivePokemonLimit(151); }
                         else if (gens === 1) { setGenerationFilter([0, 1]); setActivePokemonLimit(251); }
                         else if (gens === 2) { setGenerationFilter([0, 1, 2]); setActivePokemonLimit(386); }
+                        else if (gens === 3) { setGenerationFilter([0, 1, 2, 3]); setActivePokemonLimit(493); }
+                        else if (gens === 4) { setGenerationFilter([0, 1, 2, 3, 4]); setActivePokemonLimit(649); }
+                        else if (gens === 5) { setGenerationFilter([0, 1, 2, 3, 4, 5]); setActivePokemonLimit(721); }
+                        else if (gens === 6) { setGenerationFilter([0, 1, 2, 3, 4, 5, 6]); setActivePokemonLimit(809); }
+                        else if (gens === 7) { setGenerationFilter([0, 1, 2, 3, 4, 5, 6, 7]); setActivePokemonLimit(898); }
+                        else if (gens === 8) { setGenerationFilter([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]); setActivePokemonLimit(1025); }
                     }
 
                     // Goal setting — server sends 'goal_count' (a raw Pokémon count)
@@ -742,6 +947,23 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         });
                     }
 
+                    // Starting locations toggle — default true for old APWorlds that don't send the field
+                    setStartingLocationsEnabled(slotData.starting_locations !== false);
+
+                    // Update game profile with confirmed connection details.
+                    // Done here (not in handleConnectProfile/handleConnect) so we use
+                    // the values from THIS connection, not the previous one.
+                    if (profileId) {
+                        updateProfile(profileId, {
+                            lastConnected: Date.now(),
+                            apworldVersion: isNewVersion ? 'new' : 'legacy',
+                            goalCount: slotData.goal_count,
+                            activeRegionNames: slotData.active_regions
+                                ? Object.keys(slotData.active_regions)
+                                : undefined,
+                        });
+                    }
+
                     // Setup DataStorage sync for used items
                     const team = client.players.self.team;
                     const slot = client.players.self.slot;
@@ -750,8 +972,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     const pdKey = `pokepelago_team_${team}_slot_${slot}_used_pokedexes`;
                     const derpKey = `pokepelago_team_${team}_slot_${slot}_derpyfied`;
                     const relKey = `pokepelago_team_${team}_slot_${slot}_released`;
+                    // dexsanity=off has no per-Pokemon AP locations, so guesses are persisted here instead.
+                    const caughtKey = !slotData.dexsanity ? `pokepelago_team_${team}_slot_${slot}_caught` : null;
 
-                    client.storage.notify([mbKey, pgKey, pdKey, derpKey, relKey], (key, value) => {
+                    const keysToWatch = [mbKey, pgKey, pdKey, derpKey, relKey, ...(caughtKey ? [caughtKey] : [])];
+                    client.storage.notify(keysToWatch, (key, value) => {
                         if (!Array.isArray(value)) return;
                         const usedIds = new Set(value as number[]);
 
@@ -759,21 +984,21 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         if (key === mbKey) {
                             setUsedMasterBalls(prev => {
                                 const merged = new Set([...prev, ...usedIds]);
-                                const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + 2001).length;
+                                const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 1).length;
                                 setMasterBalls(Math.max(0, totalServer - merged.size));
                                 return merged;
                             });
                         } else if (key === pgKey) {
                             setUsedPokegears(prev => {
                                 const merged = new Set([...prev, ...usedIds]);
-                                const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + 2002).length;
+                                const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 2).length;
                                 setPokegears(Math.max(0, totalServer - merged.size));
                                 return merged;
                             });
                         } else if (key === pdKey) {
                             setUsedPokedexes(prev => {
                                 const merged = new Set([...prev, ...usedIds]);
-                                const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + 2003).length;
+                                const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 3).length;
                                 setPokedexes(Math.max(0, totalServer - merged.size));
                                 return merged;
                             });
@@ -781,6 +1006,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             setDerpyfiedIds(usedIds);
                         } else if (key === relKey) {
                             setReleasedIds(usedIds);
+                        } else if (caughtKey && key === caughtKey) {
+                            setCheckedIds(prev => new Set([...prev, ...usedIds]));
                         }
                     }).then((data) => {
                         const localMB = new Set(JSON.parse(localStorage.getItem('pokepelago_usedMasterBalls') || '[]'));
@@ -803,6 +1030,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         // Initialize traps from server data
                         if (Array.isArray(data[derpKey])) setDerpyfiedIds(new Set(data[derpKey] as number[]));
                         if (Array.isArray(data[relKey])) setReleasedIds(new Set(data[relKey] as number[]));
+
+                        // DataStorage is now initialized — allow trap processing in itemsReceived
+                        storageReadyRef.current = true;
+
+                        // Restore caught Pokemon for dexsanity=off (no AP locations to reconstruct from)
+                        if (caughtKey && Array.isArray(data[caughtKey])) {
+                            setCheckedIds(prev => new Set([...prev, ...(data[caughtKey] as number[])]));
+                        }
                     }).catch(console.error);
                 });
 
@@ -828,9 +1063,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                 });
                                 return unlocked;
                             });
-                        } else if (item.id >= ITEM_OFFSET + 1100 && item.id <= ITEM_OFFSET + 1117) {
+                        } else if (item.id >= ITEM_OFFSET + TYPE_ITEM_OFFSET && item.id <= ITEM_OFFSET + TYPE_ITEM_OFFSET + 17) {
                             const types = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
-                            const typeName = types[item.id - (ITEM_OFFSET + 1100)];
+                            const typeName = types[item.id - (ITEM_OFFSET + TYPE_ITEM_OFFSET)];
                             setTypeUnlocks(prev => new Set(prev).add(typeName));
                             setLogs(prev => [{
                                 id: crypto.randomUUID(),
@@ -839,36 +1074,46 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                 text: `Received Type Unlock: ${typeName}`,
                                 parts: [{ text: `Received Type Unlock: ${typeName}`, type: 'color', color: '#10B981' }]
                             }, ...prev.slice(0, 99)]);
-                        } else if (item.id === ITEM_OFFSET + 3001) {
+                        } else if (item.id >= ITEM_OFFSET + REGION_PASS_OFFSET && item.id < ITEM_OFFSET + REGION_PASS_OFFSET + GAME_REGIONS_ORDER.length) {
+                            const regionName = GAME_REGIONS_ORDER[item.id - (ITEM_OFFSET + REGION_PASS_OFFSET)];
+                            setRegionPasses(prev => new Set(prev).add(regionName));
+                            setLogs(prev => [{
+                                id: crypto.randomUUID(),
+                                timestamp: Date.now(),
+                                type: 'system',
+                                text: `Received ${regionName} Pass!`,
+                                parts: [{ text: `Received ${regionName} Pass!`, type: 'color', color: '#F59E0B' }]
+                            }, ...prev.slice(0, 99)]);
+                        } else if (item.id === ITEM_OFFSET + TRAP_ITEM_OFFSET + 1) {
                             // Small Shuffle Trap
                             setShuffleEndTime(Date.now() + 30000); // 30s
-                        } else if (item.id === ITEM_OFFSET + 3002) {
+                        } else if (item.id === ITEM_OFFSET + TRAP_ITEM_OFFSET + 2) {
                             // Big Shuffle Trap
                             setShuffleEndTime(Date.now() + 150000); // 2m 30s
-                        } else if (item.id === ITEM_OFFSET + 3003) {
+                        } else if (item.id === ITEM_OFFSET + TRAP_ITEM_OFFSET + 3) {
                             // Derpy Mon Trap
                             recalculateItems = true;
-                        } else if (item.id === ITEM_OFFSET + 3004) {
+                        } else if (item.id === ITEM_OFFSET + TRAP_ITEM_OFFSET + 4) {
                             // Release Trap
                             recalculateItems = true;
-                        } else if (item.id === ITEM_OFFSET + 2001 || item.id === ITEM_OFFSET + 2002 || item.id === ITEM_OFFSET + 2003) {
+                        } else if (item.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 1 || item.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 2 || item.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 3) {
                             recalculateItems = true;
                         }
                     });
 
                     if (recalculateItems) {
                         setUsedMasterBalls(used => {
-                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + 2001).length;
+                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 1).length;
                             setMasterBalls(Math.max(0, totalServer - used.size));
                             return used;
                         });
                         setUsedPokegears(used => {
-                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + 2002).length;
+                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 2).length;
                             setPokegears(Math.max(0, totalServer - used.size));
                             return used;
                         });
                         setUsedPokedexes(used => {
-                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + 2003).length;
+                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 3).length;
                             setPokedexes(Math.max(0, totalServer - used.size));
                             return used;
                         });
@@ -876,7 +1121,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         // Process Trap items (Derp Mon, Release Trap)
                         // This logic runs to find "unprocessed" trap events safely by comparing server quantities against stored list sizes
                         setDerpyfiedIds(derps => {
-                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + 3003).length;
+                            if (!storageReadyRef.current) return derps;
+                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + TRAP_ITEM_OFFSET + 3).length;
                             if (totalServer > derps.size) {
                                 let newDerps = new Set(derps);
                                 const basePathPokes = allPokemon.filter(p => !newDerps.has(p.id) && derpemonIndex[p.id]);
@@ -931,7 +1177,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         });
 
                         setReleasedIds(released => {
-                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + 3004).length;
+                            if (!storageReadyRef.current) return released;
+                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + TRAP_ITEM_OFFSET + 4).length;
                             if (totalServer > released.size) {
                                 let newReleased = new Set(released);
                                 // Pick from currently checked Pokémon (but not starters 1, 4, 7 for safety and thematic reasons)
@@ -1079,6 +1326,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     }
                 }, 5000);
 
+                // Now that the new client is authenticated, safely drop the old one.
+                // Doing this before login would cause the server to reject the new
+                // WebSocket while it tears down the previous session.
+                if (oldClient && oldClient !== client) {
+                    oldClient.socket.disconnect();
+                }
+
                 return; // Successfully connected! Exit loop.
 
             } catch (err: any) {
@@ -1098,7 +1352,23 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         console.error('All connection attempts failed', lastError);
-        setConnectionError(lastError?.message || 'Failed to connect. The host may be offline or you might have a secure connection issue.');
+        const rawMsg = lastError?.message || String(lastError || '');
+        let friendlyMsg: string;
+        if (rawMsg.includes('refused') || rawMsg.includes('ECONNREFUSED') || rawMsg.includes('ENOTFOUND') || rawMsg.includes('timed out'))
+            friendlyMsg = 'Server is offline or unreachable. Check the host and port.';
+        else if (rawMsg.includes('SSL') || rawMsg.includes('ERR_SSL') || rawMsg.includes('wss'))
+            friendlyMsg = 'Secure connection failed. Try using ws:// instead of wss://.';
+        else if (rawMsg.includes('Invalid Slot') || rawMsg.includes('InvalidSlot'))
+            friendlyMsg = `Slot "${info.slotName}" not found. Check that your name matches the YAML exactly.`;
+        else if (rawMsg.includes('Invalid Password') || rawMsg.includes('InvalidPassword'))
+            friendlyMsg = 'Incorrect password.';
+        else if (rawMsg.includes('Invalid Game') || rawMsg.includes('InvalidGame'))
+            friendlyMsg = `Slot "${info.slotName}" is not a Pokepelago game.`;
+        else if (rawMsg)
+            friendlyMsg = rawMsg;
+        else
+            friendlyMsg = 'Failed to connect. The host may be offline or you might have a secure connection issue.';
+        setConnectionError(friendlyMsg);
         setIsConnected(false);
         isConnectingRef.current = false;
     };
@@ -1119,6 +1389,17 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUnlockedIds(new Set());
         setCheckedIds(new Set());
         setHintedIds(new Set());
+        setShinyIds(new Set());
+        // derpyfiedIds and releasedIds are NOT cleared here: they have no localStorage
+        // persistence and the DataStorage sync overwrites them with the correct per-slot
+        // values on every connect. Clearing them early causes itemsReceived to see
+        // released.size=0 and re-trigger the trap for already-processed items.
+        setMasterBalls(0);
+        setPokegears(0);
+        setPokedexes(0);
+        setUsedMasterBalls(new Set());
+        setUsedPokegears(new Set());
+        setUsedPokedexes(new Set());
     };
 
     const updateUiSettings = (newSettings: Partial<UISettings>) => {
@@ -1238,6 +1519,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return null;
     }, []);
 
+    // gameStarted: true if starting locations are disabled OR any starter location already checked
+    const gameStarted = !startingLocationsEnabled ||
+        [0, 1, 2, 3, 4, 5, 6, 7].some(i => checkedIds.has(STARTER_OFFSET + i));
+
     // isPokemonGuessable moved up
     return (
         <GameContext.Provider value={{
@@ -1270,6 +1555,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setSelectedPokemonId,
             getLocationName,
             typeLocksEnabled,
+            dexsanityEnabled,
             legendaryGating,
             regionPasses,
             typeUnlocks,
@@ -1294,6 +1580,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setGameMode,
             goalCount,
             activePokemonLimit,
+            activeRegions,
+            startingRegion,
+            regionLocksEnabled,
+            startingLocationsEnabled,
+            gameStarted,
+            startGame,
+            connectionKey,
             unlockRegion,
             lockRegion,
             clearAllRegions,
@@ -1310,7 +1603,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             spriteRefreshCounter,
             setSpriteRefreshCounter,
             toast,
-            showToast
+            showToast,
+            locationOffset: LOCATION_OFFSET,
+            STARTER_OFFSET,
+            MILESTONE_OFFSET,
+            detectedApWorldVersion,
+            currentProfileId,
+            setCurrentProfileId,
         }}>
             {children}
         </GameContext.Provider>
