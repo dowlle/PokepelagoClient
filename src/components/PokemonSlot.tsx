@@ -52,7 +52,7 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
     const isVisible = isChecked || status === 'shadow' || status === 'hint';
     const cleanName = getCleanName(pokemon.name);
 
-    const isReadyToGuess = !isChecked && canGuess && status === 'shadow' && gameMode !== 'standalone';
+    const isReadyToGuess = !isChecked && canGuess && gameMode !== 'standalone';
 
     const getBorderClass = () => {
         if (releasedIds.has(pokemon.id)) return 'bg-blue-950/30 border-blue-800/30 opacity-40';

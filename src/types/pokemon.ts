@@ -19,7 +19,8 @@ export const GENERATIONS: GenerationRange[] = [
     { label: 'Gen 5', region: 'Unova', startId: 494, endId: 649 },
     { label: 'Gen 6', region: 'Kalos', startId: 650, endId: 721 },
     { label: 'Gen 7', region: 'Alola', startId: 722, endId: 809 },
-    { label: 'Gen 8', region: 'Galar', startId: 810, endId: 905 },
+    { label: 'Gen 8', region: 'Galar', startId: 810, endId: 898 },
+    { label: 'Hisui', region: 'Hisui', startId: 899, endId: 905 },
     { label: 'Gen 9', region: 'Paldea', startId: 906, endId: 1025 },
 ];
 

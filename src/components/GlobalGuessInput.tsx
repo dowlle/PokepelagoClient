@@ -4,7 +4,7 @@ import { getCleanName } from '../utils/pokemon';
 import pokemonNames from '../data/pokemon_names.json';
 
 export const GlobalGuessInput: React.FC = () => {
-    const { allPokemon, checkedIds, checkPokemon, gameMode, isPokemonGuessable, activePokemonLimit, releasedIds, setReleasedIds, toast, showToast, STARTER_OFFSET, MILESTONE_OFFSET, goalCount } = useGame();
+    const { allPokemon, checkedIds, checkPokemon, gameMode, isPokemonGuessable, activePokemonLimit, releasedIds, setReleasedIds, toast, showToast, STARTER_OFFSET, MILESTONE_OFFSET, goalCount, startGame, startingLocationsEnabled, gameStarted } = useGame();
     const [guess, setGuess] = useState('');
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -117,6 +117,7 @@ export const GlobalGuessInput: React.FC = () => {
                 showToast('recaught', `Re-caught ${getCleanName(match.name)}!`);
             } else {
                 // Success! Auto-submit
+                if (startingLocationsEnabled && !gameStarted && gameMode === 'archipelago') startGame();
                 checkPokemon(match.id);
                 showToast('success', `✓ ${getCleanName(match.name)}!`);
             }
@@ -186,6 +187,7 @@ export const GlobalGuessInput: React.FC = () => {
         }
 
         // Success!
+        if (startingLocationsEnabled && !gameStarted && gameMode === 'archipelago') startGame();
         checkPokemon(match.id);
         showToast('success', `✓ ${getCleanName(match.name)}!`);
         setGuess('');

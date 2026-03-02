@@ -149,8 +149,8 @@ export const ConnectionManager: React.FC<ConnectionManagerProps> = ({ isOpen, on
     const showForm = isAdding || editingId !== null;
 
     return createPortal(
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-            <div className="bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl border border-gray-800 flex flex-col max-h-[90vh] overflow-hidden">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
+            <div className="bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl border border-gray-800 flex flex-col max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
                 {/* Header */}
                 <div className="px-6 py-4 border-b border-gray-800 flex justify-between items-center bg-gray-950/60 shrink-0">
                     <h2 className="text-lg font-bold text-white flex items-center gap-2">

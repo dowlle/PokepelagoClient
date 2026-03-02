@@ -4,6 +4,7 @@ import { GENERATIONS } from '../types/pokemon';
 import { X, Server, Wifi, LayoutGrid, Maximize, Image, Trash2, Upload, Link2, ChevronDown, Filter, Monitor, BookOpen } from 'lucide-react';
 import { importFromFiles, clearAllSprites } from '../services/spriteService';
 import { ConnectionManager } from './ConnectionManager';
+import { getProfiles, saveProfile } from '../services/connectionManagerService';
 import type { GameProfile } from '../services/connectionManagerService';
 
 interface SettingsPanelProps {
@@ -33,6 +34,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
         setSpriteRepoUrl,
         connectionQuality,
         derpemonSpriteCount,
+        currentProfileId,
         setCurrentProfileId,
     } = useGame();
 
@@ -71,8 +73,44 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
 
     const selectAll = () => setGenerationFilter([0]);
 
+    const isGameSaved = (() => {
+        if (!isConnected) return false;
+        if (currentProfileId) return getProfiles().some(p => p.id === currentProfileId);
+        return getProfiles().some(p =>
+            p.hostname === connectionInfo.hostname &&
+            p.port === connectionInfo.port &&
+            p.slotName === connectionInfo.slotName
+        );
+    })();
+
+    const handleSaveToManager = () => {
+        const profiles = getProfiles();
+        const existing = currentProfileId
+            ? profiles.find(p => p.id === currentProfileId)
+            : profiles.find(p =>
+                p.hostname === connectionInfo.hostname &&
+                p.port === connectionInfo.port &&
+                p.slotName === connectionInfo.slotName
+            );
+        if (!existing) {
+            const newProfile: GameProfile = {
+                id: crypto.randomUUID(),
+                name: `${connectionInfo.slotName} @ ${connectionInfo.hostname}:${connectionInfo.port}`,
+                hostname: connectionInfo.hostname,
+                port: connectionInfo.port,
+                slotName: connectionInfo.slotName,
+                password: connectionInfo.password,
+                isGoaled: false,
+                lastConnected: Date.now(),
+            };
+            saveProfile(newProfile);
+            setCurrentProfileId(newProfile.id);
+        }
+    };
+
     const handleConnect = async (e: React.FormEvent) => {
         e.preventDefault();
+        setCurrentProfileId(null);
         setIsConnecting(true);
         await connect(connectionInfo);
         setIsConnecting(false);
@@ -232,6 +270,13 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                                     </div>
                                     <button onClick={disconnect} className="text-[10px] px-2 py-1 bg-gray-800 hover:bg-gray-700 text-gray-400 rounded transition-colors border border-gray-700">DISCONNECT</button>
                                 </div>
+                                <button
+                                    onClick={isGameSaved ? undefined : handleSaveToManager}
+                                    disabled={isGameSaved}
+                                    className={`w-full py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition-colors border ${isGameSaved ? 'bg-green-900/20 text-green-400 border-green-700/30 cursor-default' : 'bg-gray-800/50 hover:bg-gray-800 text-gray-400 hover:text-gray-200 border-gray-700 hover:border-gray-600'}`}
+                                >
+                                    {isGameSaved ? 'SAVED' : 'SAVE TO GAME MANAGER'}
+                                </button>
                             </div>
                         )}
                     </div>

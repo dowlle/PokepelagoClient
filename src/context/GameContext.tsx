@@ -67,6 +67,7 @@ interface GameState {
     regionLocksEnabled: boolean;
     logs: LogEntry[];
     gameMode: 'archipelago' | 'standalone' | null;
+    startingLocationsEnabled: boolean;
     shuffleEndTime: number;
     derpyfiedIds: Set<number>;
     releasedIds: Set<number>;
@@ -140,6 +141,10 @@ interface GameContextType extends GameState {
     activeRegions: Record<string, [number, number]>;
     startingRegion: string;
     regionLocksEnabled: boolean;
+    startingLocationsEnabled: boolean;
+    gameStarted: boolean;
+    startGame: () => void;
+    connectionKey: number;
     shuffleEndTime: number;
     derpyfiedIds: Set<number>;
     releasedIds: Set<number>;
@@ -193,6 +198,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [startingRegion, setStartingRegion] = useState<string>("");
     const [regionLocksEnabled, setRegionLocksEnabled] = useState<boolean>(false);
     const [goalCount, setGoalCount] = useState<number | undefined>(undefined);
+    const [startingLocationsEnabled, setStartingLocationsEnabled] = useState(true);
+    const [connectionKey, setConnectionKey] = useState(0);
 
     const [shuffleEndTime, setShuffleEndTime] = useState<number>(0);
     const [derpyfiedIds, setDerpyfiedIds] = useState<Set<number>>(new Set());
@@ -372,6 +379,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const clientRef = useRef<Client | null>(null);
     const isConnectingRef = useRef<boolean>(false);
+    const storageReadyRef = useRef(false);
     const checkedIdsRef = useRef<Set<number>>(checkedIds);
     const isPokemonGuessableRef = useRef<any>(null); // To avoid dependency cycle in useEffect
 
@@ -446,7 +454,15 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // With dexsanity=off there are no per-Pokemon AP locations, so only update local state.
         // Milestone counting reads from checkedIds, so the count still works correctly.
-        if (!dexsanityEnabled) return;
+        // Persist the guess to DataStorage so it survives reconnects.
+        if (!dexsanityEnabled) {
+            if (clientRef.current?.authenticated && id >= 1 && id <= 1025) {
+                const team = clientRef.current.players.self.team;
+                const slot = clientRef.current.players.self.slot;
+                clientRef.current.storage.prepare(`pokepelago_team_${team}_slot_${slot}_caught`, []).add([id]).commit();
+            }
+            return;
+        }
 
         const locationId = LOCATION_OFFSET + id;
 
@@ -484,22 +500,18 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
 
-    // --- Auto-check Oak's Lab (Starting Items) ---
-    useEffect(() => {
+    // --- startGame: sends Oak's Lab (starting location) checks on player request ---
+    const startGame = useCallback(() => {
         if (!clientRef.current || !isConnected || gameMode !== 'archipelago') return;
-
-        let sentChecks = false;
         const newChecked = new Set<number>();
         for (let i = 0; i < 8; i++) {
             const localId = STARTER_OFFSET + i;
             if (!checkedIds.has(localId)) {
                 clientRef.current.check(LOCATION_OFFSET + localId);
                 newChecked.add(localId);
-                sentChecks = true;
             }
         }
-
-        if (sentChecks) {
+        if (newChecked.size > 0) {
             setCheckedIds(prev => {
                 const next = new Set(prev);
                 newChecked.forEach(id => next.add(id));
@@ -714,6 +726,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         isConnectingRef.current = true;
+        storageReadyRef.current = false;
         setConnectionError(null);
         setIsConnected(false);
 
@@ -730,6 +743,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const protocolsToTry = info.hostname.includes('://') ? [''] : ['wss://', 'ws://'];
         let lastError: any = null;
+        const oldClient = clientRef.current;
 
         for (const protocol of protocolsToTry) {
             try {
@@ -838,6 +852,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         }
                     });
                     setCheckedIds(newChecked);
+                    setConnectionKey(k => k + 1);
 
                     // Sync already received items (fully reconstruct unlockedIds)
                     const receivedItems = client.items.received;
@@ -897,7 +912,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         // Derive generationFilter from active region names for UI tab display
                         const regionToGenIdx: Record<string, number> = {
                             Kanto: 0, Johto: 1, Hoenn: 2, Sinnoh: 3, Unova: 4,
-                            Kalos: 5, Alola: 6, Galar: 7, Hisui: 7, Paldea: 8,
+                            Kalos: 5, Alola: 6, Galar: 7, Hisui: 8, Paldea: 9,
                         };
                         const genIdxSet = new Set<number>();
                         for (const r of Object.keys(ar)) {
@@ -919,7 +934,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         else if (gens === 5) { setGenerationFilter([0, 1, 2, 3, 4, 5]); setActivePokemonLimit(721); }
                         else if (gens === 6) { setGenerationFilter([0, 1, 2, 3, 4, 5, 6]); setActivePokemonLimit(809); }
                         else if (gens === 7) { setGenerationFilter([0, 1, 2, 3, 4, 5, 6, 7]); setActivePokemonLimit(898); }
-                        else if (gens === 8) { setGenerationFilter([0, 1, 2, 3, 4, 5, 6, 7, 8]); setActivePokemonLimit(1025); }
+                        else if (gens === 8) { setGenerationFilter([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]); setActivePokemonLimit(1025); }
                     }
 
                     // Goal setting — server sends 'goal_count' (a raw Pokémon count)
@@ -931,6 +946,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             amount: slotData.goal_count,
                         });
                     }
+
+                    // Starting locations toggle — default true for old APWorlds that don't send the field
+                    setStartingLocationsEnabled(slotData.starting_locations !== false);
 
                     // Update game profile with confirmed connection details.
                     // Done here (not in handleConnectProfile/handleConnect) so we use
@@ -954,8 +972,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     const pdKey = `pokepelago_team_${team}_slot_${slot}_used_pokedexes`;
                     const derpKey = `pokepelago_team_${team}_slot_${slot}_derpyfied`;
                     const relKey = `pokepelago_team_${team}_slot_${slot}_released`;
+                    // dexsanity=off has no per-Pokemon AP locations, so guesses are persisted here instead.
+                    const caughtKey = !slotData.dexsanity ? `pokepelago_team_${team}_slot_${slot}_caught` : null;
 
-                    client.storage.notify([mbKey, pgKey, pdKey, derpKey, relKey], (key, value) => {
+                    const keysToWatch = [mbKey, pgKey, pdKey, derpKey, relKey, ...(caughtKey ? [caughtKey] : [])];
+                    client.storage.notify(keysToWatch, (key, value) => {
                         if (!Array.isArray(value)) return;
                         const usedIds = new Set(value as number[]);
 
@@ -985,6 +1006,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             setDerpyfiedIds(usedIds);
                         } else if (key === relKey) {
                             setReleasedIds(usedIds);
+                        } else if (caughtKey && key === caughtKey) {
+                            setCheckedIds(prev => new Set([...prev, ...usedIds]));
                         }
                     }).then((data) => {
                         const localMB = new Set(JSON.parse(localStorage.getItem('pokepelago_usedMasterBalls') || '[]'));
@@ -1007,6 +1030,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         // Initialize traps from server data
                         if (Array.isArray(data[derpKey])) setDerpyfiedIds(new Set(data[derpKey] as number[]));
                         if (Array.isArray(data[relKey])) setReleasedIds(new Set(data[relKey] as number[]));
+
+                        // DataStorage is now initialized — allow trap processing in itemsReceived
+                        storageReadyRef.current = true;
+
+                        // Restore caught Pokemon for dexsanity=off (no AP locations to reconstruct from)
+                        if (caughtKey && Array.isArray(data[caughtKey])) {
+                            setCheckedIds(prev => new Set([...prev, ...(data[caughtKey] as number[])]));
+                        }
                     }).catch(console.error);
                 });
 
@@ -1090,6 +1121,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         // Process Trap items (Derp Mon, Release Trap)
                         // This logic runs to find "unprocessed" trap events safely by comparing server quantities against stored list sizes
                         setDerpyfiedIds(derps => {
+                            if (!storageReadyRef.current) return derps;
                             const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + TRAP_ITEM_OFFSET + 3).length;
                             if (totalServer > derps.size) {
                                 let newDerps = new Set(derps);
@@ -1145,6 +1177,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         });
 
                         setReleasedIds(released => {
+                            if (!storageReadyRef.current) return released;
                             const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + TRAP_ITEM_OFFSET + 4).length;
                             if (totalServer > released.size) {
                                 let newReleased = new Set(released);
@@ -1293,6 +1326,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     }
                 }, 5000);
 
+                // Now that the new client is authenticated, safely drop the old one.
+                // Doing this before login would cause the server to reject the new
+                // WebSocket while it tears down the previous session.
+                if (oldClient && oldClient !== client) {
+                    oldClient.socket.disconnect();
+                }
+
                 return; // Successfully connected! Exit loop.
 
             } catch (err: any) {
@@ -1349,6 +1389,17 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUnlockedIds(new Set());
         setCheckedIds(new Set());
         setHintedIds(new Set());
+        setShinyIds(new Set());
+        // derpyfiedIds and releasedIds are NOT cleared here: they have no localStorage
+        // persistence and the DataStorage sync overwrites them with the correct per-slot
+        // values on every connect. Clearing them early causes itemsReceived to see
+        // released.size=0 and re-trigger the trap for already-processed items.
+        setMasterBalls(0);
+        setPokegears(0);
+        setPokedexes(0);
+        setUsedMasterBalls(new Set());
+        setUsedPokegears(new Set());
+        setUsedPokedexes(new Set());
     };
 
     const updateUiSettings = (newSettings: Partial<UISettings>) => {
@@ -1468,6 +1519,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return null;
     }, []);
 
+    // gameStarted: true if starting locations are disabled OR any starter location already checked
+    const gameStarted = !startingLocationsEnabled ||
+        [0, 1, 2, 3, 4, 5, 6, 7].some(i => checkedIds.has(STARTER_OFFSET + i));
+
     // isPokemonGuessable moved up
     return (
         <GameContext.Provider value={{
@@ -1528,6 +1583,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             activeRegions,
             startingRegion,
             regionLocksEnabled,
+            startingLocationsEnabled,
+            gameStarted,
+            startGame,
+            connectionKey,
             unlockRegion,
             lockRegion,
             clearAllRegions,
