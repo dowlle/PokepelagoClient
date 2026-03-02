@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Plus, Trash2, Edit3, Trophy, Clock, AlertTriangle, Wifi, WifiOff } from 'lucide-react';
+import { X, Plus, Trash2, Edit3, Trophy, Clock, AlertTriangle, Wifi, WifiOff, RotateCcw } from 'lucide-react';
 import {
     type GameProfile,
     getProfiles,
@@ -41,6 +41,19 @@ export const ConnectionManager: React.FC<ConnectionManagerProps> = ({ isOpen, on
     const [form, setForm] = useState(emptyForm());
     const [autoRemoveDays, setAutoRemoveDaysState] = useState(getAutoRemoveDays());
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+    const [flushConfirm, setFlushConfirm] = useState(false);
+
+    const handleFlush = () => {
+        if (!flushConfirm) {
+            setFlushConfirm(true);
+            return;
+        }
+        const preserve = new Set(['pokepelago_game_profiles', 'pokepelago_autoremove_days']);
+        Object.keys(localStorage)
+            .filter(k => k.startsWith('pokepelago_') && !preserve.has(k))
+            .forEach(k => localStorage.removeItem(k));
+        window.location.reload();
+    };
 
     const reload = useCallback(() => {
         setProfiles(getProfiles());
@@ -317,9 +330,24 @@ export const ConnectionManager: React.FC<ConnectionManagerProps> = ({ isOpen, on
                     ) : (
                         <div />
                     )}
-                    <button onClick={onClose} className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-xs font-bold transition-colors border border-gray-700">
-                        Close
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleFlush}
+                            title="Clear all local game data and reload for a clean reconnect. Saved game profiles are preserved."
+                            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors border ${flushConfirm ? 'bg-red-700/40 hover:bg-red-700/60 text-red-200 border-red-600/60' : 'bg-gray-800/60 hover:bg-red-900/20 text-gray-500 hover:text-red-400 border-gray-700 hover:border-red-800/40'}`}
+                        >
+                            <RotateCcw size={12} />
+                            {flushConfirm ? 'Confirm Reset?' : 'Flush Game Data'}
+                        </button>
+                        {flushConfirm && (
+                            <button onClick={() => setFlushConfirm(false)} className="text-[10px] text-gray-500 hover:text-gray-300 underline">
+                                Cancel
+                            </button>
+                        )}
+                        <button onClick={onClose} className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-xs font-bold transition-colors border border-gray-700">
+                            Close
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>,
