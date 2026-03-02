@@ -38,7 +38,7 @@ export const DexGrid: React.FC = () => {
         const isRevealed = unlockedIds.has(id);
 
         if (canGuess) {
-            return 'shadow';
+            return uiSettings.enableShadows ? 'shadow' : 'locked';
         } else if (isRevealed) {
             return 'unlocked';
         }
