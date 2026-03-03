@@ -573,13 +573,15 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
             });
 
-            // 2. Type-Specific Milestones — only for legacy APWorld (removed in new APWorld)
-            if (!isNewApWorldRef.current) {
+            // 2. Type-Specific Milestones (present in both legacy and new APWorld)
+            {
                 const typesList = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
                 const typeSteps = [1, 2, 5, 10, 20, 35, 50];
 
-                // Starter type offsets: Bulbasaur (Grass/Poison), Charmander (Fire), Squirtle (Water)
-                const starterTypeOffsets: Record<string, number> = {
+                // Legacy APWorld: Kanto starters (Bulbasaur/Charmander/Squirtle) were pre-collected
+                // at STARTER_OFFSET IDs so they don't appear in typeCounts — raise each threshold by 1
+                // to compensate. New APWorld: starters must be manually guessed and count normally.
+                const starterTypeOffsets: Record<string, number> = isNewApWorldRef.current ? {} : {
                     "Grass": 1,
                     "Poison": 1,
                     "Fire": 1,
@@ -595,6 +597,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             const apLocationId = LOCATION_OFFSET + TYPE_MILESTONE_OFFSET + (index * TYPE_MILESTONE_MULTIPLIER) + step;
                             const localId = apLocationId - LOCATION_OFFSET;
                             if (!checkedIds.has(localId)) {
+                                console.log(`[TypeMilestone] Sending check: Caught ${step} ${typeName} Pokemon (apId=${apLocationId})`);
                                 clientRef.current?.check(apLocationId);
                                 setCheckedIds(prev => new Set(prev).add(localId));
                             }
