@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useGame } from '../context/GameContext';
+import pokemonMetadata from '../data/pokemon_metadata.json';
 
 const TYPE_COLORS: Record<string, string> = {
     Normal: '#A8A77A',
@@ -29,7 +30,32 @@ const TYPES_ORDER = [
 ];
 
 export const TypeStatus: React.FC = () => {
-    const { typeUnlocks, typeLocksEnabled } = useGame();
+    const { typeUnlocks, typeLocksEnabled, checkedIds, activeRegions } = useGame();
+
+    const typeStats = useMemo(() => {
+        const stats: Record<string, { guessed: number; total: number }> = {};
+        TYPES_ORDER.forEach(t => (stats[t] = { guessed: 0, total: 0 }));
+
+        const regionEntries = Object.values(activeRegions);
+        const isActive = (id: number) =>
+            regionEntries.length === 0
+                ? id >= 1 && id <= 1025
+                : regionEntries.some(([lo, hi]) => id >= lo && id <= hi);
+
+        for (let id = 1; id <= 1025; id++) {
+            if (!isActive(id)) continue;
+            const data = (pokemonMetadata as any)[id];
+            if (!data) continue;
+            data.types.forEach((t: string) => {
+                const typeName = t.charAt(0).toUpperCase() + t.slice(1);
+                if (stats[typeName]) {
+                    stats[typeName].total++;
+                    if (checkedIds.has(id)) stats[typeName].guessed++;
+                }
+            });
+        }
+        return stats;
+    }, [checkedIds, activeRegions]);
 
     if (!typeLocksEnabled) return null;
 
@@ -52,11 +78,14 @@ export const TypeStatus: React.FC = () => {
                                 color: isUnlocked ? color : '#4b5563'
                             }}
                             className={`
-                                px-1 py-1 rounded-md border text-[9px] font-black uppercase tracking-tighter text-center transition-all duration-500
+                                px-1 py-1 rounded-md border text-[9px] font-black uppercase tracking-tighter text-center transition-all duration-500 flex flex-col items-center
                                 ${isUnlocked ? 'shadow-[0_0_8px_rgba(0,0,0,0.2)]' : 'opacity-40 grayscale'}
                             `}
                         >
-                            {type}
+                            <span>{type}</span>
+                            <span className="text-[8px] opacity-70 font-normal normal-case tracking-normal">
+                                ({typeStats[type]?.guessed ?? 0}/{typeStats[type]?.total ?? 0})
+                            </span>
                         </div>
                     );
                 })}
