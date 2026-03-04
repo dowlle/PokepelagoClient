@@ -3,6 +3,7 @@ import { useGame } from '../context/GameContext';
 import { X, ExternalLink, HelpCircle, MapPin, Sparkles, CheckCircle2, Lock, Palette } from 'lucide-react';
 import { getCleanName } from '../utils/pokemon';
 import { getDerpemonCredit } from '../services/derpemonService';
+import { TYPE_COLORS } from '../utils/typeColors';
 
 export const PokemonDetails: React.FC = () => {
     const {
@@ -218,14 +219,23 @@ export const PokemonDetails: React.FC = () => {
                         </div>
 
                         <div className="flex gap-2">
-                            {details?.types && showInfo && details.types.map((t: any) => (
-                                <span
-                                    key={t.type.name}
-                                    className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-gray-800 border border-gray-700 text-gray-300 animate-in fade-in slide-in-from-right-2"
-                                >
-                                    {t.type.name}
-                                </span>
-                            ))}
+                            {details?.types && showInfo && details.types.map((t: any) => {
+                                const typeName = t.type.name.charAt(0).toUpperCase() + t.type.name.slice(1);
+                                const color = TYPE_COLORS[typeName];
+                                return (
+                                    <span
+                                        key={t.type.name}
+                                        className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider animate-in fade-in slide-in-from-right-2"
+                                        style={color ? {
+                                            backgroundColor: `${color}33`,
+                                            border: `1px solid ${color}66`,
+                                            color,
+                                        } : { backgroundColor: '#1f2937', border: '1px solid #374151', color: '#d1d5db' }}
+                                    >
+                                        {t.type.name}
+                                    </span>
+                                );
+                            })}
                         </div>
                     </div>
 
