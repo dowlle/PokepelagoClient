@@ -249,10 +249,10 @@ export const GlobalGuessInput: React.FC = () => {
     return (
         <>
         <div className="relative z-30 bg-gray-950 border-b border-gray-800 shrink-0">
-            <div className="max-w-screen-xl mx-auto flex items-center gap-3 px-4 py-3">
+            <div className="max-w-7xl mx-auto flex items-center gap-3 px-4 py-3">
                 {/* Logo */}
                 <h1
-                    className="text-xl font-black tracking-tight bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent whitespace-nowrap hidden sm:block cursor-pointer hover:opacity-75 transition-opacity select-none"
+                    className="text-xl font-black tracking-tight bg-linear-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent whitespace-nowrap hidden sm:block cursor-pointer hover:opacity-75 transition-opacity select-none"
                     onClick={() => setIsCreditsOpen(true)}
                     title="Credits & Changelog"
                 >

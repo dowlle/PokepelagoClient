@@ -29,12 +29,12 @@ export const SplashScreen: React.FC = () => {
 
     return (
         <>
-        <div className="fixed inset-0 z-[100] bg-gray-950 overflow-y-auto font-sans flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-100 bg-gray-950 overflow-y-auto font-sans flex items-center justify-center p-4">
             <div className="max-w-4xl w-full">
                 {/* Hero Section */}
                 <div className="text-center mb-12 animate-in fade-in slide-in-from-top-4 duration-1000">
                     <h1
-                        className="text-6xl font-black tracking-tighter mb-4 bg-gradient-to-r from-green-400 via-emerald-500 to-blue-500 bg-clip-text text-transparent cursor-pointer hover:opacity-80 transition-opacity select-none"
+                        className="text-6xl font-black tracking-tighter mb-4 bg-linear-to-r from-green-400 via-emerald-500 to-blue-500 bg-clip-text text-transparent cursor-pointer hover:opacity-80 transition-opacity select-none"
                         onClick={() => setIsCreditsOpen(true)}
                         title="Credits & Changelog"
                     >

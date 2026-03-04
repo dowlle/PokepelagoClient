@@ -110,7 +110,7 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({ isOpen, onClose }) =
                         <X size={18} />
                     </button>
 
-                    <h2 className="text-3xl font-black tracking-tighter bg-gradient-to-r from-green-400 via-emerald-500 to-blue-500 bg-clip-text text-transparent mb-1">
+                    <h2 className="text-3xl font-black tracking-tighter bg-linear-to-r from-green-400 via-emerald-500 to-blue-500 bg-clip-text text-transparent mb-1">
                         Poképelago
                     </h2>
                     <p className="text-gray-500 text-sm">v0.3.2 · A Pokémon guessing game for Archipelago Multiworld</p>
@@ -122,7 +122,7 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({ isOpen, onClose }) =
                         <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 mb-4">Credits</h3>
                         <div className="space-y-3">
                             <div className="flex items-center gap-4 p-4 bg-gray-800/50 rounded-2xl border border-gray-700/50">
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-black text-lg shrink-0">
+                                <div className="w-10 h-10 rounded-full bg-linear-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-black text-lg shrink-0">
                                     A
                                 </div>
                                 <div>
@@ -135,7 +135,7 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({ isOpen, onClose }) =
                             </div>
 
                             <div className="flex items-center gap-4 p-4 bg-gray-800/50 rounded-2xl border border-gray-700/50">
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center text-white font-black text-sm shrink-0">
+                                <div className="w-10 h-10 rounded-full bg-linear-to-br from-yellow-500 to-orange-500 flex items-center justify-center text-white font-black text-sm shrink-0">
                                     DP
                                 </div>
                                 <div>

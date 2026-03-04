@@ -171,7 +171,7 @@ export const PokemonDetails: React.FC = () => {
                 </div>
 
                 {/* Pokemon Display */}
-                <div className={`h-48 flex items-center justify-center relative overflow-hidden ${isShiny && isChecked ? 'bg-gradient-to-b from-yellow-900/20 to-transparent' : 'bg-gray-800/20'}`}>
+                <div className={`h-48 flex items-center justify-center relative overflow-hidden ${isShiny && isChecked ? 'bg-linear-to-b from-yellow-900/20 to-transparent' : 'bg-gray-800/20'}`}>
                     {loading && (
                         <div className="w-12 h-12 border-4 border-blue-500 rounded-full animate-spin border-t-transparent opacity-50 absolute z-0"></div>
                     )}
@@ -228,7 +228,7 @@ export const PokemonDetails: React.FC = () => {
 
                 {/* Content */}
                 <div className="p-6 pt-2 space-y-6">
-                    <div className="flex justify-between items-end min-h-[50px]">
+                    <div className="flex justify-between items-end min-h-12.5">
                         <div>
                             <h2 className="text-2xl font-black text-white uppercase tracking-tight flex items-center gap-2">
                                 {displayName}
