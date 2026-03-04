@@ -2,6 +2,8 @@ import React from 'react';
 import type { PokemonRef } from '../types/pokemon';
 import { useGame } from '../context/GameContext';
 import { getCleanName } from '../utils/pokemon';
+import pokemonMetadata from '../data/pokemon_metadata.json';
+import { TYPE_COLORS } from '../utils/typeColors';
 
 interface PokemonSlotProps {
     pokemon: PokemonRef;
@@ -11,7 +13,7 @@ interface PokemonSlotProps {
 }
 
 export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShiny = false, order }) => {
-    const { setSelectedPokemonId, isPokemonGuessable, usedPokegears, getSpriteUrl, uiSettings, gameMode, releasedIds, spriteRefreshCounter } = useGame();
+    const { setSelectedPokemonId, isPokemonGuessable, usedPokegears, getSpriteUrl, uiSettings, releasedIds, spriteRefreshCounter } = useGame();
     const { canGuess, reason } = isPokemonGuessable(pokemon.id);
     const isPokegeared = usedPokegears.has(pokemon.id);
 
@@ -52,7 +54,18 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
     const isVisible = isChecked || status === 'shadow' || status === 'hint';
     const cleanName = getCleanName(pokemon.name);
 
-    const isReadyToGuess = !isChecked && canGuess && gameMode !== 'standalone';
+    const isReadyToGuess = !isChecked && canGuess;
+
+    const rawTypes: string[] = (pokemonMetadata as any)[pokemon.id]?.types ?? [];
+    const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+    const typeDotStyle: React.CSSProperties = (() => {
+        if (!uiSettings.typeDot) return { backgroundColor: '#4ade80', boxShadow: '0 0 4px #4ade80aa' };
+        const typeColor1 = TYPE_COLORS[capitalize(rawTypes[0])] ?? '#4ade80';
+        const typeColor2 = rawTypes[1] ? (TYPE_COLORS[capitalize(rawTypes[1])] ?? typeColor1) : typeColor1;
+        return rawTypes.length >= 2
+            ? { background: `linear-gradient(135deg, ${typeColor1} 50%, ${typeColor2} 50%)`, boxShadow: `0 0 4px ${typeColor1}aa` }
+            : { backgroundColor: typeColor1, boxShadow: `0 0 4px ${typeColor1}aa` };
+    })();
 
     const getBorderClass = () => {
         if (releasedIds.has(pokemon.id)) return 'bg-blue-950/30 border-blue-800/30 opacity-40';
@@ -81,20 +94,20 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
             title={!canGuess ? reason : (isChecked ? cleanName : status === 'hint' ? `${cleanName} (Hinted)` : `#${pokemon.id}`)}
         >
             {isVisible && !hasError && spriteUrl && (
-                <div className="absolute inset-0 flex items-center justify-center overflow-visible pointer-events-none">
+                <div className="absolute inset-0 flex items-center justify-center overflow-hidden pointer-events-none">
                     <img
                         src={spriteUrl}
                         alt={pokemon.name}
                         onLoad={() => setIsLoaded(true)}
                         onError={() => setHasError(true)}
                         className={`
-                            w-12 h-12 object-contain z-10 scale-[1.1] transition-all duration-300
+                            object-contain z-10 transition-all duration-300
                             ${isLoaded ? 'opacity-100' : 'opacity-0'}
                             ${status === 'shadow' || status === 'hint' || releasedIds.has(pokemon.id)
                                 ? (isPokegeared ? 'brightness-50 opacity-80' : 'brightness-0 contrast-100 opacity-60')
                                 : ''}
                         `}
-                        style={{ imageRendering: 'pixelated' }}
+                        style={{ imageRendering: 'pixelated', width: '2.75rem', height: '2.75rem' }}
                     />
                 </div>
             )}
@@ -115,7 +128,7 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
             {/* Guessable indicator — green dot in corner, hides PERMANENTLY after hover */}
             {isReadyToGuess && !hasHovered && (
                 <div className="absolute top-0.5 right-0.5 z-20 transition-opacity duration-300">
-                    <span className="block w-1.5 h-1.5 rounded-full bg-green-400 shadow-[0_0_4px_rgba(74,222,128,0.8)]" />
+                    <span className="block w-1.5 h-1.5 rounded-full" style={typeDotStyle} />
                 </div>
             )}
 
