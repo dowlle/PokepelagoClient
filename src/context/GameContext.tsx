@@ -79,6 +79,7 @@ export interface UISettings {
     enableSprites: boolean;
     enableShadows: boolean;
     spriteSet: 'normal' | 'derpemon';
+    typeDot: boolean;
 }
 
 interface ConnectionInfo {
@@ -161,6 +162,8 @@ interface GameContextType extends GameState {
     detectedApWorldVersion: 'legacy' | 'new' | 'unknown';
     currentProfileId: string | null;
     setCurrentProfileId: React.Dispatch<React.SetStateAction<string | null>>;
+    typeFilter: string[];
+    setTypeFilter: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -209,6 +212,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [toast, setToast] = useState<ToastMessage | null>(null);
     const [detectedApWorldVersion, setDetectedApWorldVersion] = useState<'legacy' | 'new' | 'unknown'>('unknown');
     const [currentProfileId, setCurrentProfileId] = useState<string | null>(null);
+    const [typeFilter, setTypeFilter] = useState<string[]>([]);
     const isNewApWorldRef = useRef(false);
 
     const showToast = useCallback((type: ToastMessage['type'], message: string) => {
@@ -230,28 +234,18 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [pokegears, setPokegears] = useState(0);
     const [pokedexes, setPokedexes] = useState(0);
     const [usedMasterBalls, setUsedMasterBalls] = useState<Set<number>>(() => {
-        const saved = localStorage.getItem('pokepelago_usedMasterBalls');
+        const saved = localStorage.getItem('pokepelago_standalone_usedMasterBalls');
         return saved ? new Set(JSON.parse(saved)) : new Set();
     });
     const [usedPokegears, setUsedPokegears] = useState<Set<number>>(() => {
-        const saved = localStorage.getItem('pokepelago_usedPokegears');
+        const saved = localStorage.getItem('pokepelago_standalone_usedPokegears');
         return saved ? new Set(JSON.parse(saved)) : new Set();
     });
     const [usedPokedexes, setUsedPokedexes] = useState<Set<number>>(() => {
-        const saved = localStorage.getItem('pokepelago_usedPokedexes');
+        const saved = localStorage.getItem('pokepelago_standalone_usedPokedexes');
         return saved ? new Set(JSON.parse(saved)) : new Set();
     });
 
-    // Save Used Items
-    useEffect(() => {
-        localStorage.setItem('pokepelago_usedMasterBalls', JSON.stringify(Array.from(usedMasterBalls)));
-    }, [usedMasterBalls]);
-    useEffect(() => {
-        localStorage.setItem('pokepelago_usedPokegears', JSON.stringify(Array.from(usedPokegears)));
-    }, [usedPokegears]);
-    useEffect(() => {
-        localStorage.setItem('pokepelago_usedPokedexes', JSON.stringify(Array.from(usedPokedexes)));
-    }, [usedPokedexes]);
     const [spriteCount, setSpriteCount] = useState(0);
     const [derpemonIndex, setDerpemonIndex] = useState<DerpemonIndex>({});
     const [spriteRepoUrl, setSpriteRepoUrlState] = useState<string>(
@@ -267,6 +261,23 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (params.has('splash')) return null;
         return localStorage.getItem('pokepelago_gamemode') as any || null;
     });
+
+    // Save Used Items (standalone only — AP mode uses DataStorage as the authoritative source)
+    useEffect(() => {
+        if (gameMode === 'standalone') {
+            localStorage.setItem('pokepelago_standalone_usedMasterBalls', JSON.stringify(Array.from(usedMasterBalls)));
+        }
+    }, [usedMasterBalls, gameMode]);
+    useEffect(() => {
+        if (gameMode === 'standalone') {
+            localStorage.setItem('pokepelago_standalone_usedPokegears', JSON.stringify(Array.from(usedPokegears)));
+        }
+    }, [usedPokegears, gameMode]);
+    useEffect(() => {
+        if (gameMode === 'standalone') {
+            localStorage.setItem('pokepelago_standalone_usedPokedexes', JSON.stringify(Array.from(usedPokedexes)));
+        }
+    }, [usedPokedexes, gameMode]);
 
     const setGameMode = useCallback((mode: 'archipelago' | 'standalone' | null) => {
         setGameModeState(mode);
@@ -364,13 +375,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
     });
     const [isLoading, setIsLoading] = useState(true);
-    const [generationFilter, setGenerationFilter] = useState<number[]>([0]);
+    const [generationFilter, setGenerationFilter] = useState<number[]>(GENERATIONS.map((_, i) => i));
 
     const [isConnected, setIsConnected] = useState(false);
     const [connectionError, setConnectionError] = useState<string | null>(null);
     const [uiSettings, setUiSettings] = useState<UISettings>(() => {
         const saved = localStorage.getItem('pokepelago_ui');
-        const defaults: UISettings = { widescreen: false, masonry: false, enableSprites: true, enableShadows: false, spriteSet: 'normal' };
+        const defaults: UISettings = { widescreen: false, masonry: false, enableSprites: true, enableShadows: false, spriteSet: 'normal', typeDot: true };
         return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
     });
 
@@ -623,6 +634,15 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return { canGuess: true };
         }
 
+        // --- ARCHIPELAGO OFFLINE: fall back to gen-filter check ---
+        if (!isConnected) {
+            const genIdx = GENERATIONS.findIndex(g => id >= g.startId && id <= g.endId);
+            if (genIdx === -1 || !generationFilter.includes(genIdx)) {
+                return { canGuess: false, reason: 'Generation not enabled in settings' };
+            }
+            return { canGuess: true };
+        }
+
         // --- ARCHIPELAGO PROGRESSION ---
         // 0. Region check — is this Pokemon in an active region?
         if (Object.keys(activeRegions).length > 0) {
@@ -677,7 +697,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         return { canGuess: true };
-    }, [gameMode, generationFilter, activePokemonLimit, activeRegions, startingRegion, regionLocksEnabled, regionPasses, typeLocksEnabled, typeUnlocks, pokemonMetadata, detectedApWorldVersion, unlockedIds]);
+    }, [gameMode, isConnected, generationFilter, activePokemonLimit, activeRegions, startingRegion, regionLocksEnabled, regionPasses, typeLocksEnabled, typeUnlocks, pokemonMetadata, detectedApWorldVersion, unlockedIds]);
 
     useEffect(() => {
         isPokemonGuessableRef.current = isPokemonGuessable;
@@ -988,26 +1008,17 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                         // Because this callback runs anytime the value changes, update the state and the dynamic counters.
                         if (key === mbKey) {
-                            setUsedMasterBalls(prev => {
-                                const merged = new Set([...prev, ...usedIds]);
-                                const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 1).length;
-                                setMasterBalls(Math.max(0, totalServer - merged.size));
-                                return merged;
-                            });
+                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 1).length;
+                            setMasterBalls(Math.max(0, totalServer - usedIds.size));
+                            setUsedMasterBalls(usedIds);
                         } else if (key === pgKey) {
-                            setUsedPokegears(prev => {
-                                const merged = new Set([...prev, ...usedIds]);
-                                const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 2).length;
-                                setPokegears(Math.max(0, totalServer - merged.size));
-                                return merged;
-                            });
+                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 2).length;
+                            setPokegears(Math.max(0, totalServer - usedIds.size));
+                            setUsedPokegears(usedIds);
                         } else if (key === pdKey) {
-                            setUsedPokedexes(prev => {
-                                const merged = new Set([...prev, ...usedIds]);
-                                const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 3).length;
-                                setPokedexes(Math.max(0, totalServer - merged.size));
-                                return merged;
-                            });
+                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 3).length;
+                            setPokedexes(Math.max(0, totalServer - usedIds.size));
+                            setUsedPokedexes(usedIds);
                         } else if (key === derpKey) {
                             setDerpyfiedIds(usedIds);
                         } else if (key === relKey) {
@@ -1016,23 +1027,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             setCheckedIds(prev => new Set([...prev, ...usedIds]));
                         }
                     }).then((data) => {
-                        const localMB = new Set(JSON.parse(localStorage.getItem('pokepelago_usedMasterBalls') || '[]'));
-                        const localPG = new Set(JSON.parse(localStorage.getItem('pokepelago_usedPokegears') || '[]'));
-                        const localPD = new Set(JSON.parse(localStorage.getItem('pokepelago_usedPokedexes') || '[]'));
-
-                        const pushUnsynced = (localSet: Set<any>, serverArr: any, key: string) => {
-                            const serverSet = new Set(Array.isArray(serverArr) ? serverArr : []);
-                            // Push items locally used that the server isn't tracking yet
-                            const unsynced = Array.from(localSet).filter(id => !serverSet.has(id));
-                            if (unsynced.length > 0) {
-                                client.storage.prepare(key, []).add(unsynced).commit();
-                            }
-                        };
-
-                        pushUnsynced(localMB, data[mbKey], mbKey);
-                        pushUnsynced(localPG, data[pgKey], pgKey);
-                        pushUnsynced(localPD, data[pdKey], pdKey);
-
                         // Initialize traps from server data
                         if (Array.isArray(data[derpKey])) setDerpyfiedIds(new Set(data[derpKey] as number[]));
                         if (Array.isArray(data[relKey])) setReleasedIds(new Set(data[relKey] as number[]));
@@ -1091,11 +1085,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                 parts: [{ text: `Received ${regionName} Pass!`, type: 'color', color: '#F59E0B' }]
                             }, ...prev.slice(0, 99)]);
                         } else if (item.id === ITEM_OFFSET + TRAP_ITEM_OFFSET + 1) {
-                            // Small Shuffle Trap
-                            setShuffleEndTime(Date.now() + 30000); // 30s
+                            // Small Shuffle Trap — gate with storageReadyRef to prevent re-trigger on reconnect
+                            if (storageReadyRef.current) setShuffleEndTime(Date.now() + 30000); // 30s
                         } else if (item.id === ITEM_OFFSET + TRAP_ITEM_OFFSET + 2) {
-                            // Big Shuffle Trap
-                            setShuffleEndTime(Date.now() + 150000); // 2m 30s
+                            // Big Shuffle Trap — gate with storageReadyRef to prevent re-trigger on reconnect
+                            if (storageReadyRef.current) setShuffleEndTime(Date.now() + 150000); // 2m 30s
                         } else if (item.id === ITEM_OFFSET + TRAP_ITEM_OFFSET + 3) {
                             // Derpy Mon Trap
                             recalculateItems = true;
@@ -1406,6 +1400,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUsedMasterBalls(new Set());
         setUsedPokegears(new Set());
         setUsedPokedexes(new Set());
+        setShuffleEndTime(0);
     };
 
     const updateUiSettings = (newSettings: Partial<UISettings>) => {
@@ -1616,6 +1611,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             detectedApWorldVersion,
             currentProfileId,
             setCurrentProfileId,
+            typeFilter,
+            setTypeFilter,
         }}>
             {children}
         </GameContext.Provider>
