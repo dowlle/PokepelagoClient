@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
 import { Shield, Globe, Laptop, ArrowRight, Download, Github, BookOpen } from 'lucide-react';
 import { ConnectionManager } from './ConnectionManager';
+import { CreditsModal } from './CreditsModal';
 import type { GameProfile } from '../services/connectionManagerService';
 
 export const SplashScreen: React.FC = () => {
     const { setGameMode, connect, setConnectionInfo, setCurrentProfileId } = useGame();
     const [isManagerOpen, setIsManagerOpen] = useState(false);
+    const [isCreditsOpen, setIsCreditsOpen] = useState(false);
 
     const handleConnectProfile = async (profile: GameProfile) => {
         setCurrentProfileId(profile.id);
@@ -31,7 +33,11 @@ export const SplashScreen: React.FC = () => {
             <div className="max-w-4xl w-full">
                 {/* Hero Section */}
                 <div className="text-center mb-12 animate-in fade-in slide-in-from-top-4 duration-1000">
-                    <h1 className="text-6xl font-black tracking-tighter mb-4 bg-gradient-to-r from-green-400 via-emerald-500 to-blue-500 bg-clip-text text-transparent">
+                    <h1
+                        className="text-6xl font-black tracking-tighter mb-4 bg-gradient-to-r from-green-400 via-emerald-500 to-blue-500 bg-clip-text text-transparent cursor-pointer hover:opacity-80 transition-opacity select-none"
+                        onClick={() => setIsCreditsOpen(true)}
+                        title="Credits & Changelog"
+                    >
                         Poképelago
                     </h1>
                     <p className="text-gray-400 text-lg max-w-2xl mx-auto leading-relaxed">
@@ -144,6 +150,10 @@ export const SplashScreen: React.FC = () => {
             isOpen={isManagerOpen}
             onClose={() => setIsManagerOpen(false)}
             onConnect={handleConnectProfile}
+        />
+        <CreditsModal
+            isOpen={isCreditsOpen}
+            onClose={() => setIsCreditsOpen(false)}
         />
         </>
     );
