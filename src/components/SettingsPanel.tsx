@@ -71,7 +71,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
         });
     };
 
-    const selectAll = () => setGenerationFilter([0]);
+    const selectAll = () => setGenerationFilter(GENERATIONS.map((_, i) => i));
 
     const isGameSaved = (() => {
         if (!isConnected) return false;
@@ -219,6 +219,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                                     </button>
                                 </div>
                             ) : (
+                                <>
                                 <form onSubmit={handleConnect} className="space-y-4">
                                     <div className="grid grid-cols-3 gap-3">
                                         <div className="col-span-2">
@@ -245,6 +246,20 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                                         {isConnecting ? 'CONNECTING...' : 'CONNECT'}
                                     </button>
                                 </form>
+                                <div className="bg-gray-800/40 border border-gray-700 rounded-xl p-4 text-center space-y-3">
+                                    <p className="text-[10px] text-gray-400">Not playing with Archipelago? Switch to <strong>Standalone Mode</strong> to freely guess all Pokémon.</p>
+                                    <button
+                                        onClick={() => {
+                                            if (confirm('Switch to Standalone Mode? Your guess progress will remain.')) {
+                                                setGameMode('standalone');
+                                            }
+                                        }}
+                                        className="w-full py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 rounded text-xs font-bold transition-colors"
+                                    >
+                                        SWITCH TO STANDALONE
+                                    </button>
+                                </div>
+                                </>
                             )
                         ) : (
                             <div className={`border rounded p-4 flex flex-col gap-3 ${connectionQuality === 'dead' ? 'bg-red-900/10 border-red-800/30' : connectionQuality === 'degraded' ? 'bg-yellow-900/10 border-yellow-800/30' : 'bg-green-900/10 border-green-800/30'}`}>
@@ -456,6 +471,16 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                                     </div>
                                 </div>
                                 <input type="checkbox" checked={uiSettings.enableShadows} onChange={(e) => updateUiSettings({ enableShadows: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-blue-600 focus:ring-blue-500" />
+                            </label>
+                            <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 rounded-full group-hover:scale-110 transition-transform" style={{ background: 'linear-gradient(135deg, #7AC74C 50%, #6390F0 50%)' }} />
+                                    <div>
+                                        <div className="text-xs font-bold text-gray-200">Type-Colored Dot</div>
+                                        <div className="text-[9px] text-gray-500">Use Pokémon type colors for the guessable indicator dot</div>
+                                    </div>
+                                </div>
+                                <input type="checkbox" checked={uiSettings.typeDot} onChange={(e) => updateUiSettings({ typeDot: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-emerald-600 focus:ring-emerald-500" />
                             </label>
                         </div>
                         <div className="pt-2 border-t border-gray-800/50">
