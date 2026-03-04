@@ -1,12 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { PokemonRef } from '../types/pokemon';
 import { GENERATIONS } from '../types/pokemon';
 import { useGame } from '../context/GameContext';
 import { PokemonSlot } from './PokemonSlot';
-import { Lock } from 'lucide-react';
+import { Lock, GripVertical, ChevronDown } from 'lucide-react';
+import pokemonMetadata from '../data/pokemon_metadata.json';
+
+const REGION_LAYOUT_KEY = 'pokepelago_region_layout';
 
 export const DexGrid: React.FC = () => {
-    const { allPokemon, unlockedIds, checkedIds, hintedIds, shinyIds, generationFilter, uiSettings, gameMode, isPokemonGuessable, shuffleEndTime, releasedIds, activeRegions, regionPasses, regionLocksEnabled, startingRegion } = useGame();
+    const { allPokemon, unlockedIds, checkedIds, hintedIds, shinyIds, generationFilter, uiSettings, gameMode, isPokemonGuessable, shuffleEndTime, releasedIds, activeRegions, regionPasses, regionLocksEnabled, startingRegion, typeFilter } = useGame();
 
     const [now, setNow] = useState(Date.now());
 
@@ -19,6 +22,72 @@ export const DexGrid: React.FC = () => {
 
     const isShuffled = shuffleEndTime > now;
 
+    // Region layout: order + open/closed — persisted to localStorage
+    const [regionOrder, setRegionOrder] = useState<string[]>(() => {
+        try {
+            const saved = localStorage.getItem(REGION_LAYOUT_KEY);
+            if (saved) return JSON.parse(saved).order ?? GENERATIONS.map(g => g.label);
+        } catch {}
+        return GENERATIONS.map(g => g.label);
+    });
+
+    const [regionOpen, setRegionOpen] = useState<Record<string, boolean>>(() => {
+        try {
+            const saved = localStorage.getItem(REGION_LAYOUT_KEY);
+            if (saved) return JSON.parse(saved).open ?? {};
+        } catch {}
+        return {};
+    });
+
+    useEffect(() => {
+        localStorage.setItem(REGION_LAYOUT_KEY, JSON.stringify({ order: regionOrder, open: regionOpen }));
+    }, [regionOrder, regionOpen]);
+
+    const toggleRegion = useCallback((label: string) => {
+        setRegionOpen(prev => ({ ...prev, [label]: prev[label] === false }));
+    }, []);
+
+    // Drag and drop
+    const [draggedLabel, setDraggedLabel] = useState<string | null>(null);
+    const [dragOverLabel, setDragOverLabel] = useState<string | null>(null);
+
+    const handleDragStart = useCallback((label: string) => setDraggedLabel(label), []);
+    const handleDragEnd = useCallback(() => { setDraggedLabel(null); setDragOverLabel(null); }, []);
+
+    const handleDragOver = useCallback((e: React.DragEvent, label: string) => {
+        e.preventDefault();
+        setDragOverLabel(label);
+    }, []);
+
+    const handleDragLeave = useCallback((e: React.DragEvent) => {
+        // Only clear if leaving the card entirely (not entering a child)
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+            setDragOverLabel(null);
+        }
+    }, []);
+
+    const handleDrop = useCallback((targetLabel: string) => {
+        if (!draggedLabel || draggedLabel === targetLabel) {
+            setDragOverLabel(null);
+            return;
+        }
+        const dragged = draggedLabel;
+        setRegionOrder(order => {
+            const arr = GENERATIONS.map(g => g.label).map(l => order.includes(l) ? order.indexOf(l) : Infinity)
+                .map((pos, i) => ({ label: GENERATIONS[i].label, pos }))
+                .sort((a, b) => a.pos - b.pos)
+                .map(x => x.label);
+            const fromIdx = arr.indexOf(dragged);
+            const toIdx = arr.indexOf(targetLabel);
+            if (fromIdx === -1 || toIdx === -1) return order;
+            arr.splice(fromIdx, 1);
+            arr.splice(toIdx, 0, dragged);
+            return arr;
+        });
+        setDraggedLabel(null);
+        setDragOverLabel(null);
+    }, [draggedLabel]);
+
     // Build a map for quick lookups
     const pokemonById = React.useMemo(() => {
         const map = new Map<number, PokemonRef>();
@@ -27,7 +96,7 @@ export const DexGrid: React.FC = () => {
     }, [allPokemon]);
 
     const getStatus = (id: number): 'locked' | 'unlocked' | 'checked' | 'shadow' | 'hint' => {
-        if (releasedIds.has(id)) return 'shadow'; // Release Trap takes precedence
+        if (releasedIds.has(id)) return 'shadow';
         if (checkedIds.has(id)) return 'checked';
 
         if (gameMode === 'standalone') {
@@ -47,6 +116,21 @@ export const DexGrid: React.FC = () => {
         return 'locked';
     };
 
+    // Ordered + filtered generations
+    const orderedGenerations = React.useMemo(() => {
+        return GENERATIONS
+            .map((gen, idx) => ({ gen, idx }))
+            .filter(({ idx }) => generationFilter.includes(idx))
+            .sort((a, b) => {
+                const ia = regionOrder.indexOf(a.gen.label);
+                const ib = regionOrder.indexOf(b.gen.label);
+                if (ia === -1 && ib === -1) return 0;
+                if (ia === -1) return 1;
+                if (ib === -1) return -1;
+                return ia - ib;
+            });
+    }, [generationFilter, regionOrder]);
+
     const activeCount = generationFilter.length;
 
     const containerClass = uiSettings.masonry
@@ -55,55 +139,84 @@ export const DexGrid: React.FC = () => {
 
     return (
         <div className={containerClass}>
-            {GENERATIONS.map((gen, genIdx) => {
-                if (!generationFilter.includes(genIdx)) return null;
-
-                // Build list of pokemon IDs in this generation
-                let pokemonInGen: PokemonRef[] = [];
+            {orderedGenerations.map(({ gen }) => {
+                // Full list for header stats (unaffected by type filter)
+                const fullInGen: PokemonRef[] = [];
                 for (let id = gen.startId; id <= gen.endId; id++) {
                     const p = pokemonById.get(id);
-                    if (p) pokemonInGen.push(p);
+                    if (p) fullInGen.push(p);
                 }
+                const checkedCount = fullInGen.filter(p => checkedIds.has(p.id)).length;
+
+                // Type-filtered list for body rendering
+                const pokemonInGen = typeFilter.length > 0
+                    ? fullInGen.filter(p => {
+                        const types: string[] = (pokemonMetadata as any)[p.id]?.types ?? [];
+                        return types.some(t => typeFilter.includes(t.charAt(0).toUpperCase() + t.slice(1)));
+                    })
+                    : fullInGen;
+
+                if (typeFilter.length > 0 && pokemonInGen.length === 0) return null;
 
                 const shuffleOrder = new Map<number, number>();
                 if (isShuffled) {
-                    // Seeded random based on the trap end time so it stays static for the duration
                     const seed = shuffleEndTime % 1000000;
                     const shuffleArr = [...pokemonInGen];
                     for (let i = shuffleArr.length - 1; i > 0; i--) {
-                        // pseudo-random using id and constant seed
                         const j = Math.floor(Math.abs(Math.sin(seed + i) * 10000)) % (i + 1);
                         [shuffleArr[i], shuffleArr[j]] = [shuffleArr[j], shuffleArr[i]];
                     }
-                    // Map pokemon id to its new visual index
-                    shuffleArr.forEach((p, idx) => {
-                        shuffleOrder.set(p.id, idx);
-                    });
+                    shuffleArr.forEach((p, idx) => shuffleOrder.set(p.id, idx));
                 }
 
-                const checkedCount = pokemonInGen.filter(p => checkedIds.has(p.id)).length;
                 const isLocked = regionLocksEnabled &&
                     Object.keys(activeRegions).length > 0 &&
                     gen.region in activeRegions &&
                     gen.region !== startingRegion &&
                     !regionPasses.has(gen.region);
 
+                const isRegionOpen = regionOpen[gen.label] !== false;
+                const isDragTarget = dragOverLabel === gen.label && draggedLabel !== gen.label;
+
                 return (
                     <div
                         key={gen.label}
+                        onDragOver={(e) => handleDragOver(e, gen.label)}
+                        onDragLeave={handleDragLeave}
+                        onDrop={() => handleDrop(gen.label)}
                         className={`
-                            bg-gray-900/70 border border-gray-700/50 rounded-xl p-4 backdrop-blur-sm shadow-2xl flex flex-col h-fit
+                            bg-gray-900/70 border rounded-xl backdrop-blur-sm shadow-2xl flex flex-col h-fit
                             ${uiSettings.masonry ? 'break-inside-avoid mb-4' : ''}
-                            w-full
+                            w-full transition-all duration-150
                             ${isLocked ? 'opacity-80 shadow-none' : ''}
+                            ${isDragTarget ? 'border-blue-500/60 shadow-[0_0_14px_rgba(59,130,246,0.3)]' : 'border-gray-700/50'}
+                            ${draggedLabel === gen.label ? 'opacity-40' : ''}
                         `}
                     >
-                        <div className="flex justify-between items-baseline mb-3">
-                            <div>
+                        {/* Header: drag handle + toggle */}
+                        <div
+                            className="flex items-center gap-2 p-4 cursor-pointer select-none"
+                            onClick={() => toggleRegion(gen.label)}
+                        >
+                            <div
+                                draggable
+                                onDragStart={(e) => { e.stopPropagation(); handleDragStart(gen.label); }}
+                                onDragEnd={handleDragEnd}
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-gray-600 hover:text-gray-400 cursor-grab active:cursor-grabbing shrink-0 transition-colors"
+                            >
+                                <GripVertical size={14} />
+                            </div>
+
+                            <div className="flex-1 min-w-0">
                                 <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
                                     {gen.region}
                                     {isLocked && <Lock size={12} className="text-gray-600" />}
-                                    {isShuffled && <span className="text-red-500 animate-pulse text-xs lowercase">shuffled! ({Math.ceil((shuffleEndTime - now) / 1000)}s)</span>}
+                                    {isShuffled && (
+                                        <span className="text-red-500 animate-pulse text-xs lowercase">
+                                            shuffled! ({Math.ceil((shuffleEndTime - now) / 1000)}s)
+                                        </span>
+                                    )}
                                 </h3>
                                 {isLocked && (
                                     <span className="text-[10px] text-gray-600 font-normal normal-case tracking-normal">
@@ -111,20 +224,30 @@ export const DexGrid: React.FC = () => {
                                     </span>
                                 )}
                             </div>
-                            <span className="text-xs font-mono text-gray-600">
-                                {checkedCount} / {pokemonInGen.length}
+
+                            <span className="text-xs font-mono text-gray-600 shrink-0">
+                                {checkedCount} / {fullInGen.length}
                             </span>
+
+                            <ChevronDown
+                                size={14}
+                                className={`text-gray-600 shrink-0 transition-transform duration-200 ${isRegionOpen ? '' : '-rotate-90'}`}
+                            />
                         </div>
-                        <div className="flex flex-wrap gap-1.5 justify-start">
-                            {pokemonInGen.map(p => (
-                                <PokemonSlot
-                                    key={p.id}
-                                    pokemon={p}
-                                    status={getStatus(p.id) as any}
-                                    isShiny={shinyIds.has(p.id)}
-                                    order={shuffleOrder.get(p.id)}
-                                />
-                            ))}
+
+                        {/* Body — always mounted so sprites stay loaded; hidden via CSS only */}
+                        <div className={`px-4 pb-4 ${isRegionOpen ? '' : 'hidden'}`}>
+                            <div className="flex flex-wrap gap-1.5 justify-start">
+                                {pokemonInGen.map(p => (
+                                    <PokemonSlot
+                                        key={p.id}
+                                        pokemon={p}
+                                        status={getStatus(p.id) as any}
+                                        isShiny={shinyIds.has(p.id)}
+                                        order={shuffleOrder.get(p.id)}
+                                    />
+                                ))}
+                            </div>
                         </div>
                     </div>
                 );
