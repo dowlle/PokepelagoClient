@@ -63,9 +63,9 @@ export const SplashScreen: React.FC = () => {
                                     <Github size={18} />
                                 </div>
                                 <div>
-                                    <h3 className="text-sm font-bold text-gray-200">1. Obtain Sprites (Optional)</h3>
+                                    <h3 className="text-sm font-bold text-gray-200">Paste a Sprite URL (Easy)</h3>
                                     <p className="text-xs text-gray-500 leading-relaxed">
-                                        Check the <a href="https://github.com/dowlle/Pokepelago#1-download-the-sprites" target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">Poképelago README</a> for instructions on where to find compatible community sprite packs or how to use your own.
+                                        Go to Settings → Sprite Management and paste a GitHub sprites tree URL. Try <span className="text-blue-400">github.com/PokeAPI/sprites/tree/master/sprites</span> to get started.
                                     </p>
                                 </div>
                             </div>
@@ -74,9 +74,9 @@ export const SplashScreen: React.FC = () => {
                                     <Download size={18} />
                                 </div>
                                 <div>
-                                    <h3 className="text-sm font-bold text-gray-200">2. Local Import</h3>
+                                    <h3 className="text-sm font-bold text-gray-200">Local Import (Offline)</h3>
                                     <p className="text-xs text-gray-500 leading-relaxed">
-                                        Import the extracted folder through the settings panel to securely store sprites in your browser.
+                                        Alternatively, import a sprite folder through the settings panel to store sprites locally in your browser.
                                     </p>
                                 </div>
                             </div>
@@ -135,9 +135,13 @@ export const SplashScreen: React.FC = () => {
 
                 {/* Footer Info */}
                 <div className="flex flex-wrap justify-center gap-8 text-[10px] font-black uppercase tracking-[0.2em] text-gray-600 animate-in fade-in duration-1000 delay-500">
-                    <a href="https://github.com/dowlle/Pokepelago" target="_blank" rel="noreferrer" className="flex items-center gap-2 hover:text-white transition-colors">
+                    <a href="https://github.com/dowlle/PokepelagoClient" target="_blank" rel="noreferrer" className="flex items-center gap-2 hover:text-white transition-colors">
                         <Github size={12} />
-                        <span>Poképelago GitHub Repo</span>
+                        <span>Poképelago Client Repo</span>
+                    </a>
+                    <a href="https://github.com/dowlle/ArchipelagoPokepelago" target="_blank" rel="noreferrer" className="flex items-center gap-2 hover:text-white transition-colors">
+                        <Github size={12} />
+                        <span>Pokepelago Archipelago Repo</span>
                     </a>
                     <div className="flex items-center gap-2">
                         <Shield size={12} />
