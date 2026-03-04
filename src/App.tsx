@@ -168,7 +168,7 @@ const GameContent: React.FC = () => {
 
       <div className="flex-1 flex overflow-hidden relative">
         {/* Main Content */}
-        <main className={`flex-1 overflow-y-auto pb-16 ${uiSettings.widescreen ? 'px-6' : 'px-4'}`}>
+        <main className={`flex-1 overflow-y-auto [scrollbar-gutter:stable] pb-16 ${uiSettings.widescreen ? 'px-6' : 'px-4'}`}>
           <div className={`${uiSettings.widescreen ? 'max-w-none' : 'max-w-screen-xl'} mx-auto pt-6`}>
             <DexGrid />
           </div>
