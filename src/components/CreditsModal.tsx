@@ -12,77 +12,77 @@ const changelog: Array<{
     date: string;
     highlights: Array<{ label: string; text: string }>;
 }> = [
-    {
-        version: '0.3.2',
-        date: 'March 2025',
-        highlights: [
-            {
-                label: 'Milestone logic fix',
-                text: 'Global and type milestones now have proper access rules. AP will only consider them reachable when enough Pokémon are actually accessible with your current items.',
-            },
-            {
-                label: 'Trap weights',
-                text: 'Configure how often each trap type appears via trap_weights in your YAML. Set any trap to 0 to disable it entirely.',
-            },
-            {
-                label: 'Language selector',
-                text: 'Choose to accept guesses in a specific language only. Prevents accidental catches from shorter names in other languages (e.g. German "Dodu" matching Doduo). Your pick is saved between sessions.',
-            },
-            {
-                label: 'Type proficiency counter',
-                text: 'The type sidebar now shows how many Pokémon of each type you\'ve caught out of the total available, e.g. Fire (12/15).',
-            },
-        ],
-    },
-    {
-        version: '0.3.1',
-        date: 'Feb 2025',
-        highlights: [
-            {
-                label: 'New APWorld logic',
-                text: 'Full rewrite of generation logic. Multiple Poképelago games can now generate in under a second. Dexsanity no longer uses per-Pokémon unlock items.',
-            },
-            {
-                label: 'Gens 4–9 & region locks',
-                text: 'All nine generations are back! Region locks return as Region Passes in the multiworld item pool.',
-            },
-            {
-                label: 'Derpemon traps',
-                text: 'Derpemon community sprites can now be triggered as a trap or toggled on globally. Community members have already created 100+ derpy sprites!',
-            },
-            {
-                label: 'Shuffle & release traps',
-                text: 'The shuffle trap scrambles your Dex grid, and the release trap frees a caught Pokémon that you\'ll have to guess again.',
-            },
-            {
-                label: 'Game Manager',
-                text: 'Save multiple connection profiles and switch between games instantly. Goaled games are flagged and can be auto-cleaned.',
-            },
-            {
-                label: 'Type colors & filters',
-                text: 'Type badges use proper type colors everywhere. Click type pills to filter the Dex grid. Ctrl+click for multi-select.',
-            },
-        ],
-    },
-    {
-        version: '0.2.0',
-        date: 'Feb 2025',
-        highlights: [
-            {
-                label: 'Sprite URL loading',
-                text: 'Paste a sprite repo URL in Settings and sprites load automatically. No more downloading and uploading ZIP files.',
-            },
-            {
-                label: 'Better connection handling',
-                text: 'The game reliably detects server disconnects and shows real-time connection quality.',
-            },
-            {
-                label: 'Multilingual name guessing',
-                text: 'Pokémon with accents, dots, or names in Japanese, French, and other languages are now recognized correctly.',
-            },
-        ],
-    },
-];
+        {
+            version: '0.3.2',
+            date: 'March 2025',
+            highlights: [
+                {
+                    label: 'Milestone logic fix',
+                    text: 'Global and type milestones now have proper access rules. AP will only consider them reachable when enough Pokémon are actually accessible with your current items.',
+                },
+                {
+                    label: 'Trap weights',
+                    text: 'Configure how often each trap type appears via trap_weights in your YAML. Set any trap to 0 to disable it entirely.',
+                },
+                {
+                    label: 'Language selector',
+                    text: 'Choose to accept guesses in a specific language only. Prevents accidental catches from shorter names in other languages (e.g. German "Dodu" matching Doduo). Your pick is saved between sessions.',
+                },
+                {
+                    label: 'Type proficiency counter',
+                    text: 'The type sidebar now shows how many Pokémon of each type you\'ve caught out of the total available, e.g. Fire (12/15).',
+                },
+            ],
+        },
+        {
+            version: '0.3.1',
+            date: 'Feb 2025',
+            highlights: [
+                {
+                    label: 'New APWorld logic',
+                    text: 'Full rewrite of generation logic. Multiple Poképelago games can now generate in under a second. Dexsanity no longer uses per-Pokémon unlock items.',
+                },
+                {
+                    label: 'Gens 4–9 & region locks',
+                    text: 'All nine generations are back! Region locks return as Region Passes in the multiworld item pool.',
+                },
+                {
+                    label: 'Derpemon traps',
+                    text: 'Derpemon community sprites can now be triggered as a trap or toggled on globally. Community members have already created 100+ derpy sprites!',
+                },
+                {
+                    label: 'Shuffle & release traps',
+                    text: 'The shuffle trap scrambles your Dex grid, and the release trap frees a caught Pokémon that you\'ll have to guess again.',
+                },
+                {
+                    label: 'Game Manager',
+                    text: 'Save multiple connection profiles and switch between games instantly. Goaled games are flagged and can be auto-cleaned.',
+                },
+                {
+                    label: 'Type colors & filters',
+                    text: 'Type badges use proper type colors everywhere. Click type pills to filter the Dex grid. Ctrl+click for multi-select.',
+                },
+            ],
+        },
+        {
+            version: '0.2.0',
+            date: 'Feb 2025',
+            highlights: [
+                {
+                    label: 'Sprite URL loading',
+                    text: 'Paste a sprite repo URL in Settings and sprites load automatically. No more downloading and uploading ZIP files.',
+                },
+                {
+                    label: 'Better connection handling',
+                    text: 'The game reliably detects server disconnects and shows real-time connection quality.',
+                },
+                {
+                    label: 'Multilingual name guessing',
+                    text: 'Pokémon with accents, dots, or names in Japanese, French, and other languages are now recognized correctly.',
+                },
+            ],
+        },
+    ];
 
 export const CreditsModal: React.FC<CreditsModalProps> = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
@@ -169,6 +169,15 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({ isOpen, onClose }) =
                             >
                                 <img src="https://archipelago.gg/favicon.ico" alt="" className="w-3 h-3 shrink-0" />
                                 Built for Archipelago
+                            </a>
+                            <a
+                                href="https://sprites.pmdcollab.org/#/Contributors"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-gray-500 rounded-xl text-xs text-gray-400 hover:text-white transition-all"
+                            >
+                                <img src="https://sprites.pmdcollab.org/favicon.ico" alt="" className="w-3 h-3 shrink-0" />
+                                Mystery Dungeon sprites by SpriteCollab
                             </a>
                         </div>
                     </section>
