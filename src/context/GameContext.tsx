@@ -488,6 +488,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return;
         }
 
+        // In standalone mode there is no AP location to check — local state update above is sufficient.
+        if (gameMode !== 'archipelago') return;
+
         // Disconnected — queue a reconnect then send the check once online again.
         // Store pending location so it can be sent after the 'connected' event fires.
         console.log('[checkPokemon] Not authenticated, reconnecting...');
@@ -495,6 +498,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const savedInfo = connectionInfoRef.current;
 
         const doReconnect = async () => {
+            if (gameMode !== 'archipelago') return;
             if (isConnectingRef.current) return;
             try {
                 // connect() will set up all event handlers (receivedItems, disconnected, etc.) properly
@@ -508,7 +512,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
         };
         doReconnect();
-    }, [isConnected, dexsanityEnabled]);
+    }, [isConnected, dexsanityEnabled, gameMode]);
 
 
 
