@@ -1,27 +1,8 @@
 import React, { useMemo } from 'react';
 import { useGame } from '../context/GameContext';
 import pokemonMetadata from '../data/pokemon_metadata.json';
-
-const TYPE_COLORS: Record<string, string> = {
-    Normal: '#A8A77A',
-    Fire: '#EE8130',
-    Water: '#6390F0',
-    Electric: '#F7D02C',
-    Grass: '#7AC74C',
-    Ice: '#96D9D6',
-    Fighting: '#C22E28',
-    Poison: '#A33EA1',
-    Ground: '#E2BF65',
-    Flying: '#A98FF3',
-    Psychic: '#F95587',
-    Bug: '#A6B91A',
-    Rock: '#B6A136',
-    Ghost: '#735797',
-    Dragon: '#6F35FC',
-    Steel: '#B7B7CE',
-    Dark: '#705746',
-    Fairy: '#D685AD',
-};
+import { TYPE_COLORS } from '../utils/typeColors';
+import { GENERATIONS } from '../types/pokemon';
 
 const TYPES_ORDER = [
     'Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice',
@@ -30,17 +11,22 @@ const TYPES_ORDER = [
 ];
 
 export const TypeStatus: React.FC = () => {
-    const { typeUnlocks, typeLocksEnabled, checkedIds, activeRegions } = useGame();
+    const { typeUnlocks, typeLocksEnabled, checkedIds, activeRegions, generationFilter, isConnected, typeFilter, setTypeFilter } = useGame();
 
     const typeStats = useMemo(() => {
         const stats: Record<string, { guessed: number; total: number }> = {};
         TYPES_ORDER.forEach(t => (stats[t] = { guessed: 0, total: 0 }));
 
         const regionEntries = Object.values(activeRegions);
-        const isActive = (id: number) =>
-            regionEntries.length === 0
-                ? id >= 1 && id <= 1025
-                : regionEntries.some(([lo, hi]) => id >= lo && id <= hi);
+        const isActive = (id: number) => {
+            // AP connected: use activeRegions from slot_data
+            if (isConnected && regionEntries.length > 0) {
+                return regionEntries.some(([lo, hi]) => id >= lo && id <= hi);
+            }
+            // Standalone or AP-offline: use generationFilter
+            const genIdx = GENERATIONS.findIndex(g => id >= g.startId && id <= g.endId);
+            return genIdx !== -1 && generationFilter.includes(genIdx);
+        };
 
         for (let id = 1; id <= 1025; id++) {
             if (!isActive(id)) continue;
@@ -55,7 +41,7 @@ export const TypeStatus: React.FC = () => {
             });
         }
         return stats;
-    }, [checkedIds, activeRegions]);
+    }, [checkedIds, activeRegions, generationFilter, isConnected]);
 
     if (!typeLocksEnabled) return null;
 
@@ -70,23 +56,38 @@ export const TypeStatus: React.FC = () => {
                     const color = TYPE_COLORS[type];
 
                     return (
-                        <div
+                        <button
                             key={type}
+                            onClick={(e) => {
+                                if (e.ctrlKey || e.metaKey) {
+                                    // Multi-select: toggle this type in/out of the selection
+                                    setTypeFilter(prev =>
+                                        prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+                                    );
+                                } else {
+                                    // Single-select: select only this type, or clear if already sole selection
+                                    setTypeFilter(prev =>
+                                        prev.length === 1 && prev[0] === type ? [] : [type]
+                                    );
+                                }
+                            }}
                             style={{
                                 backgroundColor: isUnlocked ? `${color}33` : '#1f293744',
-                                borderColor: isUnlocked ? `${color}66` : '#37415144',
-                                color: isUnlocked ? color : '#4b5563'
+                                borderColor: typeFilter.includes(type) ? color : (isUnlocked ? `${color}66` : '#37415144'),
+                                color: isUnlocked ? color : '#4b5563',
+                                boxShadow: typeFilter.includes(type) ? `0 0 8px ${color}88` : undefined,
                             }}
                             className={`
-                                px-1 py-1 rounded-md border text-[9px] font-black uppercase tracking-tighter text-center transition-all duration-500 flex flex-col items-center
-                                ${isUnlocked ? 'shadow-[0_0_8px_rgba(0,0,0,0.2)]' : 'opacity-40 grayscale'}
+                                px-1 py-1 rounded-md border text-[9px] font-black uppercase tracking-tighter text-center transition-all duration-200 flex flex-col items-center cursor-pointer
+                                ${isUnlocked ? '' : 'opacity-40 grayscale'}
+                                ${typeFilter.includes(type) ? 'scale-105' : 'hover:scale-105'}
                             `}
                         >
                             <span>{type}</span>
                             <span className="text-[8px] opacity-70 font-normal normal-case tracking-normal">
                                 ({typeStats[type]?.guessed ?? 0}/{typeStats[type]?.total ?? 0})
                             </span>
-                        </div>
+                        </button>
                     );
                 })}
             </div>
