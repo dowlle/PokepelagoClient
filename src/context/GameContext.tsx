@@ -185,7 +185,13 @@ const GAME_REGIONS_ORDER = ["Kanto", "Johto", "Hoenn", "Sinnoh", "Unova", "Kalos
 export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [allPokemon, setAllPokemon] = useState<PokemonRef[]>([]);
     const [unlockedIds, setUnlockedIds] = useState<Set<number>>(new Set());
-    const [checkedIds, setCheckedIds] = useState<Set<number>>(new Set());
+    const [checkedIds, setCheckedIds] = useState<Set<number>>(() => {
+        if (localStorage.getItem('pokepelago_gamemode') === 'standalone') {
+            const saved = localStorage.getItem('pokepelago_standalone_caught');
+            return saved ? new Set<number>(JSON.parse(saved)) : new Set<number>();
+        }
+        return new Set<number>();
+    });
     const [hintedIds, setHintedIds] = useState<Set<number>>(new Set());
     const [shinyIds, setShinyIds] = useState<Set<number>>(new Set());
     const [shadowsEnabled, setShadowsEnabled] = useState(false);
@@ -204,6 +210,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [goalCount, setGoalCount] = useState<number | undefined>(undefined);
     const [startingLocationsEnabled, setStartingLocationsEnabled] = useState(true);
     const [connectionKey, setConnectionKey] = useState(0);
+    const [connectedTeamSlot, setConnectedTeamSlot] = useState<{ team: number; slot: number } | null>(null);
+    const [dexsanityLocalWarning, setDexsanityLocalWarning] = useState(false);
 
     const [shuffleEndTime, setShuffleEndTime] = useState<number>(0);
     const [derpyfiedIds, setDerpyfiedIds] = useState<Set<number>>(new Set());
@@ -278,6 +286,52 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             localStorage.setItem('pokepelago_standalone_usedPokedexes', JSON.stringify(Array.from(usedPokedexes)));
         }
     }, [usedPokedexes, gameMode]);
+
+    // Reload standalone caught data when switching into standalone mode mid-session
+    // (disconnect() clears checkedIds first, then gameMode changes — this restores it)
+    useEffect(() => {
+        if (gameMode !== 'standalone') return;
+        const saved = localStorage.getItem('pokepelago_standalone_caught');
+        if (saved) setCheckedIds(new Set<number>(JSON.parse(saved)));
+    }, [gameMode]);
+
+    // Save caught Pokémon to localStorage in standalone mode
+    // Guard: skip when size=0 to avoid overwriting saved data during the disconnect→standalone flush
+    useEffect(() => {
+        if (gameMode !== 'standalone') return;
+        if (checkedIds.size === 0) return;
+        localStorage.setItem('pokepelago_standalone_caught', JSON.stringify(Array.from(checkedIds)));
+    }, [checkedIds, gameMode]);
+
+    // Save caught Pokémon locally for dexsanity=OFF AP games
+    // Supplements server DataStorage so progress survives refreshes even if a write was missed
+    useEffect(() => {
+        if (gameMode !== 'archipelago' || dexsanityEnabled || !connectedTeamSlot) return;
+        const { team, slot } = connectedTeamSlot;
+        localStorage.setItem(
+            `pokepelago_team_${team}_slot_${slot}_caught_local`,
+            JSON.stringify(Array.from(checkedIds))
+        );
+    }, [checkedIds, gameMode, dexsanityEnabled, connectedTeamSlot]);
+
+    // Show the device-local warning once per slot when dexsanity=OFF
+    useEffect(() => {
+        if (!connectedTeamSlot || dexsanityEnabled) {
+            setDexsanityLocalWarning(false);
+            return;
+        }
+        const { team, slot } = connectedTeamSlot;
+        const warned = localStorage.getItem(`pokepelago_team_${team}_slot_${slot}_local_warned`);
+        if (!warned) setDexsanityLocalWarning(true);
+    }, [connectedTeamSlot, dexsanityEnabled]);
+
+    const dismissDexsanityWarning = useCallback(() => {
+        if (connectedTeamSlot) {
+            const { team, slot } = connectedTeamSlot;
+            localStorage.setItem(`pokepelago_team_${team}_slot_${slot}_local_warned`, 'true');
+        }
+        setDexsanityLocalWarning(false);
+    }, [connectedTeamSlot]);
 
     const setGameMode = useCallback((mode: 'archipelago' | 'standalone' | null) => {
         setGameModeState(mode);
@@ -997,6 +1051,27 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     // Setup DataStorage sync for used items
                     const team = client.players.self.team;
                     const slot = client.players.self.slot;
+
+                    // Detect new game via seed change; wipe stale local backup if needed
+                    const seedName = client.room.seedName;
+                    const seedKey = `pokepelago_team_${team}_slot_${slot}_seed`;
+                    const caughtLocalKey = `pokepelago_team_${team}_slot_${slot}_caught_local`;
+                    if (localStorage.getItem(seedKey) !== seedName) {
+                        localStorage.removeItem(caughtLocalKey);
+                        localStorage.setItem(seedKey, seedName);
+                    }
+                    setConnectedTeamSlot({ team, slot });
+
+                    // For dexsanity=OFF: immediately restore from local backup so the UI
+                    // is populated before the async DataStorage response arrives
+                    if (!slotData.dexsanity) {
+                        const localCaught = localStorage.getItem(caughtLocalKey);
+                        if (localCaught) {
+                            const ids = JSON.parse(localCaught) as number[];
+                            setCheckedIds(prev => new Set([...prev, ...ids]));
+                        }
+                    }
+
                     const mbKey = `pokepelago_team_${team}_slot_${slot}_used_masterballs`;
                     const pgKey = `pokepelago_team_${team}_slot_${slot}_used_pokegears`;
                     const pdKey = `pokepelago_team_${team}_slot_${slot}_used_pokedexes`;
@@ -1405,6 +1480,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUsedPokegears(new Set());
         setUsedPokedexes(new Set());
         setShuffleEndTime(0);
+        setConnectedTeamSlot(null);
     };
 
     const updateUiSettings = (newSettings: Partial<UISettings>) => {
@@ -1619,6 +1695,35 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setTypeFilter,
         }}>
             {children}
+            {dexsanityLocalWarning && (
+                <div className="fixed inset-0 z-200 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+                    <div className="bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md border border-amber-500/40 flex flex-col overflow-hidden">
+                        <div className="px-6 py-4 border-b border-gray-800 bg-amber-900/20">
+                            <h2 className="text-lg font-bold text-amber-400 flex items-center gap-2">
+                                ⚠ Progress saved locally only
+                            </h2>
+                        </div>
+                        <div className="px-6 py-5 text-gray-300 text-sm leading-relaxed">
+                            <p>
+                                Because <strong className="text-white">Dexsanity is off</strong>, your caught Pokémon are
+                                stored on <strong className="text-white">this device only</strong> — they cannot sync to
+                                the Archipelago server.
+                            </p>
+                            <p className="mt-3 text-gray-400">
+                                If you continue on another device or browser, your catch progress will not carry over.
+                            </p>
+                        </div>
+                        <div className="px-6 py-4 border-t border-gray-800 flex justify-end">
+                            <button
+                                onClick={dismissDexsanityWarning}
+                                className="px-5 py-2 bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded-lg transition-colors"
+                            >
+                                Got it
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </GameContext.Provider>
     );
 };
