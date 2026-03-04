@@ -142,18 +142,23 @@ export const GlobalGuessInput: React.FC = () => {
                 (sn !== '' && (strip(sl) === sn || strip(sc) === sn));
         };
 
-        // Always check the primary English name (p.name)
+        // Always check the primary English name (p.name) from metadata
         const raw = p.name.toLowerCase();
         const clean = getCleanName(p.name).toLowerCase();
         const englishMatch = raw === normalised || clean === normalised ||
             (sn !== '' && (strip(raw) === sn || strip(clean) === sn));
 
-        if (selectedLanguage === 'en') return englishMatch;
-
         const langNames: Record<string, string> = pokemonNames[p.id.toString()] ?? {};
 
+        // Also check the English species name from pokemon_names.json — this handles form-named
+        // metadata entries like "basculin-red-striped" or "meowstic-male" where the player
+        // should be able to type the plain species name ("Basculin", "Meowstic").
+        const enSpeciesMatch = langNames['en'] ? strMatches(langNames['en']) : false;
+
+        if (selectedLanguage === 'en') return englishMatch || enSpeciesMatch;
+
         if (selectedLanguage === 'global') {
-            if (englishMatch) return true;
+            if (englishMatch || enSpeciesMatch) return true;
             return Object.values(langNames).some(name => strMatches(name));
         }
 
