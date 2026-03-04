@@ -424,7 +424,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                                     <input type="file" className="hidden" multiple {...{ webkitdirectory: '', directory: '' } as any} onChange={handleImport} />
                                 </label>
                                 <p className="text-[9px] text-gray-500 italic text-center">
-                                    Check the <a href="https://github.com/dowlle/Pokepelago#1-download-the-sprites" target="_blank" rel="noreferrer" className="text-gray-400 hover:text-white underline">Poképelago README</a> for sprite pack instructions.
+                                    Check the <a href="https://github.com/dowlle/PokepelagoClient" target="_blank" rel="noreferrer" className="text-gray-400 hover:text-white underline">Poképelago README</a> for sprite pack instructions.
                                 </p>
                             </div>
                         </div>
