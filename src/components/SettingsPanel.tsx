@@ -32,6 +32,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
         setGameMode,
         spriteRepoUrl,
         setSpriteRepoUrl,
+        pmdSpriteUrl,
+        setPmdSpriteUrl,
         connectionQuality,
         derpemonSpriteCount,
         currentProfileId,
@@ -407,6 +409,34 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                                 <p className="text-[9px] text-gray-600 italic">
                                     Paste a GitHub sprites tree URL to load sprites directly. Local imports take priority.
                                     Try: <a href="https://github.com/PokeAPI/sprites/tree/master/sprites" target="_blank" rel="noreferrer" className="text-blue-500 hover:underline">PokeAPI sprites</a>
+                                </p>
+                            </div>
+
+                            {/* Animated (PMD) Sprite URL */}
+                            <div className="space-y-2">
+                                <label className="flex items-center gap-2 text-xs font-bold text-gray-300">
+                                    <span className="text-pink-400 text-sm">✨</span>
+                                    Animated Sprites
+                                    {pmdSpriteUrl && (
+                                        <span className="text-[9px] text-pink-400 bg-pink-900/20 px-1.5 py-0.5 rounded border border-pink-700/30">Active</span>
+                                    )}
+                                </label>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="url"
+                                        value={pmdSpriteUrl}
+                                        onChange={(e) => setPmdSpriteUrl(e.target.value)}
+                                        placeholder="Go find the Mystery Sprite Repo!"
+                                        className="flex-1 bg-gray-900/60 border border-gray-700 rounded-lg px-3 py-2 text-[11px] text-gray-200 placeholder-gray-600 focus:outline-none focus:border-pink-500 transition-colors"
+                                    />
+                                    {pmdSpriteUrl && (
+                                        <button onClick={() => setPmdSpriteUrl('')} className="p-2 text-gray-500 hover:text-red-400 hover:bg-gray-800 rounded-lg transition-colors" title="Clear URL">
+                                            <X size={14} />
+                                        </button>
+                                    )}
+                                </div>
+                                <p className="text-[9px] text-gray-600 italic">
+                                    There's a sprite repo out there that has animated sprites. Can you solve this Mystery?
                                 </p>
                             </div>
 

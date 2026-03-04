@@ -4,6 +4,8 @@ import { useGame } from '../context/GameContext';
 import { getCleanName } from '../utils/pokemon';
 import pokemonMetadata from '../data/pokemon_metadata.json';
 import { TYPE_COLORS } from '../utils/typeColors';
+import { PmdSpriteCanvas } from './PmdSpriteCanvas';
+import { normalizePmdBaseUrl } from '../services/pmdSpriteService';
 
 interface PokemonSlotProps {
     pokemon: PokemonRef;
@@ -13,7 +15,7 @@ interface PokemonSlotProps {
 }
 
 export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShiny = false, order }) => {
-    const { setSelectedPokemonId, isPokemonGuessable, usedPokegears, getSpriteUrl, uiSettings, releasedIds, spriteRefreshCounter } = useGame();
+    const { setSelectedPokemonId, isPokemonGuessable, usedPokegears, getSpriteUrl, uiSettings, releasedIds, spriteRefreshCounter, pmdSpriteUrl } = useGame();
     const { canGuess, reason } = isPokemonGuessable(pokemon.id);
     const isPokegeared = usedPokegears.has(pokemon.id);
 
@@ -21,6 +23,31 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
     const [isLoaded, setIsLoaded] = React.useState(false);
     const [hasError, setHasError] = React.useState(false);
     const [hasHovered, setHasHovered] = React.useState(false);
+
+    // PMD animated sprite state
+    const normalizedPmdUrl = React.useMemo(
+        () => pmdSpriteUrl ? normalizePmdBaseUrl(pmdSpriteUrl) : '',
+        [pmdSpriteUrl]
+    );
+    const [playingAttack, setPlayingAttack] = React.useState(false);
+    const [pmdError, setPmdError] = React.useState(false);
+    const [idleFrameSize, setIdleFrameSize] = React.useState<number | null>(null);
+    const prevStatusRef = React.useRef(status);
+
+    // Trigger Attack animation when a Pokémon is first checked
+    React.useEffect(() => {
+        if (prevStatusRef.current !== 'checked' && status === 'checked' && normalizedPmdUrl) {
+            setPlayingAttack(true);
+            setPmdError(false);
+        }
+        prevStatusRef.current = status;
+    }, [status, normalizedPmdUrl]);
+
+    // Reset pmdError if the URL changes
+    React.useEffect(() => {
+        setPmdError(false);
+        setPlayingAttack(false);
+    }, [normalizedPmdUrl]);
 
     // Load sprite from local storage
     React.useEffect(() => {
@@ -93,7 +120,27 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
             style={order !== undefined ? { order } : undefined}
             title={!canGuess ? reason : (isChecked ? cleanName : status === 'hint' ? `${cleanName} (Hinted)` : `#${pokemon.id}`)}
         >
-            {isVisible && !hasError && spriteUrl && (
+            {isVisible && normalizedPmdUrl && !pmdError && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-visible">
+                    <PmdSpriteCanvas
+                        id={pokemon.id}
+                        baseUrl={normalizedPmdUrl}
+                        anim={playingAttack ? 'Attack' : 'Idle'}
+                        onAnimComplete={() => setPlayingAttack(false)}
+                        onError={() => { setPmdError(true); setPlayingAttack(false); }}
+                        onFrameSize={playingAttack ? undefined : setIdleFrameSize}
+                        referenceFrameSize={playingAttack && idleFrameSize ? idleFrameSize : undefined}
+                        filterClass={
+                            status === 'shadow' || status === 'hint' || releasedIds.has(pokemon.id)
+                                ? (isPokegeared ? 'brightness-50 opacity-80' : 'brightness-0 contrast-100 opacity-60')
+                                : ''
+                        }
+                        size={44}
+                    />
+                </div>
+            )}
+
+            {isVisible && !normalizedPmdUrl && !hasError && spriteUrl && (
                 <div className="absolute inset-0 flex items-center justify-center overflow-hidden pointer-events-none">
                     <img
                         src={spriteUrl}
@@ -112,7 +159,7 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
                 </div>
             )}
 
-            {(hasError || (isVisible && !isLoaded)) && (
+            {((normalizedPmdUrl ? pmdError : hasError) || (isVisible && !normalizedPmdUrl && !isLoaded)) && (
                 <span className="text-[10px] text-gray-600 font-mono z-0">
                     #{pokemon.id}
                 </span>

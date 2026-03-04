@@ -130,6 +130,8 @@ interface GameContextType extends GameState {
     derpemonSpriteCount: number;
     spriteRepoUrl: string;
     setSpriteRepoUrl: (url: string) => void;
+    pmdSpriteUrl: string;
+    setPmdSpriteUrl: (url: string) => void;
     unlockRegion: (region: string) => void;
     lockRegion: (region: string) => void;
     clearAllRegions: () => void;
@@ -263,6 +265,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const setSpriteRepoUrl = useCallback((url: string) => {
         setSpriteRepoUrlState(url);
         localStorage.setItem('pokepelago_spriteRepoUrl', url);
+    }, []);
+
+    const [pmdSpriteUrl, setPmdSpriteUrlState] = useState<string>(
+        () => localStorage.getItem('pokepelago_pmdSpriteUrl') || ''
+    );
+    const setPmdSpriteUrl = useCallback((url: string) => {
+        setPmdSpriteUrlState(url);
+        localStorage.setItem('pokepelago_pmdSpriteUrl', url);
     }, []);
     const [gameMode, setGameModeState] = useState<'archipelago' | 'standalone' | null>(() => {
         const params = new URLSearchParams(window.location.search);
@@ -1656,6 +1666,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             derpemonSpriteCount: Object.keys(derpemonIndex).length,
             spriteRepoUrl,
             setSpriteRepoUrl,
+            pmdSpriteUrl,
+            setPmdSpriteUrl,
             isPokemonGuessable,
             gameMode,
             setGameMode,

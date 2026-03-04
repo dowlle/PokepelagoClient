@@ -4,6 +4,8 @@ import { X, ExternalLink, HelpCircle, MapPin, Sparkles, CheckCircle2, Lock, Pale
 import { getCleanName } from '../utils/pokemon';
 import { getDerpemonCredit } from '../services/derpemonService';
 import { TYPE_COLORS } from '../utils/typeColors';
+import { PmdSpriteCanvas } from './PmdSpriteCanvas';
+import { normalizePmdBaseUrl } from '../services/pmdSpriteService';
 
 export const PokemonDetails: React.FC = () => {
     const {
@@ -32,7 +34,8 @@ export const PokemonDetails: React.FC = () => {
         isConnected,
         derpyfiedIds,
         spriteRefreshCounter,
-        locationOffset
+        locationOffset,
+        pmdSpriteUrl
     } = useGame();
 
     const [details, setDetails] = useState<any>(null);
@@ -46,6 +49,11 @@ export const PokemonDetails: React.FC = () => {
     const [masterBallSpriteLoaded, setMasterBallSpriteLoaded] = useState(false);
     const [pokedexSpriteLoaded, setPokedexSpriteLoaded] = useState(false);
     const gifRef = useRef<HTMLImageElement>(null);
+
+    const normalizedPmdUrl = React.useMemo(
+        () => pmdSpriteUrl ? normalizePmdBaseUrl(pmdSpriteUrl) : '',
+        [pmdSpriteUrl]
+    );
 
     const pokemon = allPokemon.find(p => p.id === selectedPokemonId);
     const isChecked = selectedPokemonId ? checkedIds.has(selectedPokemonId) : false;
@@ -173,7 +181,18 @@ export const PokemonDetails: React.FC = () => {
                             {isShiny && isChecked && (
                                 <div className="absolute -inset-8 bg-yellow-500/10 blur-3xl animate-pulse rounded-full" />
                             )}
-                            {spriteUrl ? (
+                            {normalizedPmdUrl ? (
+                                <PmdSpriteCanvas
+                                    id={selectedPokemonId}
+                                    baseUrl={normalizedPmdUrl}
+                                    anim="Idle"
+                                    filterClass={
+                                        showShadow && !isPokegeared ? 'brightness-0 opacity-40 contrast-100' :
+                                        showShadow && isPokegeared ? 'brightness-50 opacity-80' : ''
+                                    }
+                                    size={128}
+                                />
+                            ) : spriteUrl ? (
                                 <img
                                     ref={gifRef}
                                     src={spriteUrl}
