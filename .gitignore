@@ -25,3 +25,6 @@ dist-ssr
 
 # Stray directories
 _orig
+
+# Internal documentation
+docs/
