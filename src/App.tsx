@@ -52,8 +52,9 @@ const GameContent: React.FC = () => {
     ).length,
     [checkedIds, STARTER_OFFSET, MILESTONE_OFFSET, releasedIds]);
 
-  // Expose debug toggle to window for GlobalGuessInput to call
+  // Expose debug toggle to window for GlobalGuessInput to call (dev only)
   React.useEffect(() => {
+    if (!import.meta.env.DEV) return;
     (window as any).toggleDebug = () => setIsDebugVisible(prev => {
       const next = !prev;
       (window as any).isDebugVisible = next;
@@ -210,8 +211,8 @@ const GameContent: React.FC = () => {
           </div>
         </aside>
 
-        {/* Debug Controls - inside Main/Sidebar container to be positioned at bottom of viewport */}
-        {isDebugVisible && (
+        {/* Debug Controls - dev only */}
+        {import.meta.env.DEV && isDebugVisible && (
           <div className="absolute bottom-0 left-0 right-0 z-20 bg-gray-900/95 backdrop-blur-sm border-t border-gray-800 transition-all duration-300" style={{ right: isSidebarOpen ? '320px' : '0' }}>
             <div className="max-w-screen-xl mx-auto flex flex-col gap-3 px-4 py-3">
               <div className="flex flex-wrap items-center gap-3">

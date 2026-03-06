@@ -75,8 +75,9 @@ export const GlobalGuessInput: React.FC = () => {
         setLangMenuOpen(false);
     };
 
-    // Debug trigger
+    // Debug trigger (dev only)
     useEffect(() => {
+        if (!import.meta.env.DEV) return;
         if (guess.toLowerCase().trim() === 'myuncleworksatnintendo') {
             if ((window as any).toggleDebug) {
                 (window as any).toggleDebug();
@@ -95,8 +96,9 @@ export const GlobalGuessInput: React.FC = () => {
         releasedIdsRef.current = releasedIds;
     }, [checkedIds, isPokemonGuessable, releasedIds]);
 
-    // Expose auto-complete for debug
+    // Expose auto-complete for debug (dev only)
     useEffect(() => {
+        if (!import.meta.env.DEV) return;
         (window as any).runAutoComplete = async () => {
             (window as any).isAutoCompleting = true;
             console.log("Starting Auto-Complete Simulation...");
@@ -333,8 +335,8 @@ export const GlobalGuessInput: React.FC = () => {
                     </div>
                 )}
 
-                {/* Debug Hints */}
-                {window && (window as any).isDebugVisible && guess.length >= 2 && (
+                {/* Debug Hints (dev only) */}
+                {import.meta.env.DEV && (window as any).isDebugVisible && guess.length >= 2 && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-gray-900 border border-gray-700 rounded shadow-xl max-h-48 overflow-y-auto z-50">
                         {allPokemon
                             .filter(p => {
