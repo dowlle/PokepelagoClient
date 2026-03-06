@@ -23,6 +23,7 @@ const GameContent: React.FC = () => {
     setShuffleEndTime, setDerpyfiedIds, setReleasedIds, derpemonIndex, releasedIds, derpyfiedIds, setSpriteRefreshCounter, showToast,
     STARTER_OFFSET, MILESTONE_OFFSET,
     startingLocationsEnabled, gameStarted, connectionKey,
+    pokemonLoadError, retryPokemonLoad,
   } = useGame();
 
   const [adventureOverlayDismissed, setAdventureOverlayDismissed] = React.useState(false);
@@ -70,6 +71,32 @@ const GameContent: React.FC = () => {
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-green-500 rounded-full animate-spin border-t-transparent"></div>
           <span className="text-gray-400">Loading Pokédex...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (pokemonLoadError) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-950 text-white p-8">
+        <div className="flex flex-col items-center gap-6 max-w-md text-center">
+          <div className="text-5xl">⚠️</div>
+          <div>
+            <h1 className="text-xl font-bold text-red-400 mb-2">Failed to load Pokédex</h1>
+            <p className="text-gray-400 text-sm mb-4">
+              Could not reach PokéAPI. Check your internet connection and try again.
+              Your saved game data is safe.
+            </p>
+            <pre className="text-left text-[10px] text-red-300 bg-gray-900 border border-gray-800 rounded p-3 overflow-auto max-h-24">
+              {pokemonLoadError}
+            </pre>
+          </div>
+          <button
+            onClick={retryPokemonLoad}
+            className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-bold transition-colors"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );

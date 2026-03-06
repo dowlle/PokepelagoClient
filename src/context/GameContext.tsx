@@ -168,6 +168,8 @@ interface GameContextType extends GameState {
     setCurrentProfileId: React.Dispatch<React.SetStateAction<string | null>>;
     typeFilter: string[];
     setTypeFilter: React.Dispatch<React.SetStateAction<string[]>>;
+    pokemonLoadError: string | null;
+    retryPokemonLoad: () => void;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -235,6 +237,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
     });
     const [isLoading, setIsLoading] = useState(true);
+    const [pokemonLoadError, setPokemonLoadError] = useState<string | null>(null);
     const [generationFilter, setGenerationFilter] = useState<number[]>(GENERATIONS.map((_, i) => i));
     const [connectionInfo, setConnectionInfo] = useState<ConnectionInfo>(() => {
         const saved = localStorage.getItem('pokepelago_connection');
@@ -375,10 +378,27 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [connectionInfo]);
 
     // Load initial data and auto-connect
+    const retryPokemonLoad = useCallback(async () => {
+        setIsLoading(true);
+        setPokemonLoadError(null);
+        const { data, error } = await fetchAllPokemon();
+        if (error) {
+            setPokemonLoadError(error);
+        } else {
+            setAllPokemon(data);
+        }
+        setIsLoading(false);
+    }, []);
+
     useEffect(() => {
         const loadDataAndConnect = async () => {
             setIsLoading(true);
-            const data = await fetchAllPokemon();
+            const { data, error } = await fetchAllPokemon();
+            if (error) {
+                setPokemonLoadError(error);
+                setIsLoading(false);
+                return;
+            }
             setAllPokemon(data);
             setIsLoading(false);
 
@@ -970,6 +990,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             detectedApWorldVersion,
             currentProfileId, setCurrentProfileId,
             typeFilter, setTypeFilter,
+            pokemonLoadError, retryPokemonLoad,
         }}>
             {children}
             {dexsanityLocalWarning && (
