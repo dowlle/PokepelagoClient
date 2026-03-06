@@ -92,6 +92,7 @@ interface ConnectionInfo {
 interface GameContextType extends GameState {
     unlockPokemon: (id: number) => void;
     checkPokemon: (id: number) => void;
+    recatchPokemon: (id: number) => void;
     setGenerationFilter: React.Dispatch<React.SetStateAction<number[]>>;
     updateUiSettings: (settings: Partial<UISettings>) => void;
     isConnected: boolean;
@@ -456,6 +457,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const clientRef = useRef<Client | null>(null);
     const isConnectingRef = useRef<boolean>(false);
     const storageReadyRef = useRef(false);
+    const processedReleaseTrapCountRef = useRef<number>(0);
     const checkedIdsRef = useRef<Set<number>>(checkedIds);
     const isPokemonGuessableRef = useRef<any>(null); // To avoid dependency cycle in useEffect
 
@@ -579,6 +581,21 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [isConnected, dexsanityEnabled, gameMode]);
 
 
+
+    // --- recatchPokemon: re-catches a released Pokémon and persists the re-catch to DataStorage ---
+    const recatchPokemon = useCallback((id: number) => {
+        setReleasedIds(prev => {
+            const next = new Set(prev);
+            next.delete(id);
+            return next;
+        });
+        if (clientRef.current?.authenticated && gameMode === 'archipelago') {
+            const team = clientRef.current.players.self.team;
+            const slot = clientRef.current.players.self.slot;
+            const recaughtKey = `pokepelago_team_${team}_slot_${slot}_recaught`;
+            clientRef.current.storage.prepare(recaughtKey, []).add([id]).commit();
+        }
+    }, [gameMode]);
 
     // --- startGame: sends Oak's Lab (starting location) checks on player request ---
     const startGame = useCallback(() => {
@@ -1087,10 +1104,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     const pdKey = `pokepelago_team_${team}_slot_${slot}_used_pokedexes`;
                     const derpKey = `pokepelago_team_${team}_slot_${slot}_derpyfied`;
                     const relKey = `pokepelago_team_${team}_slot_${slot}_released`;
+                    const recaughtKey = `pokepelago_team_${team}_slot_${slot}_recaught`;
                     // dexsanity=off has no per-Pokemon AP locations, so guesses are persisted here instead.
                     const caughtKey = !slotData.dexsanity ? `pokepelago_team_${team}_slot_${slot}_caught` : null;
 
-                    const keysToWatch = [mbKey, pgKey, pdKey, derpKey, relKey, ...(caughtKey ? [caughtKey] : [])];
+                    const keysToWatch = [mbKey, pgKey, pdKey, derpKey, relKey, recaughtKey, ...(caughtKey ? [caughtKey] : [])];
                     client.storage.notify(keysToWatch, (key, value) => {
                         if (!Array.isArray(value)) return;
                         const usedIds = new Set(value as number[]);
@@ -1112,13 +1130,21 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             setDerpyfiedIds(usedIds);
                         } else if (key === relKey) {
                             setReleasedIds(usedIds);
+                            processedReleaseTrapCountRef.current = (value as number[]).length;
+                        } else if (key === recaughtKey) {
+                            setReleasedIds(prev => new Set([...prev].filter(id => !usedIds.has(id))));
                         } else if (caughtKey && key === caughtKey) {
                             setCheckedIds(prev => new Set([...prev, ...usedIds]));
                         }
                     }).then((data) => {
                         // Initialize traps from server data
                         if (Array.isArray(data[derpKey])) setDerpyfiedIds(new Set(data[derpKey] as number[]));
-                        if (Array.isArray(data[relKey])) setReleasedIds(new Set(data[relKey] as number[]));
+                        if (Array.isArray(data[relKey])) {
+                            const relHistory = data[relKey] as number[];
+                            const recaught = Array.isArray(data[recaughtKey]) ? new Set(data[recaughtKey] as number[]) : new Set<number>();
+                            setReleasedIds(new Set(relHistory.filter(id => !recaught.has(id))));
+                            processedReleaseTrapCountRef.current = relHistory.length;
+                        }
 
                         // DataStorage is now initialized — allow trap processing in itemsReceived
                         storageReadyRef.current = true;
@@ -1268,11 +1294,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         setReleasedIds(released => {
                             if (!storageReadyRef.current) return released;
                             const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + TRAP_ITEM_OFFSET + 4).length;
-                            if (totalServer > released.size) {
+                            const processedCount = processedReleaseTrapCountRef.current;
+                            if (totalServer > processedCount) {
                                 let newReleased = new Set(released);
                                 // Pick from currently checked Pokémon (but not starters 1, 4, 7 for safety and thematic reasons)
                                 const validCheckedIds = Array.from(checkedIdsRef.current).filter(id => id !== 1 && id !== 4 && id !== 7 && !newReleased.has(id));
-                                let toAdd = totalServer - released.size;
+                                let toAdd = totalServer - processedCount;
+                                processedReleaseTrapCountRef.current = totalServer;
 
                                 while (toAdd > 0 && validCheckedIds.length > 0) {
                                     const randIdx = Math.floor(Math.random() * validCheckedIds.length);
@@ -1627,6 +1655,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setGenerationFilter,
             unlockPokemon,
             checkPokemon,
+            recatchPokemon,
             uiSettings,
             updateUiSettings,
             isConnected,

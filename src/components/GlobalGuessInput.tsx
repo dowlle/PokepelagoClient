@@ -50,7 +50,7 @@ function normalisePokemonNames(raw: Record<string, unknown>): NamesMap {
 const pokemonNames: NamesMap = normalisePokemonNames(pokemonNamesJson as Record<string, unknown>);
 
 export const GlobalGuessInput: React.FC = () => {
-    const { allPokemon, checkedIds, checkPokemon, gameMode, isPokemonGuessable, activePokemonLimit, releasedIds, setReleasedIds, toast, showToast, STARTER_OFFSET, MILESTONE_OFFSET, goalCount, startGame, startingLocationsEnabled, gameStarted } = useGame();
+    const { allPokemon, checkedIds, checkPokemon, gameMode, isPokemonGuessable, activePokemonLimit, releasedIds, recatchPokemon, toast, showToast, STARTER_OFFSET, MILESTONE_OFFSET, goalCount, startGame, startingLocationsEnabled, gameStarted } = useGame();
     const [guess, setGuess] = useState('');
     const inputRef = useRef<HTMLInputElement>(null);
     const [isCreditsOpen, setIsCreditsOpen] = useState(false);
@@ -184,11 +184,7 @@ export const GlobalGuessInput: React.FC = () => {
 
         if (match) {
             if (releasedIds.has(match.id)) {
-                setReleasedIds(prev => {
-                    const next = new Set(prev);
-                    next.delete(match.id);
-                    return next;
-                });
+                recatchPokemon(match.id);
                 showToast('recaught', `Re-caught ${getCleanName(match.name)}!`);
             } else {
                 if (startingLocationsEnabled && !gameStarted && gameMode === 'archipelago') startGame();
@@ -197,7 +193,7 @@ export const GlobalGuessInput: React.FC = () => {
             }
             setGuess('');
         }
-    }, [guess, allPokemon, checkedIds, checkPokemon, isPokemonGuessable, releasedIds, setReleasedIds, matchesPokemon]);
+    }, [guess, allPokemon, checkedIds, checkPokemon, isPokemonGuessable, releasedIds, recatchPokemon, matchesPokemon]);
 
     const attemptGuess = (name: string) => {
         const normalised = name.toLowerCase().trim();
@@ -209,11 +205,7 @@ export const GlobalGuessInput: React.FC = () => {
         }
 
         if (releasedIds.has(match.id)) {
-            setReleasedIds(prev => {
-                const next = new Set(prev);
-                next.delete(match.id);
-                return next;
-            });
+            recatchPokemon(match.id);
             showToast('recaught', `Re-caught ${getCleanName(match.name)}!`);
             setGuess('');
             return;
