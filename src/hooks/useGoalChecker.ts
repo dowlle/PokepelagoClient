@@ -55,7 +55,12 @@ export function useGoalChecker({
             }
         });
 
-        // 1. Global Milestone Locations — list must match Locations.py exactly
+        // 1. Global Milestone Locations
+        // COUPLING: this list must exactly match `milestones` in worlds/pokepelago/Locations.py.
+        // The APWorld creates one AP location per entry; the client sends the check when the
+        // player reaches that catch count. A mismatch silently sends wrong location IDs.
+        // Long-term fix: include the list in slot_data so the client always uses the server's
+        // authoritative values (see A5 in docs/recommendations.md).
         const globalMilestones = [
             1, 2, 5, 10, 15, 20, 30, 40, 50, 60, 70, 80, 90, 100, 150, 250, 400, 600, 800, 1000,
             148, 248, 383, 490, 646, 718, 806, 895, 1022,

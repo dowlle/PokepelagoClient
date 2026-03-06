@@ -760,9 +760,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const caughtKey = !slotData.dexsanity ? `pokepelago_team_${team}_slot_${slot}_caught` : null;
 
         const keysToWatch = [mbKey, pgKey, pdKey, derpKey, relKey, recaughtKey, ...(caughtKey ? [caughtKey] : [])];
+        // Validate that DataStorage values are finite integers in the valid Pokémon ID range.
+        const validIds = (raw: unknown): number[] =>
+            Array.isArray(raw) ? (raw as unknown[]).filter((v): v is number => Number.isFinite(v) && (v as number) >= 1 && (v as number) <= 1025) : [];
+
         client.storage.notify(keysToWatch, (key, value) => {
             if (!Array.isArray(value)) return;
-            const usedIds = new Set(value as number[]);
+            const usedIds = new Set(validIds(value));
             if (key === mbKey) {
                 const total = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 1).length;
                 setMasterBalls(Math.max(0, total - usedIds.size)); setUsedMasterBalls(usedIds);
@@ -773,22 +777,22 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const total = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 3).length;
                 setPokedexes(Math.max(0, total - usedIds.size)); setUsedPokedexes(usedIds);
             } else if (key === derpKey) {
-                onDataStorageDerpUpdate(value as number[]);
+                onDataStorageDerpUpdate(validIds(value));
             } else if (key === relKey) {
-                onDataStorageReleaseUpdate(value as number[]);
+                onDataStorageReleaseUpdate(validIds(value));
             } else if (key === recaughtKey) {
-                onDataStorageRecaughtUpdate(new Set(value as number[]));
+                onDataStorageRecaughtUpdate(new Set(validIds(value)));
             } else if (caughtKey && key === caughtKey) {
                 setCheckedIds(prev => new Set([...prev, ...usedIds]));
             }
         }).then((data) => {
             initFromDataStorage(
-                Array.isArray(data[derpKey]) ? data[derpKey] as number[] : null,
-                Array.isArray(data[relKey]) ? data[relKey] as number[] : null,
-                Array.isArray(data[recaughtKey]) ? data[recaughtKey] as number[] : null,
+                Array.isArray(data[derpKey]) ? validIds(data[derpKey]) : null,
+                Array.isArray(data[relKey]) ? validIds(data[relKey]) : null,
+                Array.isArray(data[recaughtKey]) ? validIds(data[recaughtKey]) : null,
             );
             if (caughtKey && Array.isArray(data[caughtKey]))
-                setCheckedIds(prev => new Set([...prev, ...(data[caughtKey] as number[])]));
+                setCheckedIds(prev => new Set([...prev, ...validIds(data[caughtKey])]));
         }).catch(console.error);
     }, [currentProfileId, onDataStorageDerpUpdate, onDataStorageReleaseUpdate, onDataStorageRecaughtUpdate, initFromDataStorage]);
 

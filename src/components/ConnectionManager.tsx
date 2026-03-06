@@ -365,7 +365,7 @@ interface ProfileFormProps {
 
 const ProfileForm: React.FC<ProfileFormProps> = ({ form, setForm, onSave, onCancel, isEditing }) => {
     const update = (patch: Partial<typeof form>) => setForm(prev => ({ ...prev, ...patch }));
-    const valid = form.name.trim() && form.slotName.trim();
+    const valid = form.name.trim() && form.slotName.trim() && form.port >= 1 && form.port <= 65535;
 
     return (
         <div className="border border-blue-700/30 bg-blue-900/5 rounded-xl p-4 space-y-3">
@@ -395,9 +395,14 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ form, setForm, onSave, onCanc
                     <input
                         type="number"
                         value={form.port}
+                        min={1}
+                        max={65535}
                         onChange={e => update({ port: Number(e.target.value) })}
                         className="w-full px-2 py-1.5 bg-gray-950 border border-gray-700 rounded text-xs text-white outline-none focus:border-blue-500"
                     />
+                    {(form.port < 1 || form.port > 65535) && (
+                        <p className="text-red-400 text-[10px] mt-1">Port must be between 1 and 65535</p>
+                    )}
                 </div>
                 <div>
                     <label className="block text-[10px] text-gray-400 mb-1">Slot Name</label>
