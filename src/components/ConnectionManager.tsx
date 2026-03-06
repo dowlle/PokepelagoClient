@@ -260,6 +260,14 @@ export const ConnectionManager: React.FC<ConnectionManagerProps> = ({ isOpen, on
                                                 <span className="text-gray-700 italic">Never connected</span>
                                             )}
                                         </div>
+                                        {profile.lastKnownCaught !== undefined && profile.goalCount !== undefined && profile.goalCount > 0 && (
+                                            <div className="mt-1.5 h-1 w-full rounded-full bg-gray-800 overflow-hidden">
+                                                <div
+                                                    className={`h-full rounded-full transition-all ${profile.isGoaled ? 'bg-yellow-400' : 'bg-blue-500'}`}
+                                                    style={{ width: `${Math.min(100, (profile.lastKnownCaught / profile.goalCount) * 100)}%` }}
+                                                />
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="flex items-center gap-1 shrink-0">
                                         {isActiveProfile ? (
