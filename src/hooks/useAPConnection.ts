@@ -212,9 +212,12 @@ export function useAPConnection() {
                 console.warn(`Connection to ${protocol}${info.hostname}:${info.port} failed:`, err);
                 lastError = err;
 
-                if (clientRef.current) {
-                    clientRef.current.socket.disconnect();
-                }
+                // Orphan the failed client BEFORE disconnecting it so the async
+                // 'disconnected' event is blocked by the orphan guard and onDisconnected()
+                // is not called mid-fallback (which would reset game state unnecessarily).
+                const failedClient = clientRef.current;
+                clientRef.current = null;
+                if (failedClient) failedClient.socket.disconnect();
 
                 // Don't retry on AP-level auth failures (only on transport-level failures)
                 const msg = err?.message || String(err);

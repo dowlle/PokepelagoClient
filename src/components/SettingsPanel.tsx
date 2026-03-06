@@ -124,19 +124,18 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
 
     const handleConnectProfile = async (profile: GameProfile) => {
         setCurrentProfileId(profile.id);
-        setConnectionInfo({
+        // Build one canonical connInfo used for both form state and connect() call.
+        // password must be '' not undefined — JSON.stringify omits undefined fields,
+        // which can cause the AP server to reject the Connect packet.
+        const connInfo = {
             hostname: profile.hostname,
             port: profile.port,
             slotName: profile.slotName,
             password: profile.password || '',
-        });
+        };
+        setConnectionInfo(connInfo);
         setIsConnecting(true);
-        await connect({
-            hostname: profile.hostname,
-            port: profile.port,
-            slotName: profile.slotName,
-            password: profile.password,
-        }, profile.id);
+        await connect(connInfo, profile.id);
         setIsConnecting(false);
     };
 
