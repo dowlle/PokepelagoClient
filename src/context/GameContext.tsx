@@ -400,14 +400,19 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 return;
             }
             setAllPokemon(data);
-            setIsLoading(false);
 
             const wasConnected = localStorage.getItem('pokepelago_connected') === 'true';
             const savedConnection = localStorage.getItem('pokepelago_connection');
             const savedMode = localStorage.getItem('pokepelago_gamemode');
             if (savedMode === 'archipelago' && wasConnected && savedConnection) {
-                try { connect(JSON.parse(savedConnection)); } catch (e) { console.error('Auto-connect failed', e); }
+                // Await auto-connect so the loading spinner stays up until it resolves.
+                // This prevents a race where the user opens the Connection Manager and
+                // clicks "Connect" while isConnectingRef is still true (which would
+                // silently ignore their request).
+                try { await connect(JSON.parse(savedConnection)); } catch (e) { console.error('Auto-connect failed', e); }
             }
+
+            setIsLoading(false);
         };
         loadDataAndConnect();
     }, []);

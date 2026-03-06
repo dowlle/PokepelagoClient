@@ -121,6 +121,8 @@ export function useAPConnection() {
                 });
 
                 client.socket.on('connected', (packet: ConnectedPacket) => {
+                    // Orphan guard: if a newer connect() has replaced this client, ignore.
+                    if (clientRef.current !== client) return;
                     console.log(`Connected to Archipelago via ${protocol || '(explicit protocol)'}!`, packet);
 
                     // ── APWorld Version Detection ────────────────────────────────────────
