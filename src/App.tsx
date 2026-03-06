@@ -9,6 +9,7 @@ import { PokemonDetails } from './components/PokemonDetails';
 import { TypeStatus } from './components/TypeStatus';
 import { SplashScreen } from './components/SplashScreen';
 import { StartGameOverlay } from './components/StartGameOverlay';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { getCleanName } from './utils/pokemon';
 
 const POKEMON_TYPES = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
@@ -269,9 +270,11 @@ const GameContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <GameProvider>
-      <GameContent />
-    </GameProvider>
+    <ErrorBoundary>
+      <GameProvider>
+        <GameContent />
+      </GameProvider>
+    </ErrorBoundary>
   );
 };
 
