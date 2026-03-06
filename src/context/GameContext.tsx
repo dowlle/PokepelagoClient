@@ -2,25 +2,26 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import type { PokemonRef } from '../types/pokemon';
 import { GENERATIONS } from '../types/pokemon';
 import { fetchAllPokemon } from '../services/pokeapi';
-import { Client, itemsHandlingFlags } from 'archipelago.js';
-import type {
-    ConnectedPacket,
-    ConnectionRefusedPacket,
-    Item
-} from 'archipelago.js';
+import type { Client } from 'archipelago.js';
+import type { ConnectedPacket, Item } from 'archipelago.js';
 import pokemonMetadata from '../data/pokemon_metadata.json';
-import { getSprite, countSprites, generateSpriteKey } from '../services/spriteService';
 import { getCleanName } from '../utils/pokemon';
-import { resolveExternalSpriteUrl } from '../utils/pokesprite';
-import { loadDerpemonIndex, getDerpemonUrl, type DerpemonIndex } from '../services/derpemonService';
 import { updateProfile } from '../services/connectionManagerService';
+import { loadDerpemonIndex, type DerpemonIndex } from '../services/derpemonService';
+import { GAME_REGIONS_ORDER } from '../hooks/useOffsets';
+import type { OffsetTable } from '../hooks/useOffsets';
+import type { MutableRefObject } from 'react';
+import { useAPConnection } from '../hooks/useAPConnection';
+import { useSpriteManager } from '../hooks/useSpriteManager';
+import { useGoalChecker } from '../hooks/useGoalChecker';
+import { useTrapHandler } from '../hooks/useTrapHandler';
 
 export interface LogEntry {
     id: string;
     timestamp: number;
     type: 'item' | 'check' | 'hint' | 'chat' | 'system';
     text: string;
-    color?: string; // CSS color or class
+    color?: string;
     parts?: LogPart[];
     isMe?: boolean;
 }
@@ -60,9 +61,9 @@ interface GameState {
         amount: number;
         region?: string;
     };
-    goalCount?: number;       // raw count from slot_data (how many Pokémon to guess)
-    activePokemonLimit: number; // max Pokémon index in this generation (legacy compat)
-    activeRegions: Record<string, [number, number]>; // region name -> [low, high] ID range
+    goalCount?: number;
+    activePokemonLimit: number;
+    activeRegions: Record<string, [number, number]>;
     startingRegion: string;
     regionLocksEnabled: boolean;
     logs: LogEntry[];
@@ -171,21 +172,9 @@ interface GameContextType extends GameState {
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
-// ID Offsets (must match apworld)
-let ITEM_OFFSET = 8574000;
-let LOCATION_OFFSET = 8571000;
-let STARTER_OFFSET = 500;
-let MILESTONE_OFFSET = 1000;
-let TYPE_MILESTONE_OFFSET = 2000;
-let TYPE_MILESTONE_MULTIPLIER = 50;
-let TYPE_ITEM_OFFSET = 2000;
-let USEFUL_ITEM_OFFSET = 3000;
-let TRAP_ITEM_OFFSET = 4000;
-const REGION_PASS_OFFSET = 5000; // ITEM_OFFSET + 5000 + region_index
-let STARTER_COUNT = 8; // 8 for new APWorld, 20 for legacy
-const GAME_REGIONS_ORDER = ["Kanto", "Johto", "Hoenn", "Sinnoh", "Unova", "Kalos", "Alola", "Galar", "Hisui", "Paldea"];
-
 export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+
+    // ── Core Pokemon & Game State ────────────────────────────────────────────────
     const [allPokemon, setAllPokemon] = useState<PokemonRef[]>([]);
     const [unlockedIds, setUnlockedIds] = useState<Set<number>>(new Set());
     const [checkedIds, setCheckedIds] = useState<Set<number>>(() => {
@@ -206,41 +195,20 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [legendaryGating, setLegendaryGating] = useState(0);
     const [regionPasses, setRegionPasses] = useState<Set<string>>(new Set());
     const [typeUnlocks, setTypeUnlocks] = useState<Set<string>>(new Set());
-    const [activePokemonLimit, setActivePokemonLimit] = useState<number>(386); // legacy compat
+    const [activePokemonLimit, setActivePokemonLimit] = useState<number>(386);
     const [activeRegions, setActiveRegions] = useState<Record<string, [number, number]>>({});
-    const [startingRegion, setStartingRegion] = useState<string>("");
+    const [startingRegion, setStartingRegion] = useState<string>('');
     const [regionLocksEnabled, setRegionLocksEnabled] = useState<boolean>(false);
     const [goalCount, setGoalCount] = useState<number | undefined>(undefined);
     const [startingLocationsEnabled, setStartingLocationsEnabled] = useState(true);
-    const [connectionKey, setConnectionKey] = useState(0);
     const [connectedTeamSlot, setConnectedTeamSlot] = useState<{ team: number; slot: number } | null>(null);
     const [dexsanityLocalWarning, setDexsanityLocalWarning] = useState(false);
-
-    const [shuffleEndTime, setShuffleEndTime] = useState<number>(0);
-    const [derpyfiedIds, setDerpyfiedIds] = useState<Set<number>>(new Set());
-    const [releasedIds, setReleasedIds] = useState<Set<number>>(new Set());
-    const [spriteRefreshCounter, setSpriteRefreshCounter] = useState<number>(0);
     const [toast, setToast] = useState<ToastMessage | null>(null);
     const [detectedApWorldVersion, setDetectedApWorldVersion] = useState<'legacy' | 'new' | 'unknown'>('unknown');
     const [currentProfileId, setCurrentProfileId] = useState<string | null>(null);
     const [typeFilter, setTypeFilter] = useState<string[]>([]);
-    const isNewApWorldRef = useRef(false);
 
-    const showToast = useCallback((type: ToastMessage['type'], message: string) => {
-        setToast({ type, message, id: Date.now() });
-    }, []);
-
-    useEffect(() => {
-        if (toast) {
-            const timer = setTimeout(() => setToast(null), 3000);
-            return () => clearTimeout(timer);
-        }
-    }, [toast]);
-
-    const [pingLatency, setPingLatency] = useState<number | null>(null);
-    const [connectionQuality, setConnectionQuality] = useState<'good' | 'degraded' | 'dead' | null>(null);
-    const pingTimeoutRef = useRef<number | ReturnType<typeof setInterval> | null>(null);
-    const lastPingTimeRef = useRef<number>(0);
+    // ── Item Counts ──────────────────────────────────────────────────────────────
     const [masterBalls, setMasterBalls] = useState(0);
     const [pokegears, setPokegears] = useState(0);
     const [pokedexes, setPokedexes] = useState(0);
@@ -257,57 +225,123 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return saved ? new Set(JSON.parse(saved)) : new Set();
     });
 
-    const [spriteCount, setSpriteCount] = useState(0);
-    const [derpemonIndex, setDerpemonIndex] = useState<DerpemonIndex>({});
-    const [spriteRepoUrl, setSpriteRepoUrlState] = useState<string>(
-        () => localStorage.getItem('pokepelago_spriteRepoUrl') || ''
-    );
-
-    const setSpriteRepoUrl = useCallback((url: string) => {
-        setSpriteRepoUrlState(url);
-        localStorage.setItem('pokepelago_spriteRepoUrl', url);
-    }, []);
-
-    const [pmdSpriteUrl, setPmdSpriteUrlState] = useState<string>(
-        () => localStorage.getItem('pokepelago_pmdSpriteUrl') || ''
-    );
-    const setPmdSpriteUrl = useCallback((url: string) => {
-        setPmdSpriteUrlState(url);
-        localStorage.setItem('pokepelago_pmdSpriteUrl', url);
-    }, []);
+    // ── UI & Connection ──────────────────────────────────────────────────────────
+    const [uiSettings, setUiSettings] = useState<UISettings>(() => {
+        const saved = localStorage.getItem('pokepelago_ui');
+        const defaults: UISettings = {
+            widescreen: false, masonry: false, enableSprites: true,
+            enableShadows: false, spriteSet: 'normal', typeDot: true,
+        };
+        return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
+    });
+    const [isLoading, setIsLoading] = useState(true);
+    const [generationFilter, setGenerationFilter] = useState<number[]>(GENERATIONS.map((_, i) => i));
+    const [connectionInfo, setConnectionInfo] = useState<ConnectionInfo>(() => {
+        const saved = localStorage.getItem('pokepelago_connection');
+        if (saved) { try { return JSON.parse(saved); } catch (e) { console.error('Failed to parse saved connection info', e); } }
+        return { hostname: 'archipelago.gg', port: 38281, slotName: 'Player1', password: '' };
+    });
     const [gameMode, setGameModeState] = useState<'archipelago' | 'standalone' | null>(() => {
         const params = new URLSearchParams(window.location.search);
         if (params.has('splash')) return null;
         return localStorage.getItem('pokepelago_gamemode') as any || null;
     });
 
-    // Save Used Items (standalone only — AP mode uses DataStorage as the authoritative source)
+    // ── Derpemon index (loaded once, shared by useTrapHandler + useSpriteManager) ─
+    const [derpemonIndex, setDerpemonIndex] = useState<DerpemonIndex>({});
+    useEffect(() => { loadDerpemonIndex().then(setDerpemonIndex); }, []);
+
+    // ── Refs used by event handlers ──────────────────────────────────────────────
+    const checkedIdsRef = useRef<Set<number>>(checkedIds);
+    const isPokemonGuessableRef = useRef<any>(null);
+    const connectionInfoRef = useRef(connectionInfo);
+    useEffect(() => { checkedIdsRef.current = checkedIds; }, [checkedIds]);
+    useEffect(() => { connectionInfoRef.current = connectionInfo; }, [connectionInfo]);
+
+    // ── Toast ────────────────────────────────────────────────────────────────────
+    const showToast = useCallback((type: ToastMessage['type'], message: string) => {
+        setToast({ type, message, id: Date.now() });
+    }, []);
     useEffect(() => {
-        if (gameMode === 'standalone') {
-            localStorage.setItem('pokepelago_standalone_usedMasterBalls', JSON.stringify(Array.from(usedMasterBalls)));
+        if (toast) {
+            const timer = setTimeout(() => setToast(null), 3000);
+            return () => clearTimeout(timer);
         }
+    }, [toast]);
+
+    // ── Log ─────────────────────────────────────────────────────────────────────
+    const addLog = useCallback((entry: Omit<LogEntry, 'id' | 'timestamp'>) => {
+        setLogs(prev => [
+            { ...entry, id: Math.random().toString(36).substring(7), timestamp: Date.now() },
+            ...prev.slice(0, 999),
+        ]);
+    }, []);
+
+    // ── AP Connection Hook ───────────────────────────────────────────────────────
+    const apConnection = useAPConnection();
+    const {
+        clientRef, isConnected, connectionError, pingLatency, connectionQuality,
+        connectionKey, isConnectingRef, offsetsRef, isNewApWorldRef,
+    } = apConnection;
+
+    // ── Trap Handler Hook ────────────────────────────────────────────────────────
+    const {
+        shuffleEndTime, setShuffleEndTime,
+        derpyfiedIds, setDerpyfiedIds,
+        releasedIds, setReleasedIds,
+        spriteRefreshCounter, setSpriteRefreshCounter,
+        storageReadyRef,
+        initFromDataStorage,
+        onDataStorageDerpUpdate, onDataStorageReleaseUpdate, onDataStorageRecaughtUpdate,
+        processTrapItems,
+    } = useTrapHandler({
+        offsetsRef,
+        checkedIdsRef,
+        isPokemonGuessableRef,
+        allPokemon,
+        derpemonIndex,
+        showToast,
+        addLog,
+    });
+
+    // ── Sprite Manager Hook ──────────────────────────────────────────────────────
+    const {
+        spriteCount,
+        spriteRepoUrl, setSpriteRepoUrl,
+        pmdSpriteUrl, setPmdSpriteUrl,
+        refreshSpriteCount, getSpriteUrl,
+    } = useSpriteManager({ uiSettings, derpyfiedIds, derpemonIndex });
+
+    // ── Goal Checker Hook ────────────────────────────────────────────────────────
+    useGoalChecker({
+        clientRef, offsetsRef, isNewApWorldRef,
+        checkedIds, setCheckedIds,
+        releasedIds, allPokemon,
+        isConnected, goalCount, gameMode,
+        currentProfileId, typeLocksEnabled, typeUnlocks, unlockedIds,
+    });
+
+    // ── Persistence Effects ──────────────────────────────────────────────────────
+    useEffect(() => {
+        if (gameMode === 'standalone')
+            localStorage.setItem('pokepelago_standalone_usedMasterBalls', JSON.stringify(Array.from(usedMasterBalls)));
     }, [usedMasterBalls, gameMode]);
     useEffect(() => {
-        if (gameMode === 'standalone') {
+        if (gameMode === 'standalone')
             localStorage.setItem('pokepelago_standalone_usedPokegears', JSON.stringify(Array.from(usedPokegears)));
-        }
     }, [usedPokegears, gameMode]);
     useEffect(() => {
-        if (gameMode === 'standalone') {
+        if (gameMode === 'standalone')
             localStorage.setItem('pokepelago_standalone_usedPokedexes', JSON.stringify(Array.from(usedPokedexes)));
-        }
     }, [usedPokedexes, gameMode]);
 
     // Reload standalone caught data when switching into standalone mode mid-session
-    // (disconnect() clears checkedIds first, then gameMode changes — this restores it)
     useEffect(() => {
         if (gameMode !== 'standalone') return;
         const saved = localStorage.getItem('pokepelago_standalone_caught');
         if (saved) setCheckedIds(new Set<number>(JSON.parse(saved)));
     }, [gameMode]);
 
-    // Save caught Pokémon to localStorage in standalone mode
-    // Guard: skip when size=0 to avoid overwriting saved data during the disconnect→standalone flush
     useEffect(() => {
         if (gameMode !== 'standalone') return;
         if (checkedIds.size === 0) return;
@@ -315,7 +349,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [checkedIds, gameMode]);
 
     // Save caught Pokémon locally for dexsanity=OFF AP games
-    // Supplements server DataStorage so progress survives refreshes even if a write was missed
     useEffect(() => {
         if (gameMode !== 'archipelago' || dexsanityEnabled || !connectedTeamSlot) return;
         const { team, slot } = connectedTeamSlot;
@@ -325,153 +358,18 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         );
     }, [checkedIds, gameMode, dexsanityEnabled, connectedTeamSlot]);
 
-    // Show the device-local warning once per slot when dexsanity=OFF
+    // Show dexsanity=OFF warning once per slot
     useEffect(() => {
-        if (!connectedTeamSlot || dexsanityEnabled) {
-            setDexsanityLocalWarning(false);
-            return;
-        }
+        if (!connectedTeamSlot || dexsanityEnabled) { setDexsanityLocalWarning(false); return; }
         const { team, slot } = connectedTeamSlot;
         const warned = localStorage.getItem(`pokepelago_team_${team}_slot_${slot}_local_warned`);
         if (!warned) setDexsanityLocalWarning(true);
     }, [connectedTeamSlot, dexsanityEnabled]);
 
-    const dismissDexsanityWarning = useCallback(() => {
-        if (connectedTeamSlot) {
-            const { team, slot } = connectedTeamSlot;
-            localStorage.setItem(`pokepelago_team_${team}_slot_${slot}_local_warned`, 'true');
-        }
-        setDexsanityLocalWarning(false);
-    }, [connectedTeamSlot]);
-
-    const setGameMode = useCallback((mode: 'archipelago' | 'standalone' | null) => {
-        setGameModeState(mode);
-        if (mode) {
-            localStorage.setItem('pokepelago_gamemode', mode);
-        } else {
-            localStorage.removeItem('pokepelago_gamemode');
-        }
-    }, []);
-
-    const refreshSpriteCount = useCallback(async () => {
-        const count = await countSprites();
-        setSpriteCount(count);
-    }, []);
-
-    // A ref that always reflects the current spriteSet — used inside getSpriteUrl
-    // to avoid the circular declaration-order issue (getSpriteUrl is defined before uiSettings).
-    const spriteSetRef = useRef<'normal' | 'derpemon'>('normal');
-    const enableSpritesRef = useRef<boolean>(true);
-
-    const getSpriteUrl = useCallback(async (id: number, options: { shiny?: boolean; animated?: boolean } = {}) => {
-        // 0. Derp Trap Forced Override (takes highest precedence)
-        if (derpyfiedIds.has(id) && !options.animated) {
-            const derpemonUrl = getDerpemonUrl(derpemonIndex, id);
-            if (derpemonUrl) return derpemonUrl;
-        }
-
-        // 1. Derpemon sprite set (GitHub CDN, static sprites only — no shiny/animated)
-        if (spriteSetRef.current === 'derpemon' && !options.animated) {
-            const derpemonUrl = getDerpemonUrl(derpemonIndex, id);
-            if (derpemonUrl) return derpemonUrl;
-        }
-
-        // 2. Check local IDB sprites
-        if (enableSpritesRef.current) {
-            const key = generateSpriteKey(id, options);
-            const blob = await getSprite(key);
-            if (blob) {
-                return URL.createObjectURL(blob);
-            }
-        }
-
-        // 3. Fall back to external repo URL if configured
-        if (spriteRepoUrl) {
-            return resolveExternalSpriteUrl(spriteRepoUrl, id, options);
-        }
-        return null;
-        // spriteSetRef.current and derpyfiedIds are listed here so the callback re-creates when they change,
-        // ensuring PokemonSlot/PokemonDetails effects re-run and fetch the correct sprite immediately.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [derpemonIndex, spriteSetRef.current, enableSpritesRef.current, spriteRepoUrl, derpyfiedIds]);
-
-
-    useEffect(() => {
-        refreshSpriteCount();
-    }, [refreshSpriteCount]);
-
-    // Load Derpemon index once on mount
-    useEffect(() => {
-        loadDerpemonIndex().then(setDerpemonIndex);
-    }, []);
-
-    const getLocationName = useCallback((locationId: number) => {
-        let name: string | undefined;
-
-        if (clientRef.current) {
-            name = clientRef.current.package.lookupLocationName(clientRef.current.game, locationId, false);
-        }
-
-        if (!name && locationId > LOCATION_OFFSET && locationId <= LOCATION_OFFSET + Math.max(1050, MILESTONE_OFFSET)) {
-            const pkmnId = locationId - LOCATION_OFFSET;
-            const pkmn = allPokemon.find(p => p.id === pkmnId);
-            if (pkmn) {
-                name = `Pokémon #${pkmnId} (${getCleanName(pkmn.name)})`;
-            }
-        }
-
-        return name || `Unknown Location ${locationId}`;
-    }, [allPokemon]);
-
-    const [connectionInfo, setConnectionInfo] = useState<ConnectionInfo>(() => {
-        const saved = localStorage.getItem('pokepelago_connection');
-        if (saved) {
-            try {
-                return JSON.parse(saved);
-            } catch (e) {
-                console.error('Failed to parse saved connection info', e);
-            }
-        }
-        return {
-            hostname: 'archipelago.gg',
-            port: 38281,
-            slotName: 'Player1',
-            password: ''
-        };
-    });
-    const [isLoading, setIsLoading] = useState(true);
-    const [generationFilter, setGenerationFilter] = useState<number[]>(GENERATIONS.map((_, i) => i));
-
-    const [isConnected, setIsConnected] = useState(false);
-    const [connectionError, setConnectionError] = useState<string | null>(null);
-    const [uiSettings, setUiSettings] = useState<UISettings>(() => {
-        const saved = localStorage.getItem('pokepelago_ui');
-        const defaults: UISettings = { widescreen: false, masonry: false, enableSprites: true, enableShadows: false, spriteSet: 'normal', typeDot: true };
-        return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
-    });
-
-    // Keep spriteSetRef in sync every render so getSpriteUrl always reads the latest value.
-    spriteSetRef.current = uiSettings.spriteSet;
-    enableSpritesRef.current = uiSettings.enableSprites;
-
-    const clientRef = useRef<Client | null>(null);
-    const isConnectingRef = useRef<boolean>(false);
-    const storageReadyRef = useRef(false);
-    const processedReleaseTrapCountRef = useRef<number>(0);
-    const checkedIdsRef = useRef<Set<number>>(checkedIds);
-    const isPokemonGuessableRef = useRef<any>(null); // To avoid dependency cycle in useEffect
-
-    useEffect(() => {
-        checkedIdsRef.current = checkedIds;
-    }, [checkedIds]);
-
-    // Save UI settings
     useEffect(() => {
         localStorage.setItem('pokepelago_ui', JSON.stringify(uiSettings));
     }, [uiSettings]);
 
-
-    // Save Connection Info
     useEffect(() => {
         localStorage.setItem('pokepelago_connection', JSON.stringify(connectionInfo));
     }, [connectionInfo]);
@@ -484,54 +382,35 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setAllPokemon(data);
             setIsLoading(false);
 
-            // Auto-reconnect if previously connected AND mode is archipelago
             const wasConnected = localStorage.getItem('pokepelago_connected') === 'true';
             const savedConnection = localStorage.getItem('pokepelago_connection');
             const savedMode = localStorage.getItem('pokepelago_gamemode');
-
             if (savedMode === 'archipelago' && wasConnected && savedConnection) {
-                try {
-                    const info = JSON.parse(savedConnection);
-                    connect(info);
-                } catch (e) {
-                    console.error('Auto-connect failed', e);
-                }
+                try { connect(JSON.parse(savedConnection)); } catch (e) { console.error('Auto-connect failed', e); }
             }
         };
         loadDataAndConnect();
     }, []);
 
-    // Cleanup on unmount
     useEffect(() => {
-        return () => {
-            if (clientRef.current) {
-                clientRef.current.socket.disconnect();
-            }
-        };
+        return () => { if (clientRef.current) clientRef.current.socket.disconnect(); };
     }, []);
 
+    // ── Core Game Functions ──────────────────────────────────────────────────────
     const unlockPokemon = useCallback((id: number) => {
         setUnlockedIds(prev => {
             if (prev.has(id)) return prev;
-            const next = new Set(prev);
-            next.add(id);
-            return next;
+            const next = new Set(prev); next.add(id); return next;
         });
     }, []);
-
-    const connectionInfoRef = useRef(connectionInfo);
-    useEffect(() => { connectionInfoRef.current = connectionInfo; }, [connectionInfo]);
 
     const checkPokemon = useCallback((id: number) => {
         setCheckedIds(prev => {
             if (prev.has(id)) return prev;
-            const next = new Set(prev);
-            next.add(id);
-            return next;
+            const next = new Set(prev); next.add(id); return next;
         });
 
-        // With dexsanity=off there are no per-Pokemon AP locations, so only update local state.
-        // Milestone counting reads from checkedIds, so the count still works correctly.
+        // With dexsanity=off there are no per-Pokemon AP locations — only update local state.
         // Persist the guess to DataStorage so it survives reconnects.
         if (!dexsanityEnabled) {
             if (clientRef.current?.authenticated && id >= 1 && id <= 1025) {
@@ -542,64 +421,43 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return;
         }
 
-        const locationId = LOCATION_OFFSET + id;
+        const locationId = offsetsRef.current.LOCATION_OFFSET + id;
 
-        // Use the library's proper `authenticated` property — this checks both socket connection and AP login
         if (clientRef.current?.authenticated) {
-            try {
-                clientRef.current.check(locationId);
-            } catch (e) {
-                console.warn('[checkPokemon] check() threw:', e);
-            }
+            try { clientRef.current.check(locationId); } catch (e) { console.warn('[checkPokemon] check() threw:', e); }
             return;
         }
 
-        // In standalone mode there is no AP location to check — local state update above is sufficient.
         if (gameMode !== 'archipelago') return;
 
-        // Disconnected — queue a reconnect then send the check once online again.
-        // Store pending location so it can be sent after the 'connected' event fires.
+        // Disconnected — reconnect and then send the check.
         console.log('[checkPokemon] Not authenticated, reconnecting...');
         const pendingLocationId = locationId;
         const savedInfo = connectionInfoRef.current;
-
         const doReconnect = async () => {
-            if (gameMode !== 'archipelago') return;
-            if (isConnectingRef.current) return;
+            if (gameMode !== 'archipelago' || isConnectingRef.current) return;
             try {
-                // connect() will set up all event handlers (receivedItems, disconnected, etc.) properly
                 await connect(savedInfo);
-                // After reconnect, try sending the check if now authenticated
                 if (clientRef.current?.authenticated) {
                     try { clientRef.current.check(pendingLocationId); } catch (_) { }
                 }
-            } catch (e) {
-                console.warn('[checkPokemon] reconnect failed:', e);
-            }
+            } catch (e) { console.warn('[checkPokemon] reconnect failed:', e); }
         };
         doReconnect();
     }, [isConnected, dexsanityEnabled, gameMode]);
 
-
-
-    // --- recatchPokemon: re-catches a released Pokémon and persists the re-catch to DataStorage ---
     const recatchPokemon = useCallback((id: number) => {
-        setReleasedIds(prev => {
-            const next = new Set(prev);
-            next.delete(id);
-            return next;
-        });
+        setReleasedIds(prev => { const next = new Set(prev); next.delete(id); return next; });
         if (clientRef.current?.authenticated && gameMode === 'archipelago') {
             const team = clientRef.current.players.self.team;
             const slot = clientRef.current.players.self.slot;
-            const recaughtKey = `pokepelago_team_${team}_slot_${slot}_recaught`;
-            clientRef.current.storage.prepare(recaughtKey, []).add([id]).commit();
+            clientRef.current.storage.prepare(`pokepelago_team_${team}_slot_${slot}_recaught`, []).add([id]).commit();
         }
     }, [gameMode]);
 
-    // --- startGame: sends Oak's Lab (starting location) checks on player request ---
     const startGame = useCallback(() => {
         if (!clientRef.current || !isConnected || gameMode !== 'archipelago') return;
+        const { STARTER_OFFSET, STARTER_COUNT, LOCATION_OFFSET } = offsetsRef.current;
         const newChecked = new Set<number>();
         for (let i = 0; i < STARTER_COUNT; i++) {
             const localId = STARTER_OFFSET + i;
@@ -609,924 +467,99 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
         }
         if (newChecked.size > 0) {
-            setCheckedIds(prev => {
-                const next = new Set(prev);
-                newChecked.forEach(id => next.add(id));
-                return next;
-            });
+            setCheckedIds(prev => { const next = new Set(prev); newChecked.forEach(id => next.add(id)); return next; });
         }
     }, [isConnected, checkedIds, gameMode]);
-
-    // --- Extended Locations (Catch X Type/Region) Checking ---
-    useEffect(() => {
-        if (!clientRef.current || !isConnected || gameMode === 'standalone') return;
-
-        const checkExtendedLocations = () => {
-            const typeCounts: Record<string, number> = {};
-            let totalCatches = 0;
-
-            // Count everything we've guessed so far (Checked Locations)
-            // Valid Pokémon IDs are from 1 up to 1025.
-            // We avoid counting Milestone and Type Milestone locations by checking the offset.
-            Array.from(checkedIds).forEach(id => {
-                // Skip Oak's Lab/Starters range (STARTER_OFFSET to STARTER_OFFSET + 20)
-                if (id >= STARTER_OFFSET && id < STARTER_OFFSET + 20) return;
-
-                // Skip Milestones and Type Milestones based on detected offsets
-                if (id >= MILESTONE_OFFSET) return;
-
-                // If ID is a valid Pokemon ID (1-1025)
-                if (id >= 1 && id <= 1025) {
-                    totalCatches++;
-                    const data = (pokemonMetadata as any)[id];
-                    if (!data) return;
-
-                    // Count types for type milestones
-                    data.types.forEach((t: string) => {
-                        const cType = t.charAt(0).toUpperCase() + t.slice(1);
-                        typeCounts[cType] = (typeCounts[cType] || 0) + 1;
-                    });
-                }
-            });
-
-            // 1. Global Milestone Locations (MILESTONE_OFFSET + count)
-            // This list should match Locations.py exactly.
-            const globalMilestones = [
-                1, 2, 5, 10, 15, 20, 30, 40, 50, 60, 70, 80, 90, 100, 150, 250, 400, 600, 800, 1000,
-                148, 248, 383, 490, 646, 718, 806, 895, 1022
-            ].filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b);
-
-            globalMilestones.forEach(count => {
-                // Rules.py uses Has("Caught Pokemon", count + STARTER_OFFSET)
-                // totalCatches and rawCount already include the starters (pre-collected).
-                if (totalCatches >= count) {
-                    const apLocationId = LOCATION_OFFSET + MILESTONE_OFFSET + count;
-                    const localId = apLocationId - LOCATION_OFFSET;
-                    if (!checkedIds.has(localId)) {
-                        clientRef.current?.check(apLocationId);
-                        setCheckedIds(prev => new Set(prev).add(localId));
-                    }
-                }
-            });
-
-            // 2. Type-Specific Milestones (present in both legacy and new APWorld)
-            {
-                const typesList = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
-                const typeSteps = [1, 2, 5, 10, 20, 35, 50];
-
-                // Legacy APWorld: Kanto starters (Bulbasaur/Charmander/Squirtle) were pre-collected
-                // at STARTER_OFFSET IDs so they don't appear in typeCounts — raise each threshold by 1
-                // to compensate. New APWorld: starters must be manually guessed and count normally.
-                const starterTypeOffsets: Record<string, number> = isNewApWorldRef.current ? {} : {
-                    "Grass": 1,
-                    "Poison": 1,
-                    "Fire": 1,
-                    "Water": 1
-                };
-
-                typesList.forEach((typeName, index) => {
-                    const rawCount = typeCounts[typeName] || 0;
-                    const offset = starterTypeOffsets[typeName] || 0;
-
-                    typeSteps.forEach(step => {
-                        if (rawCount >= step + offset) {
-                            const apLocationId = LOCATION_OFFSET + TYPE_MILESTONE_OFFSET + (index * TYPE_MILESTONE_MULTIPLIER) + step;
-                            const localId = apLocationId - LOCATION_OFFSET;
-                            if (!checkedIds.has(localId)) {
-                                console.log(`[TypeMilestone] Sending check: Caught ${step} ${typeName} Pokemon (apId=${apLocationId})`);
-                                clientRef.current?.check(apLocationId);
-                                setCheckedIds(prev => new Set(prev).add(localId));
-                            }
-                        }
-                    });
-                });
-            }
-        };
-
-        checkExtendedLocations();
-    }, [checkedIds, isConnected, gameMode, pokemonMetadata, unlockedIds, typeLocksEnabled, typeUnlocks]);
 
     const isPokemonGuessable = useCallback((id: number) => {
         const data = (pokemonMetadata as any)[id];
         if (!data) return { canGuess: true };
 
-        // --- STANDALONE PROGRESSION ---
         if (gameMode === 'standalone') {
             const genIdx = GENERATIONS.findIndex(g => id >= g.startId && id <= g.endId);
-            if (genIdx === -1 || !generationFilter.includes(genIdx)) {
+            if (genIdx === -1 || !generationFilter.includes(genIdx))
                 return { canGuess: false, reason: 'Generation not enabled in settings' };
-            }
             return { canGuess: true };
         }
 
-        // --- ARCHIPELAGO OFFLINE: fall back to gen-filter check ---
         if (!isConnected) {
             const genIdx = GENERATIONS.findIndex(g => id >= g.startId && id <= g.endId);
-            if (genIdx === -1 || !generationFilter.includes(genIdx)) {
+            if (genIdx === -1 || !generationFilter.includes(genIdx))
                 return { canGuess: false, reason: 'Generation not enabled in settings' };
-            }
             return { canGuess: true };
         }
 
-        // --- ARCHIPELAGO PROGRESSION ---
-        // 0. Region check — is this Pokemon in an active region?
         if (Object.keys(activeRegions).length > 0) {
             const inActiveRegion = Object.values(activeRegions).some(([low, high]) => id >= low && id <= high);
-            if (!inActiveRegion) {
-                return { canGuess: false, reason: 'This Pokemon is not in your active region.' };
-            }
-            // Region lock check — non-starting regions need a Region Pass
+            if (!inActiveRegion) return { canGuess: false, reason: 'This Pokemon is not in your active region.' };
             if (regionLocksEnabled) {
-                let pokemonRegion = "";
+                let pokemonRegion = '';
                 for (const [region, [low, high]] of Object.entries(activeRegions)) {
                     if (id >= low && id <= high) { pokemonRegion = region; break; }
                 }
                 if (pokemonRegion && pokemonRegion !== startingRegion && !regionPasses.has(pokemonRegion)) {
-                    return {
-                        canGuess: false,
-                        reason: `Need ${pokemonRegion} Pass to access this Pokemon.`,
-                        missingRegion: pokemonRegion
-                    };
+                    return { canGuess: false, reason: `Need ${pokemonRegion} Pass to access this Pokemon.`, missingRegion: pokemonRegion };
                 }
             }
         } else if (id > activePokemonLimit) {
-            // Legacy APWorld: fall back to limit-based check
             return { canGuess: false, reason: 'This Pokemon is not in your active generation.' };
         }
 
-        // 1a. Legacy dexsanity unlock check.
-        // In v0.2.1 APWorld, each Pokemon had a "{Name} Unlock" item that must be received
-        // before the player can guess it. The new APWorld removed these items entirely.
         if (gameMode === 'archipelago' && detectedApWorldVersion === 'legacy') {
-            if (!unlockedIds.has(id)) {
-                return { canGuess: false, reason: 'Waiting for this Pokémon\'s Unlock item.', missingPokemon: true };
-            }
+            if (!unlockedIds.has(id))
+                return { canGuess: false, reason: "Waiting for this Pokémon's Unlock item.", missingPokemon: true };
         }
 
-        // 1b. Type Locks Check (applies regardless of dexsanity)
-        // With dexsanity=off, Type Keys still gate guessing Pokemon of that type, providing
-        // the same type-based progression as dexsanity=on.
         if (typeLocksEnabled) {
-            const missingTypes = data.types.filter((t: string) => {
-                const cType = t.charAt(0).toUpperCase() + t.slice(1);
-                return !typeUnlocks.has(cType);
-            });
+            const missingTypes = data.types.filter((t: string) => !typeUnlocks.has(t.charAt(0).toUpperCase() + t.slice(1)));
             if (missingTypes.length > 0) {
                 const missing = missingTypes.map((t: string) => t.charAt(0).toUpperCase() + t.slice(1));
-                return {
-                    canGuess: false,
-                    reason: `Missing Type Keys: ${missing.join(', ')}`,
-                    missingTypes: missing
-                };
+                return { canGuess: false, reason: `Missing Type Keys: ${missing.join(', ')}`, missingTypes: missing };
             }
         }
 
         return { canGuess: true };
-    }, [gameMode, isConnected, generationFilter, activePokemonLimit, activeRegions, startingRegion, regionLocksEnabled, regionPasses, typeLocksEnabled, typeUnlocks, pokemonMetadata, detectedApWorldVersion, unlockedIds]);
+    }, [gameMode, isConnected, generationFilter, activePokemonLimit, activeRegions, startingRegion,
+        regionLocksEnabled, regionPasses, typeLocksEnabled, typeUnlocks, detectedApWorldVersion, unlockedIds]);
 
-    useEffect(() => {
-        isPokemonGuessableRef.current = isPokemonGuessable;
-    }, [isPokemonGuessable]);
+    useEffect(() => { isPokemonGuessableRef.current = isPokemonGuessable; }, [isPokemonGuessable]);
 
-    // --- Goal / Victory Checking ---
-    useEffect(() => {
-        if (!clientRef.current || !isConnected || gameMode !== 'archipelago') return;
-        if (goalCount === undefined) return;
-
-        // Count Pokémon guess locations only (IDs 1–1025)
-        // Excludes Oak's Lab, Milestone, Type Milestone, and released (ran away) Pokémon.
-        const guessedCount = Array.from(checkedIds).filter(id => {
-            if (id >= STARTER_OFFSET && id < STARTER_OFFSET + 20) return false;
-            if (id >= MILESTONE_OFFSET) return false;
-            if (releasedIds.has(id)) return false;
-            return id >= 1 && id <= 1025;
-        }).length;
-
-        if (guessedCount >= goalCount) {
-            console.log(`Goal met! ${guessedCount}/${goalCount} Pokémon guessed. Sending CLIENT_GOAL.`);
-            clientRef.current.updateStatus(30); // 30 = ClientStatus.CLIENT_GOAL
-            if (currentProfileId) {
-                updateProfile(currentProfileId, { isGoaled: true, goaledAt: Date.now() });
-            }
+    const getLocationName = useCallback((locationId: number) => {
+        let name: string | undefined;
+        if (clientRef.current)
+            name = clientRef.current.package.lookupLocationName(clientRef.current.game, locationId, false);
+        const { LOCATION_OFFSET, MILESTONE_OFFSET } = offsetsRef.current;
+        if (!name && locationId > LOCATION_OFFSET && locationId <= LOCATION_OFFSET + Math.max(1050, MILESTONE_OFFSET)) {
+            const pkmnId = locationId - LOCATION_OFFSET;
+            const pkmn = allPokemon.find(p => p.id === pkmnId);
+            if (pkmn) name = `Pokémon #${pkmnId} (${getCleanName(pkmn.name)})`;
         }
-    }, [checkedIds, isConnected, gameMode, goalCount, releasedIds, currentProfileId]);
-
-    const addLog = useCallback((entry: Omit<LogEntry, 'id' | 'timestamp'>) => {
-        setLogs(prev => [
-            {
-                ...entry,
-                id: Math.random().toString(36).substring(7),
-                timestamp: Date.now()
-            },
-            ...prev.slice(0, 999) // Keep last 1000
-        ]);
-    }, []);
+        return name || `Unknown Location ${locationId}`;
+    }, [allPokemon]);
 
     const say = useCallback((text: string) => {
-        if (clientRef.current && isConnected) {
-            clientRef.current.messages.say(text);
-        }
+        if (clientRef.current && isConnected) clientRef.current.messages.say(text);
     }, [isConnected]);
 
-    const connect = async (info: ConnectionInfo, profileId?: string) => {
-        if (isConnectingRef.current) {
-            console.log('Already connecting, ignoring request.');
-            return;
+    const dismissDexsanityWarning = useCallback(() => {
+        if (connectedTeamSlot) {
+            const { team, slot } = connectedTeamSlot;
+            localStorage.setItem(`pokepelago_team_${team}_slot_${slot}_local_warned`, 'true');
         }
-
-        isConnectingRef.current = true;
-        storageReadyRef.current = false;
-        setConnectionError(null);
-        setIsConnected(false);
-
-        // Stop any active ping interval — we'll restart it after a successful login.
-        // Do NOT manually disconnect the old client here: the server will kick the old
-        // session once the new connection authenticates. Manually disconnecting first
-        // and immediately reconnecting causes the server to close the new WebSocket while
-        // it's still tearing down the previous session. The orphan guard on the
-        // 'disconnected' handler below prevents the kicked client from clobbering state.
-        if (pingTimeoutRef.current) {
-            clearInterval(pingTimeoutRef.current as any);
-            pingTimeoutRef.current = null;
-        }
-
-        const protocolsToTry = info.hostname.includes('://') ? [''] : ['wss://', 'ws://'];
-        let lastError: any = null;
-        const oldClient = clientRef.current;
-
-        for (const protocol of protocolsToTry) {
-            try {
-                const client = new Client();
-                clientRef.current = client;
-
-                const url = `${protocol}${info.hostname}:${info.port}`;
-
-                // Socket Event Handlers
-                client.socket.on('connectionRefused', (packet: ConnectionRefusedPacket) => {
-                    const errors = packet.errors || [];
-                    let msg = 'Connection refused.';
-                    if (errors.includes('InvalidSlot'))
-                        msg = `Slot "${info.slotName}" not found. Check that your name matches the YAML exactly.`;
-                    else if (errors.includes('InvalidPassword'))
-                        msg = 'Incorrect password.';
-                    else if (errors.includes('InvalidGame'))
-                        msg = `Slot "${info.slotName}" is not a Pokepelago game.`;
-                    else if (errors.includes('IncompatibleVersion'))
-                        msg = 'Archipelago version incompatible with this client.';
-                    else if (errors.length > 0)
-                        msg = `Connection refused: ${errors.join(', ')}`;
-                    setConnectionError(msg);
-                    setIsConnected(false);
-                    if (pingTimeoutRef.current) clearInterval(pingTimeoutRef.current);
-                });
-
-                client.socket.on('bounced', (packet: any) => {
-                    if (packet.tags && packet.tags.includes('ping')) {
-                        setPingLatency(Date.now() - lastPingTimeRef.current);
-                        setConnectionQuality('good');
-                    }
-                });
-
-                // Properly detect disconnects using the library's built-in event.
-                // This fires whether the server drops us or we lose network.
-                // Guard against orphaned clients: when a new connect() supersedes this one,
-                // clientRef.current is updated to the new client. If this old client later
-                // gets kicked by the server, ignore the event so it can't clobber new state.
-                client.socket.on('disconnected', () => {
-                    if (clientRef.current !== client) return;
-                    console.log('[GameContext] Disconnected from Archipelago server.');
-                    setIsConnected(false);
-                    setConnectionQuality('dead');
-                    setPingLatency(null);
-                    if (pingTimeoutRef.current) {
-                        clearInterval(pingTimeoutRef.current as any);
-                        pingTimeoutRef.current = null;
-                    }
-                });
-
-                client.socket.on('connected', (packet: ConnectedPacket) => {
-                    console.log(`Connected to Archipelago via ${protocol || '(explicit protocol)'}!`, packet);
-
-                    // Detect APVersion based on offset
-                    const allLocs = [
-                        ...(packet.missing_locations || []),
-                        ...(packet.checked_locations || [])
-                    ];
-                    // New APWorld always sends 'dexsanity' in slot_data (reliable signal).
-                    // Also check location ID ranges: new Pokemon Guess locs are 8560001-8561025,
-                    // new starting locs are 8660000+. Dexsanity=off has no Guess locs but will
-                    // always have starting or milestone locs outside the old legacy range.
-                    const isNewVersion =
-                        (typeof packet.slot_data === 'object' && packet.slot_data !== null && 'dexsanity' in packet.slot_data) ||
-                        allLocs.some((id: number) => (id >= 8560000 && id < 8570000) || id >= 8660000);
-                    isNewApWorldRef.current = isNewVersion;
-                    if (isNewVersion) {
-                        LOCATION_OFFSET = 8560000;
-                        STARTER_OFFSET = 100_000;
-                        MILESTONE_OFFSET = 10_000;
-                        TYPE_MILESTONE_OFFSET = 20_000;
-                        TYPE_MILESTONE_MULTIPLIER = 1000;
-                        TYPE_ITEM_OFFSET = 2000;
-                        USEFUL_ITEM_OFFSET = 3000;
-                        TRAP_ITEM_OFFSET = 4000;
-                        STARTER_COUNT = 8;
-                        setDetectedApWorldVersion('new');
-                        console.log('[GameContext] Detected Gen 9+ APWorld (Location Offset: 8560000)');
-                    } else {
-                        LOCATION_OFFSET = 8571000;
-                        STARTER_OFFSET = 500;
-                        MILESTONE_OFFSET = 1000;
-                        TYPE_MILESTONE_OFFSET = 2000;
-                        TYPE_MILESTONE_MULTIPLIER = 50;
-                        TYPE_ITEM_OFFSET = 1100;
-                        USEFUL_ITEM_OFFSET = 2000;
-                        TRAP_ITEM_OFFSET = 3000;
-                        STARTER_COUNT = 20;
-                        setDetectedApWorldVersion('legacy');
-                        console.log('[GameContext] Detected Legacy APWorld (Location Offset: 8571000)');
-                        // Warn in log that legacy APWorld has limited feature support
-                        setLogs(prev => [{
-                            id: crypto.randomUUID(),
-                            timestamp: Date.now(),
-                            type: 'system',
-                            text: '⚠ Connected to a Legacy APWorld. Some features (region locks, type key system) may not be available.',
-                            color: '#F59E0B'
-                        }, ...prev.slice(0, 99)]);
-                    }
-
-                    // Sync already checked locations
-                    const checkedLocs = packet.checked_locations || [];
-                    const newChecked = new Set<number>();
-                    checkedLocs.forEach((locId: number) => {
-                        if (locId >= LOCATION_OFFSET && locId <= LOCATION_OFFSET + 200_000) {
-                            newChecked.add(locId - LOCATION_OFFSET);
-                        }
-                    });
-                    setCheckedIds(newChecked);
-                    setConnectionKey(k => k + 1);
-
-                    // Sync already received items (fully reconstruct unlockedIds)
-                    const receivedItems = client.items.received;
-                    const newUnlocked = new Set<number>();
-                    receivedItems.forEach((item) => {
-                        if (item.id > ITEM_OFFSET && item.id <= ITEM_OFFSET + 1025) {
-                            newUnlocked.add(item.id - ITEM_OFFSET);
-                        }
-                    });
-                    setUnlockedIds(newUnlocked);
-
-                    // Reconstruct shinyIds from received items count
-                    const shinyCount = receivedItems.filter(i => i.id === 105000).length;
-                    if (shinyCount > 0) {
-                        const receivedPokemonIds = Array.from(newUnlocked);
-                        setShinyIds(new Set(receivedPokemonIds.slice(0, shinyCount)));
-                    }
-
-                    // Reconstruct Type Unlocks
-                    const newTypeUnlocks = new Set<string>();
-                    const typesMap = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
-                    receivedItems.forEach(item => {
-                        if (item.id >= ITEM_OFFSET + TYPE_ITEM_OFFSET && item.id <= ITEM_OFFSET + TYPE_ITEM_OFFSET + 17) {
-                            newTypeUnlocks.add(typesMap[item.id - (ITEM_OFFSET + TYPE_ITEM_OFFSET)]);
-                        }
-                    });
-                    setTypeUnlocks(newTypeUnlocks);
-
-                    // Reconstruct Region Pass unlocks
-                    const newRegionPasses = new Set<string>();
-                    receivedItems.forEach(item => {
-                        const idx = item.id - (ITEM_OFFSET + REGION_PASS_OFFSET);
-                        if (idx >= 0 && idx < GAME_REGIONS_ORDER.length) {
-                            newRegionPasses.add(GAME_REGIONS_ORDER[idx]);
-                        }
-                    });
-                    setRegionPasses(newRegionPasses);
-
-                    // Handle slot data for settings
-                    const slotData = packet.slot_data as any || {};
-
-                    // Shadows setting
-                    setShadowsEnabled(!!slotData.shadows);
-
-                    // Logic settings
-                    setTypeLocksEnabled(!!slotData.type_locks);
-                    // dexsanity defaults to true for older APWorld versions that don't send the field
-                    setDexsanityEnabled(slotData.dexsanity !== undefined ? !!slotData.dexsanity : true);
-                    setLegendaryGating(slotData.legendary_gating ?? 0);
-
-                    // Region settings (new APWorld: active_regions replaces pokemon_generations)
-                    setRegionLocksEnabled(!!slotData.region_locks);
-                    if (slotData.active_regions !== undefined) {
-                        const ar = slotData.active_regions as Record<string, [number, number]>;
-                        setActiveRegions(ar);
-                        setStartingRegion(slotData.starting_region ?? "");
-                        // Derive generationFilter from active region names for UI tab display
-                        const regionToGenIdx: Record<string, number> = {
-                            Kanto: 0, Johto: 1, Hoenn: 2, Sinnoh: 3, Unova: 4,
-                            Kalos: 5, Alola: 6, Galar: 7, Hisui: 8, Paldea: 9,
-                        };
-                        const genIdxSet = new Set<number>();
-                        for (const r of Object.keys(ar)) {
-                            const idx = regionToGenIdx[r];
-                            if (idx !== undefined) genIdxSet.add(idx);
-                        }
-                        setGenerationFilter(Array.from(genIdxSet).sort());
-                        // Set activePokemonLimit to max ID for backward compat
-                        const maxId = Math.max(...Object.values(ar).map(([, hi]) => hi));
-                        setActivePokemonLimit(maxId);
-                    } else if (slotData.pokemon_generations !== undefined) {
-                        // Legacy APWorld: map cumulative gen number to limit
-                        const gens = slotData.pokemon_generations;
-                        if (gens === 0) { setGenerationFilter([0]); setActivePokemonLimit(151); }
-                        else if (gens === 1) { setGenerationFilter([0, 1]); setActivePokemonLimit(251); }
-                        else if (gens === 2) { setGenerationFilter([0, 1, 2]); setActivePokemonLimit(386); }
-                        else if (gens === 3) { setGenerationFilter([0, 1, 2, 3]); setActivePokemonLimit(493); }
-                        else if (gens === 4) { setGenerationFilter([0, 1, 2, 3, 4]); setActivePokemonLimit(649); }
-                        else if (gens === 5) { setGenerationFilter([0, 1, 2, 3, 4, 5]); setActivePokemonLimit(721); }
-                        else if (gens === 6) { setGenerationFilter([0, 1, 2, 3, 4, 5, 6]); setActivePokemonLimit(809); }
-                        else if (gens === 7) { setGenerationFilter([0, 1, 2, 3, 4, 5, 6, 7]); setActivePokemonLimit(898); }
-                        else if (gens === 8) { setGenerationFilter([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]); setActivePokemonLimit(1025); }
-                    }
-
-                    // Goal setting — server sends 'goal_count' (a raw Pokémon count)
-                    if (slotData.goal_count !== undefined) {
-                        setGoalCount(slotData.goal_count);
-                        // Also set legacy goal for display in the toolbar
-                        setGoal({
-                            type: 'any_pokemon',
-                            amount: slotData.goal_count,
-                        });
-                    }
-
-                    // Starting locations toggle — default true for old APWorlds that don't send the field
-                    setStartingLocationsEnabled(slotData.starting_locations !== false);
-
-                    // Update game profile with confirmed connection details.
-                    // Done here (not in handleConnectProfile/handleConnect) so we use
-                    // the values from THIS connection, not the previous one.
-                    if (profileId) {
-                        updateProfile(profileId, {
-                            lastConnected: Date.now(),
-                            apworldVersion: isNewVersion ? 'new' : 'legacy',
-                            goalCount: slotData.goal_count,
-                            activeRegionNames: slotData.active_regions
-                                ? Object.keys(slotData.active_regions)
-                                : undefined,
-                        });
-                    }
-
-                    // Setup DataStorage sync for used items
-                    const team = client.players.self.team;
-                    const slot = client.players.self.slot;
-
-                    // Detect new game via seed change; wipe stale local backup if needed
-                    const seedName = client.room.seedName;
-                    const seedKey = `pokepelago_team_${team}_slot_${slot}_seed`;
-                    const caughtLocalKey = `pokepelago_team_${team}_slot_${slot}_caught_local`;
-                    if (localStorage.getItem(seedKey) !== seedName) {
-                        localStorage.removeItem(caughtLocalKey);
-                        localStorage.setItem(seedKey, seedName);
-                    }
-                    setConnectedTeamSlot({ team, slot });
-
-                    // For dexsanity=OFF: immediately restore from local backup so the UI
-                    // is populated before the async DataStorage response arrives
-                    if (!slotData.dexsanity) {
-                        const localCaught = localStorage.getItem(caughtLocalKey);
-                        if (localCaught) {
-                            const ids = JSON.parse(localCaught) as number[];
-                            setCheckedIds(prev => new Set([...prev, ...ids]));
-                        }
-                    }
-
-                    const mbKey = `pokepelago_team_${team}_slot_${slot}_used_masterballs`;
-                    const pgKey = `pokepelago_team_${team}_slot_${slot}_used_pokegears`;
-                    const pdKey = `pokepelago_team_${team}_slot_${slot}_used_pokedexes`;
-                    const derpKey = `pokepelago_team_${team}_slot_${slot}_derpyfied`;
-                    const relKey = `pokepelago_team_${team}_slot_${slot}_released`;
-                    const recaughtKey = `pokepelago_team_${team}_slot_${slot}_recaught`;
-                    // dexsanity=off has no per-Pokemon AP locations, so guesses are persisted here instead.
-                    const caughtKey = !slotData.dexsanity ? `pokepelago_team_${team}_slot_${slot}_caught` : null;
-
-                    const keysToWatch = [mbKey, pgKey, pdKey, derpKey, relKey, recaughtKey, ...(caughtKey ? [caughtKey] : [])];
-                    client.storage.notify(keysToWatch, (key, value) => {
-                        if (!Array.isArray(value)) return;
-                        const usedIds = new Set(value as number[]);
-
-                        // Because this callback runs anytime the value changes, update the state and the dynamic counters.
-                        if (key === mbKey) {
-                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 1).length;
-                            setMasterBalls(Math.max(0, totalServer - usedIds.size));
-                            setUsedMasterBalls(usedIds);
-                        } else if (key === pgKey) {
-                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 2).length;
-                            setPokegears(Math.max(0, totalServer - usedIds.size));
-                            setUsedPokegears(usedIds);
-                        } else if (key === pdKey) {
-                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 3).length;
-                            setPokedexes(Math.max(0, totalServer - usedIds.size));
-                            setUsedPokedexes(usedIds);
-                        } else if (key === derpKey) {
-                            setDerpyfiedIds(usedIds);
-                        } else if (key === relKey) {
-                            setReleasedIds(usedIds);
-                            processedReleaseTrapCountRef.current = (value as number[]).length;
-                        } else if (key === recaughtKey) {
-                            setReleasedIds(prev => new Set([...prev].filter(id => !usedIds.has(id))));
-                        } else if (caughtKey && key === caughtKey) {
-                            setCheckedIds(prev => new Set([...prev, ...usedIds]));
-                        }
-                    }).then((data) => {
-                        // Initialize traps from server data
-                        if (Array.isArray(data[derpKey])) setDerpyfiedIds(new Set(data[derpKey] as number[]));
-                        if (Array.isArray(data[relKey])) {
-                            const relHistory = data[relKey] as number[];
-                            const recaught = Array.isArray(data[recaughtKey]) ? new Set(data[recaughtKey] as number[]) : new Set<number>();
-                            setReleasedIds(new Set(relHistory.filter(id => !recaught.has(id))));
-                            processedReleaseTrapCountRef.current = relHistory.length;
-                        }
-
-                        // DataStorage is now initialized — allow trap processing in itemsReceived
-                        storageReadyRef.current = true;
-
-                        // Restore caught Pokemon for dexsanity=off (no AP locations to reconstruct from)
-                        if (caughtKey && Array.isArray(data[caughtKey])) {
-                            setCheckedIds(prev => new Set([...prev, ...(data[caughtKey] as number[])]));
-                        }
-                    }).catch(console.error);
-                });
-
-                // Handle items via ItemsManager
-                client.items.on('itemsReceived', (items: Item[]) => {
-                    let recalculateItems = false;
-                    items.forEach((item) => {
-                        if (item.id > ITEM_OFFSET && item.id <= ITEM_OFFSET + 1025) {
-                            const dexId = item.id - ITEM_OFFSET;
-                            unlockPokemon(dexId);
-                        } else if (item.id === 105000) {
-                            // Shiny Upgrade
-                            setUnlockedIds(unlocked => {
-                                const pokemonIds = Array.from(unlocked);
-                                setShinyIds(prev => {
-                                    const next = new Set(prev);
-                                    // Apply to the next unlocked pokemon that isn't shiny yet
-                                    const targetIdx = prev.size;
-                                    if (targetIdx < pokemonIds.length) {
-                                        next.add(pokemonIds[targetIdx]);
-                                    }
-                                    return next;
-                                });
-                                return unlocked;
-                            });
-                        } else if (item.id >= ITEM_OFFSET + TYPE_ITEM_OFFSET && item.id <= ITEM_OFFSET + TYPE_ITEM_OFFSET + 17) {
-                            const types = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
-                            const typeName = types[item.id - (ITEM_OFFSET + TYPE_ITEM_OFFSET)];
-                            setTypeUnlocks(prev => new Set(prev).add(typeName));
-                            setLogs(prev => [{
-                                id: crypto.randomUUID(),
-                                timestamp: Date.now(),
-                                type: 'system',
-                                text: `Received Type Unlock: ${typeName}`,
-                                parts: [{ text: `Received Type Unlock: ${typeName}`, type: 'color', color: '#10B981' }]
-                            }, ...prev.slice(0, 99)]);
-                        } else if (item.id >= ITEM_OFFSET + REGION_PASS_OFFSET && item.id < ITEM_OFFSET + REGION_PASS_OFFSET + GAME_REGIONS_ORDER.length) {
-                            const regionName = GAME_REGIONS_ORDER[item.id - (ITEM_OFFSET + REGION_PASS_OFFSET)];
-                            setRegionPasses(prev => new Set(prev).add(regionName));
-                            setLogs(prev => [{
-                                id: crypto.randomUUID(),
-                                timestamp: Date.now(),
-                                type: 'system',
-                                text: `Received ${regionName} Pass!`,
-                                parts: [{ text: `Received ${regionName} Pass!`, type: 'color', color: '#F59E0B' }]
-                            }, ...prev.slice(0, 99)]);
-                        } else if (item.id === ITEM_OFFSET + TRAP_ITEM_OFFSET + 1) {
-                            // Small Shuffle Trap — gate with storageReadyRef to prevent re-trigger on reconnect
-                            if (storageReadyRef.current) setShuffleEndTime(Date.now() + 30000); // 30s
-                        } else if (item.id === ITEM_OFFSET + TRAP_ITEM_OFFSET + 2) {
-                            // Big Shuffle Trap — gate with storageReadyRef to prevent re-trigger on reconnect
-                            if (storageReadyRef.current) setShuffleEndTime(Date.now() + 150000); // 2m 30s
-                        } else if (item.id === ITEM_OFFSET + TRAP_ITEM_OFFSET + 3) {
-                            // Derpy Mon Trap
-                            recalculateItems = true;
-                        } else if (item.id === ITEM_OFFSET + TRAP_ITEM_OFFSET + 4) {
-                            // Release Trap
-                            recalculateItems = true;
-                        } else if (item.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 1 || item.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 2 || item.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 3) {
-                            recalculateItems = true;
-                        }
-                    });
-
-                    if (recalculateItems) {
-                        setUsedMasterBalls(used => {
-                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 1).length;
-                            setMasterBalls(Math.max(0, totalServer - used.size));
-                            return used;
-                        });
-                        setUsedPokegears(used => {
-                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 2).length;
-                            setPokegears(Math.max(0, totalServer - used.size));
-                            return used;
-                        });
-                        setUsedPokedexes(used => {
-                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 3).length;
-                            setPokedexes(Math.max(0, totalServer - used.size));
-                            return used;
-                        });
-
-                        // Process Trap items (Derp Mon, Release Trap)
-                        // This logic runs to find "unprocessed" trap events safely by comparing server quantities against stored list sizes
-                        setDerpyfiedIds(derps => {
-                            if (!storageReadyRef.current) return derps;
-                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + TRAP_ITEM_OFFSET + 3).length;
-                            if (totalServer > derps.size) {
-                                let newDerps = new Set(derps);
-                                const basePathPokes = allPokemon.filter(p => !newDerps.has(p.id) && derpemonIndex[p.id]);
-
-                                // Priority 1: Guessed or Guessable
-                                let availablePokes = basePathPokes.filter(p => checkedIdsRef.current.has(p.id) || (isPokemonGuessableRef.current && isPokemonGuessableRef.current(p.id).canGuess));
-
-                                // Priority 2: Fallback to all if Priority 1 is empty
-                                if (availablePokes.length === 0) {
-                                    availablePokes = basePathPokes;
-                                }
-
-                                let toAdd = totalServer - derps.size;
-                                while (toAdd > 0 && availablePokes.length > 0) {
-                                    const randIdx = Math.floor(Math.random() * availablePokes.length);
-                                    const picked = availablePokes.splice(randIdx, 1)[0];
-                                    newDerps.add(picked.id);
-                                    toAdd--;
-
-                                    // Remove the picked Pokemon from basePathPokes so we don't accidentally pick it again if we fall back
-                                    const baseIdx = basePathPokes.findIndex(p => p.id === picked.id);
-                                    if (baseIdx !== -1) basePathPokes.splice(baseIdx, 1);
-
-                                    if (availablePokes.length === 0 && toAdd > 0) {
-                                        availablePokes = basePathPokes; // Fallback mid-loop if we run out
-                                    }
-
-                                    if (checkedIdsRef.current.has(picked.id)) {
-                                        showToast('trap', `${getCleanName(picked.name)} turned derpy!`);
-                                    } else {
-                                        showToast('trap', `A Pokémon turned derpy!`);
-                                    }
-                                }
-
-                                // Sync newly added IDs to server
-                                const team = client.players.self.team;
-                                const slot = client.players.self.slot;
-                                const derpKey = `pokepelago_team_${team}_slot_${slot}_derpyfied`;
-
-                                const unsynced = Array.from(newDerps).filter(id => !derps.has(id));
-                                if (unsynced.length > 0) {
-                                    client.storage.prepare(derpKey, []).add(unsynced).commit();
-                                }
-
-                                if (toAdd > 0) {
-                                    setSpriteRefreshCounter(c => c + 1); // Force re-render of sprites
-                                }
-
-                                return newDerps;
-                            }
-                            return derps;
-                        });
-
-                        setReleasedIds(released => {
-                            if (!storageReadyRef.current) return released;
-                            const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + TRAP_ITEM_OFFSET + 4).length;
-                            const processedCount = processedReleaseTrapCountRef.current;
-                            if (totalServer > processedCount) {
-                                let newReleased = new Set(released);
-                                // Pick from currently checked Pokémon (but not starters 1, 4, 7 for safety and thematic reasons)
-                                const validCheckedIds = Array.from(checkedIdsRef.current).filter(id => id !== 1 && id !== 4 && id !== 7 && !newReleased.has(id));
-                                let toAdd = totalServer - processedCount;
-                                processedReleaseTrapCountRef.current = totalServer;
-
-                                while (toAdd > 0 && validCheckedIds.length > 0) {
-                                    const randIdx = Math.floor(Math.random() * validCheckedIds.length);
-                                    const pickedId = validCheckedIds.splice(randIdx, 1)[0];
-                                    newReleased.add(pickedId);
-                                    toAdd--;
-
-                                    setLogs(prev => [{
-                                        id: crypto.randomUUID(),
-                                        timestamp: Date.now(),
-                                        type: 'system',
-                                        text: `Release Trap triggering! A Pokémon ran away!`,
-                                        parts: [{ text: `A Pokémon ran away! You must guess it again.`, type: 'color', color: '#EF4444' }]
-                                    }, ...prev.slice(0, 99)]);
-
-                                    showToast('trap', 'Oh no! A Pokémon ran away!');
-                                }
-
-                                // Sync newly added IDs to server
-                                const team = client.players.self.team;
-                                const slot = client.players.self.slot;
-                                const relKey = `pokepelago_team_${team}_slot_${slot}_released`;
-
-                                const unsynced = Array.from(newReleased).filter(id => !released.has(id));
-                                if (unsynced.length > 0) {
-                                    client.storage.prepare(relKey, []).add(unsynced).commit();
-                                }
-                                return newReleased;
-                            }
-                            return released;
-                        });
-                    }
-                });
-
-                // Generic log capturing
-                client.socket.on('printJSON', (packet) => {
-                    if (packet.type === 'Hint') {
-                        const item = packet.item as any;
-                        if (item && item.receiving_player === client.players.self.slot && (item.item as number) > ITEM_OFFSET && (item.item as number) <= ITEM_OFFSET + 1025) {
-                            const dexId = (item.item as number) - ITEM_OFFSET;
-                            setHintedIds(prev => {
-                                const next = new Set(prev);
-                                next.add(dexId);
-                                return next;
-                            });
-                        }
-                    }
-
-                    if (packet.data) {
-                        const parts: LogPart[] = packet.data.map((p: any) => {
-                            let text = p.text || '';
-                            let type = p.type || 'color';
-
-                            if (p.type === 'player_id') {
-                                const pid = parseInt(p.text);
-                                text = client.players.findPlayer(pid)?.alias || `Player ${pid}`;
-                                type = 'player';
-                            } else if (p.type === 'item_id') {
-                                const iid = parseInt(p.text);
-                                const player = client.players.findPlayer(p.player);
-                                text = client.package.lookupItemName(player?.game || client.game, iid) || `Item ${iid}`;
-                                type = 'item';
-                            } else if (p.type === 'location_id') {
-                                const lid = parseInt(p.text);
-                                const player = client.players.findPlayer(p.player);
-                                text = client.package.lookupLocationName(player?.game || client.game, lid) || `Location ${lid}`;
-                                type = 'location';
-                            }
-
-                            return { text, type, color: p.color };
-                        });
-
-                        const isHintOrItem = packet.type === 'Hint' || packet.type === 'ItemSend' || packet.type === 'ItemCheat';
-                        let isMe = true;
-                        if (isHintOrItem && client.players.self) {
-                            // If it's a hint or item, default to not me, unless my slot is mentioned
-                            isMe = packet.data.some((p: any) => p.type === 'player_id' && parseInt(p.text) === client.players.self.slot);
-                        }
-
-                        addLog({
-                            type: packet.type === 'Hint' ? 'hint' : packet.type === 'ItemSend' ? 'item' : packet.type === 'Chat' ? 'chat' : 'system',
-                            text: parts.map(p => p.text).join(''),
-                            parts,
-                            isMe
-                        });
-                    }
-                });
-
-                client.socket.on('locationInfo', (packet) => {
-                    packet.locations.forEach(item => {
-                        if (item.player === client.players.self.slot && (item.item as number) > ITEM_OFFSET && (item.item as number) <= ITEM_OFFSET + 1025) {
-                            const dexId = (item.item as number) - ITEM_OFFSET;
-                            setHintedIds(prev => {
-                                const next = new Set(prev);
-                                next.add(dexId);
-                                return next;
-                            });
-                        }
-                    });
-                });
-
-                // 1. Try to load cached DataPackage
-                const cachedPackageRaw = localStorage.getItem('pokepelago_datapackage');
-                if (cachedPackageRaw) {
-                    try {
-                        const parsedCache = JSON.parse(cachedPackageRaw);
-                        client.package.importPackage(parsedCache);
-                        console.log('[GameContext] Loaded Archipelago data package from cache.');
-                    } catch (e) {
-                        console.warn('[GameContext] Failed to parse cached data package, ignoring.', e);
-                    }
-                }
-
-                await client.login(url, info.slotName, 'Pokepelago', {
-                    password: info.password,
-                    items: itemsHandlingFlags.all,
-                });
-
-                // 2. Save DataPackage back to cache immediately upon successful login
-                // (this ensures we have definitions for the current game)
-                try {
-                    const latestPackage = client.package.exportPackage();
-                    localStorage.setItem('pokepelago_datapackage', JSON.stringify(latestPackage));
-                    console.log('[GameContext] Saved Archipelago data package to cache.');
-                } catch (e) {
-                    console.error('[GameContext] Failed to save data package to cache.', e);
-                }
-
-                setIsConnected(true);
-                setConnectionQuality('good');
-                setConnectionError(null);
-                localStorage.setItem('pokepelago_connected', 'true');
-                isConnectingRef.current = false;
-
-                if (pingTimeoutRef.current) clearInterval(pingTimeoutRef.current as any);
-                pingTimeoutRef.current = setInterval(() => {
-                    if (clientRef.current?.authenticated) {
-                        lastPingTimeRef.current = Date.now();
-                        (clientRef.current as any).socket.send({ cmd: 'Bounce', tags: ['ping'] });
-                    }
-                }, 5000);
-
-                // Now that the new client is authenticated, safely drop the old one.
-                // Doing this before login would cause the server to reject the new
-                // WebSocket while it tears down the previous session.
-                if (oldClient && oldClient !== client) {
-                    oldClient.socket.disconnect();
-                }
-
-                return; // Successfully connected! Exit loop.
-
-            } catch (err: any) {
-                console.warn(`Connection to ${protocol}${info.hostname}:${info.port} failed:`, err);
-                lastError = err;
-
-                if (clientRef.current) {
-                    clientRef.current.socket.disconnect();
-                }
-
-                // If error is related to Archipelago denying login specifically (rather than a WebSocket transport failure), don't retry.
-                const msg = err?.message || String(err);
-                if (msg.includes('Invalid Slot') || msg.includes('Invalid Password') || msg.includes('Invalid Game') || msg.includes('Incompatible Version')) {
-                    break;
-                }
-            }
-        }
-
-        console.error('All connection attempts failed', lastError);
-        const rawMsg = lastError?.message || String(lastError || '');
-        let friendlyMsg: string;
-        if (rawMsg.includes('refused') || rawMsg.includes('ECONNREFUSED') || rawMsg.includes('ENOTFOUND') || rawMsg.includes('timed out'))
-            friendlyMsg = 'Server is offline or unreachable. Check the host and port.';
-        else if (rawMsg.includes('SSL') || rawMsg.includes('ERR_SSL') || rawMsg.includes('wss'))
-            friendlyMsg = 'Secure connection failed. Try using ws:// instead of wss://.';
-        else if (rawMsg.includes('Invalid Slot') || rawMsg.includes('InvalidSlot'))
-            friendlyMsg = `Slot "${info.slotName}" not found. Check that your name matches the YAML exactly.`;
-        else if (rawMsg.includes('Invalid Password') || rawMsg.includes('InvalidPassword'))
-            friendlyMsg = 'Incorrect password.';
-        else if (rawMsg.includes('Invalid Game') || rawMsg.includes('InvalidGame'))
-            friendlyMsg = `Slot "${info.slotName}" is not a Pokepelago game.`;
-        else if (rawMsg)
-            friendlyMsg = rawMsg;
-        else
-            friendlyMsg = 'Failed to connect. The host may be offline or you might have a secure connection issue.';
-        setConnectionError(friendlyMsg);
-        setIsConnected(false);
-        isConnectingRef.current = false;
-    };
-
-    const disconnect = () => {
-        if (pingTimeoutRef.current) {
-            clearInterval(pingTimeoutRef.current as any);
-            pingTimeoutRef.current = null;
-        }
-        setPingLatency(null);
-        setConnectionQuality(null);
-        if (clientRef.current) {
-            clientRef.current.socket.disconnect();
-            clientRef.current = null;
-        }
-        setIsConnected(false);
-        localStorage.setItem('pokepelago_connected', 'false');
-        setUnlockedIds(new Set());
-        setCheckedIds(new Set());
-        setHintedIds(new Set());
-        setShinyIds(new Set());
-        // derpyfiedIds and releasedIds are NOT cleared here: they have no localStorage
-        // persistence and the DataStorage sync overwrites them with the correct per-slot
-        // values on every connect. Clearing them early causes itemsReceived to see
-        // released.size=0 and re-trigger the trap for already-processed items.
-        setMasterBalls(0);
-        setPokegears(0);
-        setPokedexes(0);
-        setUsedMasterBalls(new Set());
-        setUsedPokegears(new Set());
-        setUsedPokedexes(new Set());
-        setShuffleEndTime(0);
-        setConnectedTeamSlot(null);
-    };
+        setDexsanityLocalWarning(false);
+    }, [connectedTeamSlot]);
+
+    const setGameMode = useCallback((mode: 'archipelago' | 'standalone' | null) => {
+        setGameModeState(mode);
+        if (mode) localStorage.setItem('pokepelago_gamemode', mode);
+        else localStorage.removeItem('pokepelago_gamemode');
+    }, []);
 
     const updateUiSettings = (newSettings: Partial<UISettings>) => {
         setUiSettings(prev => {
             const next = { ...prev, ...newSettings };
-            if (newSettings.spriteSet !== undefined || newSettings.enableSprites !== undefined) {
+            if (newSettings.spriteSet !== undefined || newSettings.enableSprites !== undefined)
                 setSpriteRefreshCounter(c => c + 1);
-            }
             return next;
         });
     };
@@ -1535,19 +568,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (masterBalls > 0) {
             setMasterBalls(prev => prev - 1);
             setUsedMasterBalls(prev => new Set(prev).add(pokemonId));
-
             if (clientRef.current?.authenticated) {
                 const team = clientRef.current.players.self.team;
                 const slot = clientRef.current.players.self.slot;
                 clientRef.current.storage.prepare(`pokepelago_team_${team}_slot_${slot}_used_masterballs`, []).add([pokemonId]).commit();
             }
-
             checkPokemon(pokemonId);
-            addLog({
-                type: 'system',
-                text: `Used a Master Ball on Pokemon #${pokemonId}!`,
-                isMe: true
-            });
+            addLog({ type: 'system', text: `Used a Master Ball on Pokemon #${pokemonId}!`, isMe: true });
         }
     }, [masterBalls, checkPokemon, addLog]);
 
@@ -1555,18 +582,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (pokegears > 0) {
             setPokegears(prev => prev - 1);
             setUsedPokegears(prev => new Set(prev).add(pokemonId));
-
             if (clientRef.current?.authenticated) {
                 const team = clientRef.current.players.self.team;
                 const slot = clientRef.current.players.self.slot;
                 clientRef.current.storage.prepare(`pokepelago_team_${team}_slot_${slot}_used_pokegears`, []).add([pokemonId]).commit();
             }
-
-            addLog({
-                type: 'system',
-                text: `Used a Pokegear on Pokemon #${pokemonId}!`,
-                isMe: true
-            });
+            addLog({ type: 'system', text: `Used a Pokegear on Pokemon #${pokemonId}!`, isMe: true });
         }
     }, [pokegears, addLog]);
 
@@ -1574,52 +595,21 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (pokedexes > 0) {
             setPokedexes(prev => prev - 1);
             setUsedPokedexes(prev => new Set(prev).add(pokemonId));
-
             if (clientRef.current?.authenticated) {
                 const team = clientRef.current.players.self.team;
                 const slot = clientRef.current.players.self.slot;
                 clientRef.current.storage.prepare(`pokepelago_team_${team}_slot_${slot}_used_pokedexes`, []).add([pokemonId]).commit();
             }
-
-            addLog({
-                type: 'system',
-                text: `Used a Pokedex on Pokemon #${pokemonId}!`,
-                isMe: true
-            });
+            addLog({ type: 'system', text: `Used a Pokedex on Pokemon #${pokemonId}!`, isMe: true });
         }
     }, [pokedexes, addLog]);
 
-    const unlockRegion = useCallback((region: string) => {
-        setRegionPasses(prev => new Set(prev).add(region));
-    }, []);
-
-    const lockRegion = useCallback((region: string) => {
-        setRegionPasses(prev => {
-            const next = new Set(prev);
-            next.delete(region);
-            return next;
-        });
-    }, []);
-
-    const clearAllRegions = useCallback(() => {
-        setRegionPasses(new Set());
-    }, []);
-
-    const unlockType = useCallback((typeName: string) => {
-        setTypeUnlocks(prev => new Set(prev).add(typeName));
-    }, []);
-
-    const lockType = useCallback((typeName: string) => {
-        setTypeUnlocks(prev => {
-            const next = new Set(prev);
-            next.delete(typeName);
-            return next;
-        });
-    }, []);
-
-    const clearAllTypes = useCallback(() => {
-        setTypeUnlocks(new Set());
-    }, []);
+    const unlockRegion = useCallback((region: string) => { setRegionPasses(prev => new Set(prev).add(region)); }, []);
+    const lockRegion = useCallback((region: string) => { setRegionPasses(prev => { const next = new Set(prev); next.delete(region); return next; }); }, []);
+    const clearAllRegions = useCallback(() => { setRegionPasses(new Set()); }, []);
+    const unlockType = useCallback((typeName: string) => { setTypeUnlocks(prev => new Set(prev).add(typeName)); }, []);
+    const lockType = useCallback((typeName: string) => { setTypeUnlocks(prev => { const next = new Set(prev); next.delete(typeName); return next; }); }, []);
+    const clearAllTypes = useCallback(() => { setTypeUnlocks(new Set()); }, []);
 
     const scoutLocation = useCallback(async (locationId: number) => {
         if (!clientRef.current?.authenticated) return null;
@@ -1627,113 +617,355 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const items = await clientRef.current.scout([locationId]);
             if (items && items.length > 0) {
                 const item = items[0];
-                return {
-                    itemName: item.name,
-                    playerName: item.receiver.alias
-                };
+                return { itemName: item.name, playerName: item.receiver.alias };
             }
-        } catch (e) {
-            console.warn('[GameContext] Failed to scout location', locationId, e);
-        }
+        } catch (e) { console.warn('[GameContext] Failed to scout location', locationId, e); }
         return null;
     }, []);
 
-    // gameStarted: true if starting locations are disabled OR any starter location already checked
+    // ── Connection Event Handlers ─────────────────────────────────────────────────
+
+    const onConnected = useCallback((
+        packet: ConnectedPacket,
+        client: Client,
+        isNewVersion: boolean,
+        offsets: MutableRefObject<OffsetTable>,
+    ) => {
+        const o = offsets.current;
+
+        // Sync already-checked locations
+        const checkedLocs = packet.checked_locations || [];
+        const newChecked = new Set<number>();
+        checkedLocs.forEach((locId: number) => {
+            if (locId >= o.LOCATION_OFFSET && locId <= o.LOCATION_OFFSET + 200_000)
+                newChecked.add(locId - o.LOCATION_OFFSET);
+        });
+        setCheckedIds(newChecked);
+
+        // Reconstruct received items
+        const receivedItems = client.items.received;
+        const newUnlocked = new Set<number>();
+        receivedItems.forEach(item => {
+            if (item.id > o.ITEM_OFFSET && item.id <= o.ITEM_OFFSET + 1025)
+                newUnlocked.add(item.id - o.ITEM_OFFSET);
+        });
+        setUnlockedIds(newUnlocked);
+
+        // Reconstruct shinyIds
+        const shinyCount = receivedItems.filter(i => i.id === 105000).length;
+        setShinyIds(shinyCount > 0 ? new Set(Array.from(newUnlocked).slice(0, shinyCount)) : new Set());
+
+        // Reconstruct Type Unlocks
+        const typesMap = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
+        const newTypeUnlocks = new Set<string>();
+        receivedItems.forEach(item => {
+            if (item.id >= o.ITEM_OFFSET + o.TYPE_ITEM_OFFSET && item.id <= o.ITEM_OFFSET + o.TYPE_ITEM_OFFSET + 17)
+                newTypeUnlocks.add(typesMap[item.id - (o.ITEM_OFFSET + o.TYPE_ITEM_OFFSET)]);
+        });
+        setTypeUnlocks(newTypeUnlocks);
+
+        // Reconstruct Region Passes
+        const newRegionPasses = new Set<string>();
+        receivedItems.forEach(item => {
+            const idx = item.id - (o.ITEM_OFFSET + o.REGION_PASS_OFFSET);
+            if (idx >= 0 && idx < GAME_REGIONS_ORDER.length) newRegionPasses.add(GAME_REGIONS_ORDER[idx]);
+        });
+        setRegionPasses(newRegionPasses);
+
+        // Parse slot data
+        const slotData = packet.slot_data as any || {};
+        setShadowsEnabled(!!slotData.shadows);
+        setTypeLocksEnabled(!!slotData.type_locks);
+        setDexsanityEnabled(slotData.dexsanity !== undefined ? !!slotData.dexsanity : true);
+        setLegendaryGating(slotData.legendary_gating ?? 0);
+        setRegionLocksEnabled(!!slotData.region_locks);
+
+        if (slotData.active_regions !== undefined) {
+            const ar = slotData.active_regions as Record<string, [number, number]>;
+            setActiveRegions(ar);
+            setStartingRegion(slotData.starting_region ?? '');
+            const regionToGenIdx: Record<string, number> = {
+                Kanto: 0, Johto: 1, Hoenn: 2, Sinnoh: 3, Unova: 4, Kalos: 5, Alola: 6, Galar: 7, Hisui: 8, Paldea: 9,
+            };
+            const genIdxSet = new Set<number>();
+            for (const r of Object.keys(ar)) { const idx = regionToGenIdx[r]; if (idx !== undefined) genIdxSet.add(idx); }
+            setGenerationFilter(Array.from(genIdxSet).sort());
+            setActivePokemonLimit(Math.max(...Object.values(ar).map(([, hi]) => hi)));
+        } else if (slotData.pokemon_generations !== undefined) {
+            const gens = slotData.pokemon_generations;
+            if (gens === 0) { setGenerationFilter([0]); setActivePokemonLimit(151); }
+            else if (gens === 1) { setGenerationFilter([0, 1]); setActivePokemonLimit(251); }
+            else if (gens === 2) { setGenerationFilter([0, 1, 2]); setActivePokemonLimit(386); }
+            else if (gens === 3) { setGenerationFilter([0, 1, 2, 3]); setActivePokemonLimit(493); }
+            else if (gens === 4) { setGenerationFilter([0, 1, 2, 3, 4]); setActivePokemonLimit(649); }
+            else if (gens === 5) { setGenerationFilter([0, 1, 2, 3, 4, 5]); setActivePokemonLimit(721); }
+            else if (gens === 6) { setGenerationFilter([0, 1, 2, 3, 4, 5, 6]); setActivePokemonLimit(809); }
+            else if (gens === 7) { setGenerationFilter([0, 1, 2, 3, 4, 5, 6, 7]); setActivePokemonLimit(898); }
+            else if (gens === 8) { setGenerationFilter([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]); setActivePokemonLimit(1025); }
+        }
+
+        if (slotData.goal_count !== undefined) {
+            setGoalCount(slotData.goal_count);
+            setGoal({ type: 'any_pokemon', amount: slotData.goal_count });
+        }
+        setStartingLocationsEnabled(slotData.starting_locations !== false);
+        setDetectedApWorldVersion(isNewVersion ? 'new' : 'legacy');
+
+        if (!isNewVersion) {
+            setLogs(prev => [{
+                id: crypto.randomUUID(), timestamp: Date.now(), type: 'system',
+                text: '⚠ Connected to a Legacy APWorld. Some features (region locks, type key system) may not be available.',
+                color: '#F59E0B',
+            }, ...prev.slice(0, 99)]);
+        }
+
+        if (currentProfileId) {
+            updateProfile(currentProfileId, {
+                lastConnected: Date.now(),
+                apworldVersion: isNewVersion ? 'new' : 'legacy',
+                goalCount: slotData.goal_count,
+                activeRegionNames: slotData.active_regions ? Object.keys(slotData.active_regions) : undefined,
+            });
+        }
+
+        // DataStorage setup
+        const team = client.players.self.team;
+        const slot = client.players.self.slot;
+
+        // Detect new game via seed change; wipe stale local backup if needed
+        const seedName = client.room.seedName;
+        const seedKey = `pokepelago_team_${team}_slot_${slot}_seed`;
+        const caughtLocalKey = `pokepelago_team_${team}_slot_${slot}_caught_local`;
+        if (localStorage.getItem(seedKey) !== seedName) {
+            localStorage.removeItem(caughtLocalKey);
+            localStorage.setItem(seedKey, seedName);
+        }
+        setConnectedTeamSlot({ team, slot });
+
+        // Immediately restore from local backup for dexsanity=OFF
+        if (!slotData.dexsanity) {
+            const localCaught = localStorage.getItem(caughtLocalKey);
+            if (localCaught) {
+                const ids = JSON.parse(localCaught) as number[];
+                setCheckedIds(prev => new Set([...prev, ...ids]));
+            }
+        }
+
+        const mbKey = `pokepelago_team_${team}_slot_${slot}_used_masterballs`;
+        const pgKey = `pokepelago_team_${team}_slot_${slot}_used_pokegears`;
+        const pdKey = `pokepelago_team_${team}_slot_${slot}_used_pokedexes`;
+        const derpKey = `pokepelago_team_${team}_slot_${slot}_derpyfied`;
+        const relKey = `pokepelago_team_${team}_slot_${slot}_released`;
+        const recaughtKey = `pokepelago_team_${team}_slot_${slot}_recaught`;
+        const caughtKey = !slotData.dexsanity ? `pokepelago_team_${team}_slot_${slot}_caught` : null;
+
+        const keysToWatch = [mbKey, pgKey, pdKey, derpKey, relKey, recaughtKey, ...(caughtKey ? [caughtKey] : [])];
+        client.storage.notify(keysToWatch, (key, value) => {
+            if (!Array.isArray(value)) return;
+            const usedIds = new Set(value as number[]);
+            if (key === mbKey) {
+                const total = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 1).length;
+                setMasterBalls(Math.max(0, total - usedIds.size)); setUsedMasterBalls(usedIds);
+            } else if (key === pgKey) {
+                const total = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 2).length;
+                setPokegears(Math.max(0, total - usedIds.size)); setUsedPokegears(usedIds);
+            } else if (key === pdKey) {
+                const total = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 3).length;
+                setPokedexes(Math.max(0, total - usedIds.size)); setUsedPokedexes(usedIds);
+            } else if (key === derpKey) {
+                onDataStorageDerpUpdate(value as number[]);
+            } else if (key === relKey) {
+                onDataStorageReleaseUpdate(value as number[]);
+            } else if (key === recaughtKey) {
+                onDataStorageRecaughtUpdate(new Set(value as number[]));
+            } else if (caughtKey && key === caughtKey) {
+                setCheckedIds(prev => new Set([...prev, ...usedIds]));
+            }
+        }).then((data) => {
+            initFromDataStorage(
+                Array.isArray(data[derpKey]) ? data[derpKey] as number[] : null,
+                Array.isArray(data[relKey]) ? data[relKey] as number[] : null,
+                Array.isArray(data[recaughtKey]) ? data[recaughtKey] as number[] : null,
+            );
+            if (caughtKey && Array.isArray(data[caughtKey]))
+                setCheckedIds(prev => new Set([...prev, ...(data[caughtKey] as number[])]));
+        }).catch(console.error);
+    }, [currentProfileId, onDataStorageDerpUpdate, onDataStorageReleaseUpdate, onDataStorageRecaughtUpdate, initFromDataStorage]);
+
+    const onDisconnected = useCallback(() => {
+        setUnlockedIds(new Set());
+        setCheckedIds(new Set());
+        setHintedIds(new Set());
+        setShinyIds(new Set());
+        // derpyfiedIds and releasedIds NOT cleared — DataStorage overwrites on reconnect.
+        setMasterBalls(0); setPokegears(0); setPokedexes(0);
+        setUsedMasterBalls(new Set()); setUsedPokegears(new Set()); setUsedPokedexes(new Set());
+        setShuffleEndTime(0);
+        setConnectedTeamSlot(null);
+        localStorage.setItem('pokepelago_connected', 'false');
+    }, []);
+
+    const onItemsReceived = useCallback((items: Item[], client: Client) => {
+        const o = offsetsRef.current;
+        let recalculateItems = false;
+
+        items.forEach(item => {
+            if (item.id > o.ITEM_OFFSET && item.id <= o.ITEM_OFFSET + 1025) {
+                unlockPokemon(item.id - o.ITEM_OFFSET);
+            } else if (item.id === 105000) {
+                setUnlockedIds(unlocked => {
+                    const pokemonIds = Array.from(unlocked);
+                    setShinyIds(prev => {
+                        const next = new Set(prev);
+                        const targetIdx = prev.size;
+                        if (targetIdx < pokemonIds.length) next.add(pokemonIds[targetIdx]);
+                        return next;
+                    });
+                    return unlocked;
+                });
+            } else if (item.id >= o.ITEM_OFFSET + o.TYPE_ITEM_OFFSET && item.id <= o.ITEM_OFFSET + o.TYPE_ITEM_OFFSET + 17) {
+                const types = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
+                const typeName = types[item.id - (o.ITEM_OFFSET + o.TYPE_ITEM_OFFSET)];
+                setTypeUnlocks(prev => new Set(prev).add(typeName));
+                setLogs(prev => [{
+                    id: crypto.randomUUID(), timestamp: Date.now(), type: 'system',
+                    text: `Received Type Unlock: ${typeName}`,
+                    parts: [{ text: `Received Type Unlock: ${typeName}`, type: 'color', color: '#10B981' }],
+                }, ...prev.slice(0, 99)]);
+            } else if (item.id >= o.ITEM_OFFSET + o.REGION_PASS_OFFSET && item.id < o.ITEM_OFFSET + o.REGION_PASS_OFFSET + GAME_REGIONS_ORDER.length) {
+                const regionName = GAME_REGIONS_ORDER[item.id - (o.ITEM_OFFSET + o.REGION_PASS_OFFSET)];
+                setRegionPasses(prev => new Set(prev).add(regionName));
+                setLogs(prev => [{
+                    id: crypto.randomUUID(), timestamp: Date.now(), type: 'system',
+                    text: `Received ${regionName} Pass!`,
+                    parts: [{ text: `Received ${regionName} Pass!`, type: 'color', color: '#F59E0B' }],
+                }, ...prev.slice(0, 99)]);
+            } else if (
+                item.id === o.ITEM_OFFSET + o.TRAP_ITEM_OFFSET + 1 ||
+                item.id === o.ITEM_OFFSET + o.TRAP_ITEM_OFFSET + 2 ||
+                item.id === o.ITEM_OFFSET + o.TRAP_ITEM_OFFSET + 3 ||
+                item.id === o.ITEM_OFFSET + o.TRAP_ITEM_OFFSET + 4 ||
+                item.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 1 ||
+                item.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 2 ||
+                item.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 3
+            ) {
+                recalculateItems = true;
+            }
+        });
+
+        if (recalculateItems) {
+            setUsedMasterBalls(used => { setMasterBalls(Math.max(0, client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 1).length - used.size)); return used; });
+            setUsedPokegears(used => { setPokegears(Math.max(0, client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 2).length - used.size)); return used; });
+            setUsedPokedexes(used => { setPokedexes(Math.max(0, client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 3).length - used.size)); return used; });
+            processTrapItems(items, client);
+        }
+    }, [unlockPokemon, processTrapItems]);
+
+    const onPrintJSON = useCallback((packet: any, client: Client) => {
+        if (packet.type === 'Hint') {
+            const item = packet.item as any;
+            if (item && item.receiving_player === client.players.self.slot) {
+                const o = offsetsRef.current;
+                if ((item.item as number) > o.ITEM_OFFSET && (item.item as number) <= o.ITEM_OFFSET + 1025) {
+                    const dexId = (item.item as number) - o.ITEM_OFFSET;
+                    setHintedIds(prev => { const next = new Set(prev); next.add(dexId); return next; });
+                }
+            }
+        }
+        if (packet.data) {
+            const parts = packet.data.map((p: any) => {
+                let text = p.text || '';
+                let type = p.type || 'color';
+                if (p.type === 'player_id') {
+                    const pid = parseInt(p.text);
+                    text = client.players.findPlayer(pid)?.alias || `Player ${pid}`; type = 'player';
+                } else if (p.type === 'item_id') {
+                    const iid = parseInt(p.text);
+                    const player = client.players.findPlayer(p.player);
+                    text = client.package.lookupItemName(player?.game || client.game, iid) || `Item ${iid}`; type = 'item';
+                } else if (p.type === 'location_id') {
+                    const lid = parseInt(p.text);
+                    const player = client.players.findPlayer(p.player);
+                    text = client.package.lookupLocationName(player?.game || client.game, lid) || `Location ${lid}`; type = 'location';
+                }
+                return { text, type, color: p.color };
+            });
+            const isHintOrItem = packet.type === 'Hint' || packet.type === 'ItemSend' || packet.type === 'ItemCheat';
+            const isMe = !isHintOrItem || !client.players.self ? true :
+                packet.data.some((p: any) => p.type === 'player_id' && parseInt(p.text) === client.players.self.slot);
+            addLog({
+                type: packet.type === 'Hint' ? 'hint' : packet.type === 'ItemSend' ? 'item' : packet.type === 'Chat' ? 'chat' : 'system',
+                text: parts.map((p: any) => p.text).join(''), parts, isMe,
+            });
+        }
+    }, [addLog]);
+
+    const onLocationInfo = useCallback((packet: any, client: Client) => {
+        const o = offsetsRef.current;
+        packet.locations.forEach((item: any) => {
+            if (item.player === client.players.self.slot && (item.item as number) > o.ITEM_OFFSET && (item.item as number) <= o.ITEM_OFFSET + 1025) {
+                const dexId = (item.item as number) - o.ITEM_OFFSET;
+                setHintedIds(prev => { const next = new Set(prev); next.add(dexId); return next; });
+            }
+        });
+    }, []);
+
+    // ── Public connect / disconnect ───────────────────────────────────────────────
+    const connect = useCallback(async (info: ConnectionInfo, profileId?: string) => {
+        if (profileId) setCurrentProfileId(profileId);
+        storageReadyRef.current = false;
+        await apConnection.connect(info, profileId, {
+            onConnected, onDisconnected, onItemsReceived, onPrintJSON, onLocationInfo,
+        });
+    }, [apConnection, onConnected, onDisconnected, onItemsReceived, onPrintJSON, onLocationInfo]);
+
+    const disconnect = useCallback(() => {
+        apConnection.disconnect();
+        onDisconnected();
+    }, [apConnection, onDisconnected]);
+
+    // ── Derived ──────────────────────────────────────────────────────────────────
+    const { STARTER_OFFSET, STARTER_COUNT } = offsetsRef.current;
     const gameStarted = !startingLocationsEnabled ||
         Array.from({ length: STARTER_COUNT }, (_, i) => i).some(i => checkedIds.has(STARTER_OFFSET + i));
 
-    // isPokemonGuessable moved up
     return (
         <GameContext.Provider value={{
-            allPokemon,
-            unlockedIds,
-            checkedIds,
-            hintedIds,
-            shinyIds,
-            isLoading,
-            generationFilter,
-            setGenerationFilter,
-            unlockPokemon,
-            checkPokemon,
-            recatchPokemon,
-            uiSettings,
-            updateUiSettings,
-            isConnected,
-            connectionError,
-            connect,
-            disconnect,
-            shadowsEnabled,
-            goal,
-            logs,
-            addLog,
-            say,
-            connectionInfo,
-            setConnectionInfo,
-            pingLatency,
-            connectionQuality,
-            selectedPokemonId,
-            setSelectedPokemonId,
+            allPokemon, unlockedIds, checkedIds, hintedIds, shinyIds, isLoading,
+            generationFilter, setGenerationFilter,
+            unlockPokemon, checkPokemon, recatchPokemon,
+            uiSettings, updateUiSettings,
+            isConnected, connectionError, connect, disconnect,
+            shadowsEnabled, goal, logs, addLog, say,
+            connectionInfo, setConnectionInfo,
+            pingLatency, connectionQuality,
+            selectedPokemonId, setSelectedPokemonId,
             getLocationName,
-            typeLocksEnabled,
-            dexsanityEnabled,
-            legendaryGating,
-            regionPasses,
-            typeUnlocks,
-            masterBalls,
-            pokegears,
-            pokedexes,
-            useMasterBall,
-            usePokegear,
-            usePokedex,
-            usedMasterBalls,
-            usedPokegears,
-            usedPokedexes,
-            spriteCount,
-            refreshSpriteCount,
-            getSpriteUrl,
-            derpemonIndex,
-            derpemonSpriteCount: Object.keys(derpemonIndex).length,
-            spriteRepoUrl,
-            setSpriteRepoUrl,
-            pmdSpriteUrl,
-            setPmdSpriteUrl,
-            isPokemonGuessable,
-            gameMode,
-            setGameMode,
-            goalCount,
-            activePokemonLimit,
-            activeRegions,
-            startingRegion,
-            regionLocksEnabled,
-            startingLocationsEnabled,
-            gameStarted,
-            startGame,
+            typeLocksEnabled, dexsanityEnabled, legendaryGating,
+            regionPasses, typeUnlocks,
+            masterBalls, pokegears, pokedexes,
+            useMasterBall, usePokegear, usePokedex,
+            usedMasterBalls, usedPokegears, usedPokedexes,
+            spriteCount, refreshSpriteCount, getSpriteUrl,
+            derpemonIndex, derpemonSpriteCount: Object.keys(derpemonIndex).length,
+            spriteRepoUrl, setSpriteRepoUrl, pmdSpriteUrl, setPmdSpriteUrl,
+            isPokemonGuessable, gameMode, setGameMode,
+            goalCount, activePokemonLimit, activeRegions, startingRegion, regionLocksEnabled,
+            startingLocationsEnabled, gameStarted, startGame,
             connectionKey,
-            unlockRegion,
-            lockRegion,
-            clearAllRegions,
+            unlockRegion, lockRegion, clearAllRegions,
             scoutLocation,
-            unlockType,
-            lockType,
-            clearAllTypes,
-            shuffleEndTime,
-            derpyfiedIds,
-            releasedIds,
-            setShuffleEndTime,
-            setDerpyfiedIds,
-            setReleasedIds,
-            spriteRefreshCounter,
-            setSpriteRefreshCounter,
-            toast,
-            showToast,
-            locationOffset: LOCATION_OFFSET,
-            STARTER_OFFSET,
-            MILESTONE_OFFSET,
+            unlockType, lockType, clearAllTypes,
+            shuffleEndTime, derpyfiedIds, releasedIds,
+            setShuffleEndTime, setDerpyfiedIds, setReleasedIds,
+            spriteRefreshCounter, setSpriteRefreshCounter,
+            toast, showToast,
+            locationOffset: offsetsRef.current.LOCATION_OFFSET,
+            STARTER_OFFSET: offsetsRef.current.STARTER_OFFSET,
+            MILESTONE_OFFSET: offsetsRef.current.MILESTONE_OFFSET,
             detectedApWorldVersion,
-            currentProfileId,
-            setCurrentProfileId,
-            typeFilter,
-            setTypeFilter,
+            currentProfileId, setCurrentProfileId,
+            typeFilter, setTypeFilter,
         }}>
             {children}
             {dexsanityLocalWarning && (
@@ -1771,8 +1003,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useGame = () => {
     const context = useContext(GameContext);
-    if (!context) {
-        throw new Error('useGame must be used within a GameProvider');
-    }
+    if (!context) throw new Error('useGame must be used within a GameProvider');
     return context;
 };
