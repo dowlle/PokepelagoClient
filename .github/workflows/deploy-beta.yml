@@ -1,9 +1,9 @@
-name: Deploy to GitHub Pages
+name: Deploy Beta to GitHub Pages
 
 on:
   push:
     branches:
-      - main
+      - beta
   workflow_dispatch:
 
 permissions:
@@ -23,12 +23,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
+      - name: Build (beta)
         run: npm run build
+        env:
+          DEPLOY_TARGET: beta
 
-      - name: Deploy to GitHub Pages
+      - name: Deploy to GitHub Pages (beta/)
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: dist
+          target-folder: beta
           clean: true
-          clean-exclude: beta
