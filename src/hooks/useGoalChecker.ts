@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
+import confetti from 'canvas-confetti';
 import type { Client } from 'archipelago.js';
 import type { PokemonRef } from '../types/pokemon';
 import type { OffsetTable } from './useOffsets';
@@ -30,6 +31,7 @@ export function useGoalChecker({
     currentProfileId, typeLocksEnabled, typeUnlocks, unlockedIds,
     slotMilestones,
 }: UseGoalCheckerParams) {
+    const celebrationTriggered = useRef(false);
 
     // Extended Locations: milestone and type-milestone AP location checks
     useEffect(() => {
@@ -134,6 +136,12 @@ export function useGoalChecker({
             clientRef.current.updateStatus(30); // 30 = ClientStatus.CLIENT_GOAL
             if (currentProfileId) {
                 updateProfile(currentProfileId, { isGoaled: true, goaledAt: Date.now() });
+            }
+            if (!celebrationTriggered.current) {
+                celebrationTriggered.current = true;
+                confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#f87171', '#facc15', '#4ade80', '#60a5fa', '#c084fc'] });
+                setTimeout(() => confetti({ particleCount: 80, angle: 60, spread: 55, origin: { x: 0 } }), 200);
+                setTimeout(() => confetti({ particleCount: 80, angle: 120, spread: 55, origin: { x: 1 } }), 200);
             }
         }
     }, [checkedIds, isConnected, gameMode, goalCount, releasedIds, currentProfileId]);
