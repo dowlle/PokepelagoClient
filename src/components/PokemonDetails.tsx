@@ -140,7 +140,7 @@ export const PokemonDetails: React.FC = () => {
 
     const isPokegeared = usedPokegears.has(selectedPokemonId);
     const isPokedexed = usedPokedexes.has(selectedPokemonId);
-    const { canGuess, reason, missingRegion, missingTypes, missingPokemon } = isPokemonGuessable(selectedPokemonId);
+    const { canGuess, reason, reasons, missingRegion, missingTypes, missingPokemon } = isPokemonGuessable(selectedPokemonId);
 
     let displayName = '???';
     if (showInfo) {
@@ -291,7 +291,7 @@ export const PokemonDetails: React.FC = () => {
                     )}
 
                     {/* Requirements Section */}
-                    {!isChecked && (missingRegion || missingTypes || missingPokemon) && (
+                    {!isChecked && !canGuess && (missingRegion || missingTypes || missingPokemon || reason) && (
                         <div className="bg-red-900/10 border border-red-500/30 rounded-xl p-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-500">
                             <div className="flex items-center gap-2 text-red-400 font-bold text-xs uppercase tracking-wider">
                                 <Lock size={14} />
@@ -313,6 +313,16 @@ export const PokemonDetails: React.FC = () => {
                                         Pokémon Item
                                     </span>
                                 ))}
+                                {reasons && reasons.map((r: string, i: number) => (
+                                    <span key={i} className="px-3 py-1 bg-red-950/60 border border-red-500/30 rounded-lg text-[10px] text-red-200 uppercase font-black tracking-widest shadow-lg">
+                                        {r}
+                                    </span>
+                                ))}
+                                {!missingRegion && !missingTypes && !missingPokemon && !reasons && reason && (
+                                    <span className="px-3 py-1 bg-red-950/60 border border-red-500/30 rounded-lg text-[10px] text-red-200 uppercase font-black tracking-widest shadow-lg">
+                                        {reason}
+                                    </span>
+                                )}
                             </div>
                         </div>
                     )}

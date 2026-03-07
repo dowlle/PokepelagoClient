@@ -7,6 +7,7 @@ import { Settings, Wifi, WifiOff, PanelRightClose, PanelRightOpen, MessageSquare
 import { ArchipelagoLog } from './components/ArchipelagoLog';
 import { PokemonDetails } from './components/PokemonDetails';
 import { TypeStatus } from './components/TypeStatus';
+import { GateTracker } from './components/GateTracker';
 import { SplashScreen } from './components/SplashScreen';
 import { StartGameOverlay } from './components/StartGameOverlay';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -228,8 +229,9 @@ const GameContent: React.FC = () => {
             </button>
           </div>
 
-          <div className="p-4 border-b border-gray-800 shrink-0">
+          <div className="p-4 border-b border-gray-800 shrink-0 flex flex-col gap-3">
             <TypeStatus />
+            <GateTracker />
           </div>
 
           <div className="flex-1 overflow-hidden">

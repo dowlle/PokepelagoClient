@@ -9,6 +9,11 @@ import { getCleanName } from '../utils/pokemon';
 import { updateProfile } from '../services/connectionManagerService';
 import { loadDerpemonIndex, type DerpemonIndex } from '../services/derpemonService';
 import { GAME_REGIONS_ORDER } from '../hooks/useOffsets';
+import {
+    SUB_LEGENDARY_IDS, BOX_LEGENDARY_IDS, MYTHIC_IDS,
+    BABY_IDS, TRADE_EVO_IDS, FOSSIL_IDS, ULTRA_BEAST_IDS, PARADOX_IDS,
+    STONE_EVO_IDS, STONE_NAMES_ORDERED,
+} from '../data/pokemon_gates';
 import type { OffsetTable } from '../hooks/useOffsets';
 import type { MutableRefObject } from 'react';
 import { useAPConnection } from '../hooks/useAPConnection';
@@ -72,6 +77,23 @@ interface GameState {
     shuffleEndTime: number;
     derpyfiedIds: Set<number>;
     releasedIds: Set<number>;
+    // New lock gate state
+    gymBadges: number;
+    hasLinkCable: boolean;
+    daycareCount: number;
+    hasFossilRestorer: boolean;
+    hasUltraWormhole: boolean;
+    hasTimeRift: boolean;
+    unlockedStones: Set<string>;
+    legendaryLocksEnabled: boolean;
+    tradeLocksEnabled: boolean;
+    babyLocksEnabled: boolean;
+    daycareRequired: number;
+    fossilLocksEnabled: boolean;
+    ultraBeastLocksEnabled: boolean;
+    paradoxLocksEnabled: boolean;
+    stoneLocksEnabled: boolean;
+    startingStarter: string | null;
 }
 
 export interface UISettings {
@@ -112,6 +134,7 @@ interface GameContextType extends GameState {
     isPokemonGuessable: (id: number) => {
         canGuess: boolean;
         reason?: string;
+        reasons?: string[];
         missingRegion?: string;
         missingTypes?: string[];
         missingPokemon?: boolean;
@@ -168,8 +191,27 @@ interface GameContextType extends GameState {
     setCurrentProfileId: React.Dispatch<React.SetStateAction<string | null>>;
     typeFilter: string[];
     setTypeFilter: React.Dispatch<React.SetStateAction<string[]>>;
+    dexFilter: Set<'guessable' | 'guessed'>;
+    setDexFilter: React.Dispatch<React.SetStateAction<Set<'guessable' | 'guessed'>>>;
     pokemonLoadError: string | null;
     retryPokemonLoad: () => void;
+    // New lock gate state (exposed for TrackerSidebar and other consumers)
+    gymBadges: number;
+    hasLinkCable: boolean;
+    daycareCount: number;
+    hasFossilRestorer: boolean;
+    hasUltraWormhole: boolean;
+    hasTimeRift: boolean;
+    unlockedStones: Set<string>;
+    legendaryLocksEnabled: boolean;
+    tradeLocksEnabled: boolean;
+    babyLocksEnabled: boolean;
+    daycareRequired: number;
+    fossilLocksEnabled: boolean;
+    ultraBeastLocksEnabled: boolean;
+    paradoxLocksEnabled: boolean;
+    stoneLocksEnabled: boolean;
+    startingStarter: string | null;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -210,6 +252,25 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [detectedApWorldVersion, setDetectedApWorldVersion] = useState<'legacy' | 'new' | 'unknown'>('unknown');
     const [currentProfileId, setCurrentProfileId] = useState<string | null>(null);
     const [typeFilter, setTypeFilter] = useState<string[]>([]);
+    const [dexFilter, setDexFilter] = useState<Set<'guessable' | 'guessed'>>(new Set());
+
+    // ── Gate item state (new lock systems) ──────────────────────────────────────
+    const [gymBadges, setGymBadges] = useState(0);
+    const [hasLinkCable, setHasLinkCable] = useState(false);
+    const [daycareCount, setDaycareCount] = useState(0);
+    const [hasFossilRestorer, setHasFossilRestorer] = useState(false);
+    const [hasUltraWormhole, setHasUltraWormhole] = useState(false);
+    const [hasTimeRift, setHasTimeRift] = useState(false);
+    const [unlockedStones, setUnlockedStones] = useState<Set<string>>(new Set());
+    const [legendaryLocksEnabled, setLegendaryLocksEnabled] = useState(false);
+    const [tradeLocksEnabled, setTradeLocksEnabled] = useState(false);
+    const [babyLocksEnabled, setBabyLocksEnabled] = useState(false);
+    const [daycareRequired, setDaycareRequired] = useState(1);
+    const [fossilLocksEnabled, setFossilLocksEnabled] = useState(false);
+    const [ultraBeastLocksEnabled, setUltraBeastLocksEnabled] = useState(false);
+    const [paradoxLocksEnabled, setParadoxLocksEnabled] = useState(false);
+    const [stoneLocksEnabled, setStoneLocksEnabled] = useState(false);
+    const [startingStarter, setStartingStarter] = useState<string | null>(null);
 
     // ── Item Counts ──────────────────────────────────────────────────────────────
     const [masterBalls, setMasterBalls] = useState(0);
@@ -537,17 +598,55 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 return { canGuess: false, reason: "Waiting for this Pokémon's Unlock item.", missingPokemon: true };
         }
 
-        if (typeLocksEnabled) {
-            const missingTypes = data.types.filter((t: string) => !typeUnlocks.has(t.charAt(0).toUpperCase() + t.slice(1)));
-            if (missingTypes.length > 0) {
-                const missing = missingTypes.map((t: string) => t.charAt(0).toUpperCase() + t.slice(1));
-                return { canGuess: false, reason: `Missing Type Keys: ${missing.join(', ')}`, missingTypes: missing };
+        // Collect ALL gate failures so we can show them simultaneously
+        const missingTypesList: string[] = typeLocksEnabled
+            ? data.types
+                .filter((t: string) => !typeUnlocks.has(t.charAt(0).toUpperCase() + t.slice(1)))
+                .map((t: string) => t.charAt(0).toUpperCase() + t.slice(1))
+            : [];
+
+        const gateReasons: string[] = [];
+        if (legendaryLocksEnabled) {
+            const needed = MYTHIC_IDS.has(id) ? 8 : BOX_LEGENDARY_IDS.has(id) ? 7 : SUB_LEGENDARY_IDS.has(id) ? 6 : 0;
+            if (needed > 0 && gymBadges < needed)
+                gateReasons.push(`Badges: ${gymBadges}/${needed}`);
+        }
+        if (tradeLocksEnabled && TRADE_EVO_IDS.has(id) && !hasLinkCable)
+            gateReasons.push('Link Cable');
+        if (babyLocksEnabled && BABY_IDS.has(id) && daycareCount < daycareRequired)
+            gateReasons.push(`Daycare: ${daycareCount}/${daycareRequired}`);
+        if (fossilLocksEnabled && FOSSIL_IDS.has(id) && !hasFossilRestorer)
+            gateReasons.push('Fossil Restorer');
+        if (ultraBeastLocksEnabled && ULTRA_BEAST_IDS.has(id) && !hasUltraWormhole)
+            gateReasons.push('Ultra Wormhole');
+        if (paradoxLocksEnabled && PARADOX_IDS.has(id) && !hasTimeRift)
+            gateReasons.push('Time Rift');
+        if (stoneLocksEnabled) {
+            for (const [stone, ids] of Object.entries(STONE_EVO_IDS)) {
+                if (ids.has(id) && !unlockedStones.has(stone))
+                    gateReasons.push(`Need ${stone.charAt(0).toUpperCase()}${stone.slice(1)} Stone`);
             }
+        }
+
+        if (missingTypesList.length > 0 || gateReasons.length > 0) {
+            const firstReason = missingTypesList.length > 0
+                ? `Missing Type Keys: ${missingTypesList.join(', ')}`
+                : gateReasons[0];
+            return {
+                canGuess: false,
+                reason: firstReason,
+                reasons: gateReasons,
+                missingTypes: missingTypesList.length > 0 ? missingTypesList : undefined,
+            };
         }
 
         return { canGuess: true };
     }, [gameMode, isConnected, generationFilter, activePokemonLimit, activeRegions, startingRegion,
-        regionLocksEnabled, regionPasses, typeLocksEnabled, typeUnlocks, detectedApWorldVersion, unlockedIds]);
+        regionLocksEnabled, regionPasses, typeLocksEnabled, typeUnlocks, detectedApWorldVersion, unlockedIds,
+        legendaryLocksEnabled, gymBadges, tradeLocksEnabled, hasLinkCable,
+        babyLocksEnabled, daycareCount, daycareRequired, fossilLocksEnabled, hasFossilRestorer,
+        ultraBeastLocksEnabled, hasUltraWormhole, paradoxLocksEnabled, hasTimeRift,
+        stoneLocksEnabled, unlockedStones]);
 
     useEffect(() => { isPokemonGuessableRef.current = isPokemonGuessable; }, [isPokemonGuessable]);
 
@@ -679,8 +778,21 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUnlockedIds(newUnlocked);
 
         // Reconstruct shinyIds
-        const shinyCount = receivedItems.filter(i => i.id === 105000).length;
+        const shinyCount = receivedItems.filter(i => i.id === o.ITEM_OFFSET + 6020).length;
         setShinyIds(shinyCount > 0 ? new Set(Array.from(newUnlocked).slice(0, shinyCount)) : new Set());
+
+        // Reconstruct gate items
+        setGymBadges(receivedItems.filter(i => i.id === o.ITEM_OFFSET + 6000).length);
+        setHasLinkCable(receivedItems.some(i => i.id === o.ITEM_OFFSET + 6001));
+        setDaycareCount(receivedItems.filter(i => i.id === o.ITEM_OFFSET + 6002).length);
+        setHasUltraWormhole(receivedItems.some(i => i.id === o.ITEM_OFFSET + 6003));
+        setHasTimeRift(receivedItems.some(i => i.id === o.ITEM_OFFSET + 6004));
+        setHasFossilRestorer(receivedItems.some(i => i.id === o.ITEM_OFFSET + 6005));
+        const newStones = new Set<string>();
+        STONE_NAMES_ORDERED.forEach((s, i) => {
+            if (receivedItems.some(item => item.id === o.ITEM_OFFSET + 6010 + i)) newStones.add(s);
+        });
+        setUnlockedStones(newStones);
 
         // Reconstruct Type Unlocks
         const typesMap = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
@@ -706,6 +818,15 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setDexsanityEnabled(slotData.dexsanity !== undefined ? !!slotData.dexsanity : true);
         setLegendaryGating(slotData.legendary_gating ?? 0);
         setRegionLocksEnabled(!!slotData.region_locks);
+        setLegendaryLocksEnabled(!!slotData.legendary_locks);
+        setTradeLocksEnabled(!!slotData.trade_locks);
+        setBabyLocksEnabled(!!slotData.baby_locks);
+        setDaycareRequired(slotData.daycare_count ?? 1);
+        setFossilLocksEnabled(!!slotData.fossil_locks);
+        setUltraBeastLocksEnabled(!!slotData.ultra_beast_locks);
+        setParadoxLocksEnabled(!!slotData.paradox_locks);
+        setStoneLocksEnabled(!!slotData.stone_locks);
+        setStartingStarter(slotData.starting_starter ?? null);
 
         if (slotData.active_regions !== undefined) {
             const ar = slotData.active_regions as Record<string, [number, number]>;
@@ -841,6 +962,23 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setShuffleEndTime(0);
         setConnectedTeamSlot(null);
         setSlotMilestones(undefined);
+        // Reset gate items
+        setGymBadges(0);
+        setHasLinkCable(false);
+        setDaycareCount(0);
+        setHasFossilRestorer(false);
+        setHasUltraWormhole(false);
+        setHasTimeRift(false);
+        setUnlockedStones(new Set());
+        setLegendaryLocksEnabled(false);
+        setTradeLocksEnabled(false);
+        setBabyLocksEnabled(false);
+        setDaycareRequired(1);
+        setFossilLocksEnabled(false);
+        setUltraBeastLocksEnabled(false);
+        setParadoxLocksEnabled(false);
+        setStoneLocksEnabled(false);
+        setStartingStarter(null);
         localStorage.setItem('pokepelago_connected', 'false');
     }, []);
 
@@ -851,7 +989,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         items.forEach(item => {
             if (item.id > o.ITEM_OFFSET && item.id <= o.ITEM_OFFSET + 1025) {
                 unlockPokemon(item.id - o.ITEM_OFFSET);
-            } else if (item.id === 105000) {
+            } else if (item.id === o.ITEM_OFFSET + 6020) {
                 setUnlockedIds(unlocked => {
                     const pokemonIds = Array.from(unlocked);
                     setShinyIds(prev => {
@@ -862,6 +1000,21 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     });
                     return unlocked;
                 });
+            } else if (item.id === o.ITEM_OFFSET + 6000) {
+                setGymBadges(prev => prev + 1);
+            } else if (item.id === o.ITEM_OFFSET + 6001) {
+                setHasLinkCable(true);
+            } else if (item.id === o.ITEM_OFFSET + 6002) {
+                setDaycareCount(prev => prev + 1);
+            } else if (item.id === o.ITEM_OFFSET + 6003) {
+                setHasUltraWormhole(true);
+            } else if (item.id === o.ITEM_OFFSET + 6004) {
+                setHasTimeRift(true);
+            } else if (item.id === o.ITEM_OFFSET + 6005) {
+                setHasFossilRestorer(true);
+            } else if (item.id >= o.ITEM_OFFSET + 6010 && item.id <= o.ITEM_OFFSET + 6019) {
+                const stone = STONE_NAMES_ORDERED[item.id - (o.ITEM_OFFSET + 6010)];
+                if (stone) setUnlockedStones(prev => new Set(prev).add(stone));
             } else if (item.id >= o.ITEM_OFFSET + o.TYPE_ITEM_OFFSET && item.id <= o.ITEM_OFFSET + o.TYPE_ITEM_OFFSET + 17) {
                 const types = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
                 const typeName = types[item.id - (o.ITEM_OFFSET + o.TYPE_ITEM_OFFSET)];
@@ -1005,7 +1158,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             detectedApWorldVersion,
             currentProfileId, setCurrentProfileId,
             typeFilter, setTypeFilter,
+            dexFilter, setDexFilter,
             pokemonLoadError, retryPokemonLoad,
+            gymBadges, hasLinkCable, daycareCount, hasFossilRestorer, hasUltraWormhole, hasTimeRift,
+            unlockedStones, legendaryLocksEnabled, tradeLocksEnabled, babyLocksEnabled, daycareRequired,
+            fossilLocksEnabled, ultraBeastLocksEnabled, paradoxLocksEnabled, stoneLocksEnabled, startingStarter,
         }}>
             {children}
             {dexsanityLocalWarning && (
