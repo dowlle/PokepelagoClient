@@ -863,7 +863,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (typeof slotData.starter_count === 'number') {
             offsetsRef.current = { ...offsetsRef.current, STARTER_COUNT: slotData.starter_count };
         }
-        setStartingLocationsEnabled(slotData.starting_locations !== false);
+        setStartingLocationsEnabled(!!slotData.starting_locations);
         setDetectedApWorldVersion(isNewVersion ? 'new' : 'legacy');
 
         if (!isNewVersion) {
