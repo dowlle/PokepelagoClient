@@ -9,7 +9,7 @@ import pokemonMetadata from '../data/pokemon_metadata.json';
 const REGION_LAYOUT_KEY = 'pokepelago_region_layout';
 
 export const DexGrid: React.FC = () => {
-    const { allPokemon, unlockedIds, checkedIds, hintedIds, shinyIds, generationFilter, uiSettings, gameMode, isPokemonGuessable, shuffleEndTime, releasedIds, activeRegions, regionPasses, regionLocksEnabled, startingRegion, typeFilter } = useGame();
+    const { allPokemon, unlockedIds, checkedIds, hintedIds, shinyIds, generationFilter, uiSettings, gameMode, isPokemonGuessable, shuffleEndTime, releasedIds, activeRegions, regionPasses, regionLocksEnabled, startingRegion, typeFilter, dexFilter, setDexFilter } = useGame();
 
     const [now, setNow] = useState(Date.now());
 
@@ -137,8 +137,49 @@ export const DexGrid: React.FC = () => {
         ? `columns-1 ${activeCount > 1 ? 'sm:columns-2' : ''} ${activeCount > 2 ? 'lg:columns-3' : ''} ${activeCount > 3 ? 'xl:columns-4' : ''} ${activeCount > 4 ? '2xl:columns-5' : ''} gap-4 px-4 pb-32 space-y-4`
         : `grid grid-cols-1 ${activeCount > 1 ? 'sm:grid-cols-2' : ''} ${activeCount > 2 ? 'lg:grid-cols-3' : ''} ${activeCount > 3 ? 'xl:grid-cols-4' : ''} ${activeCount > 4 ? '2xl:grid-cols-5' : ''} gap-4 px-4 pb-32 items-start`;
 
+    const toggleDexFilter = (key: 'guessable' | 'guessed') => {
+        setDexFilter(prev => {
+            const next = new Set(prev);
+            next.has(key) ? next.delete(key) : next.add(key);
+            return next;
+        });
+    };
+
     return (
-        <div className={containerClass}>
+        <div className="flex flex-col">
+            {/* Dex filter bar */}
+            <div className="flex items-center gap-2 px-4 pt-3 pb-1">
+                <span className="text-[10px] font-black uppercase text-gray-600 tracking-widest">Show:</span>
+                <button
+                    onClick={() => toggleDexFilter('guessable')}
+                    className={`px-2 py-1 text-[10px] uppercase font-black tracking-widest rounded-lg border transition-all ${
+                        dexFilter.has('guessable')
+                            ? 'border-green-500/60 text-green-300 bg-green-900/30'
+                            : 'border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-400'
+                    }`}
+                >
+                    Guessable
+                </button>
+                <button
+                    onClick={() => toggleDexFilter('guessed')}
+                    className={`px-2 py-1 text-[10px] uppercase font-black tracking-widest rounded-lg border transition-all ${
+                        dexFilter.has('guessed')
+                            ? 'border-amber-500/60 text-amber-300 bg-amber-900/30'
+                            : 'border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-400'
+                    }`}
+                >
+                    Guessed
+                </button>
+                {dexFilter.size > 0 && (
+                    <button
+                        onClick={() => setDexFilter(new Set())}
+                        className="px-2 py-1 text-[10px] uppercase font-black tracking-widest rounded-lg border border-gray-700 text-gray-600 hover:text-gray-400 hover:border-gray-500 transition-all"
+                    >
+                        Clear
+                    </button>
+                )}
+            </div>
+            <div className={containerClass}>
             {orderedGenerations.map(({ gen }) => {
                 // Full list for header stats (unaffected by type filter)
                 const fullInGen: PokemonRef[] = [];
@@ -149,14 +190,26 @@ export const DexGrid: React.FC = () => {
                 const checkedCount = fullInGen.filter(p => checkedIds.has(p.id)).length;
 
                 // Type-filtered list for body rendering
-                const pokemonInGen = typeFilter.length > 0
+                let pokemonInGen = typeFilter.length > 0
                     ? fullInGen.filter(p => {
                         const types: string[] = (pokemonMetadata as any)[p.id]?.types ?? [];
                         return types.some(t => typeFilter.includes(t.charAt(0).toUpperCase() + t.slice(1)));
                     })
                     : fullInGen;
 
-                if (typeFilter.length > 0 && pokemonInGen.length === 0) return null;
+                // Dex filter (guessable / guessed)
+                if (dexFilter.size > 0) {
+                    pokemonInGen = pokemonInGen.filter(p => {
+                        const isGuessed = checkedIds.has(p.id);
+                        const canGuess = isPokemonGuessable(p.id).canGuess && !isGuessed;
+                        if (dexFilter.has('guessable') && dexFilter.has('guessed')) return canGuess || isGuessed;
+                        if (dexFilter.has('guessable')) return canGuess;
+                        if (dexFilter.has('guessed')) return isGuessed;
+                        return true;
+                    });
+                }
+
+                if ((typeFilter.length > 0 || dexFilter.size > 0) && pokemonInGen.length === 0) return null;
 
                 const shuffleOrder = new Map<number, number>();
                 if (isShuffled) {
@@ -252,6 +305,7 @@ export const DexGrid: React.FC = () => {
                     </div>
                 );
             })}
+            </div>
         </div>
     );
 };
