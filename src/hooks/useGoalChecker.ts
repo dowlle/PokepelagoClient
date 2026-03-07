@@ -21,12 +21,14 @@ interface UseGoalCheckerParams {
     typeLocksEnabled: boolean;
     typeUnlocks: Set<string>;
     unlockedIds: Set<number>;
+    slotMilestones?: number[];
 }
 
 export function useGoalChecker({
     clientRef, offsetsRef, isNewApWorldRef, checkedIds, setCheckedIds,
     releasedIds, isConnected, goalCount, gameMode,
     currentProfileId, typeLocksEnabled, typeUnlocks, unlockedIds,
+    slotMilestones,
 }: UseGoalCheckerParams) {
 
     // Extended Locations: milestone and type-milestone AP location checks
@@ -56,15 +58,14 @@ export function useGoalChecker({
         });
 
         // 1. Global Milestone Locations
-        // COUPLING: this list must exactly match `milestones` in worlds/pokepelago/Locations.py.
-        // The APWorld creates one AP location per entry; the client sends the check when the
-        // player reaches that catch count. A mismatch silently sends wrong location IDs.
-        // Long-term fix: include the list in slot_data so the client always uses the server's
-        // authoritative values (see A5 in docs/recommendations.md).
-        const globalMilestones = [
+        // The milestone list is sourced from slot_data (new APWorld) so the client always uses
+        // the server's authoritative values (A5 in docs/recommendations.md).
+        // Legacy APWorld does not send milestones in slot_data; fall back to the hardcoded list.
+        const LEGACY_MILESTONES = [
             1, 2, 5, 10, 15, 20, 30, 40, 50, 60, 70, 80, 90, 100, 150, 250, 400, 600, 800, 1000,
             148, 248, 383, 490, 646, 718, 806, 895, 1022,
         ].filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b);
+        const globalMilestones = slotMilestones ?? LEGACY_MILESTONES;
 
         globalMilestones.forEach(count => {
             if (totalCatches >= count) {
@@ -109,7 +110,7 @@ export function useGoalChecker({
                 });
             });
         }
-    }, [checkedIds, isConnected, gameMode, typeLocksEnabled, typeUnlocks, unlockedIds]);
+    }, [checkedIds, isConnected, gameMode, typeLocksEnabled, typeUnlocks, unlockedIds, slotMilestones]);
 
 
     // Victory: send CLIENT_GOAL when guessedCount >= goalCount

@@ -202,6 +202,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [startingRegion, setStartingRegion] = useState<string>('');
     const [regionLocksEnabled, setRegionLocksEnabled] = useState<boolean>(false);
     const [goalCount, setGoalCount] = useState<number | undefined>(undefined);
+    const [slotMilestones, setSlotMilestones] = useState<number[] | undefined>(undefined);
     const [startingLocationsEnabled, setStartingLocationsEnabled] = useState(true);
     const [connectedTeamSlot, setConnectedTeamSlot] = useState<{ team: number; slot: number } | null>(null);
     const [dexsanityLocalWarning, setDexsanityLocalWarning] = useState(false);
@@ -322,6 +323,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         releasedIds, allPokemon,
         isConnected, goalCount, gameMode,
         currentProfileId, typeLocksEnabled, typeUnlocks, unlockedIds,
+        slotMilestones,
     });
 
     // ── Persistence Effects ──────────────────────────────────────────────────────
@@ -733,6 +735,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setGoalCount(slotData.goal_count);
             setGoal({ type: 'any_pokemon', amount: slotData.goal_count });
         }
+        const rawMilestones = slotData.milestones;
+        if (Array.isArray(rawMilestones) && rawMilestones.every((n: unknown) => typeof n === 'number')) {
+            setSlotMilestones(rawMilestones as number[]);
+        }
+        if (typeof slotData.starter_count === 'number') {
+            offsetsRef.current = { ...offsetsRef.current, STARTER_COUNT: slotData.starter_count };
+        }
         setStartingLocationsEnabled(slotData.starting_locations !== false);
         setDetectedApWorldVersion(isNewVersion ? 'new' : 'legacy');
 
@@ -831,6 +840,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUsedMasterBalls(new Set()); setUsedPokegears(new Set()); setUsedPokedexes(new Set());
         setShuffleEndTime(0);
         setConnectedTeamSlot(null);
+        setSlotMilestones(undefined);
         localStorage.setItem('pokepelago_connected', 'false');
     }, []);
 
