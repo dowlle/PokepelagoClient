@@ -301,14 +301,24 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [isLoading, setIsLoading] = useState(true);
     const [pokemonLoadError, setPokemonLoadError] = useState<string | null>(null);
     const [generationFilter, setGenerationFilter] = useState<number[]>(GENERATIONS.map((_, i) => i));
+    const urlParams = useState(() => new URLSearchParams(window.location.search))[0];
     const [connectionInfo, setConnectionInfo] = useState<ConnectionInfo>(() => {
+        if (urlParams.has('host') || urlParams.has('port') || urlParams.has('name')) {
+            const saved = localStorage.getItem('pokepelago_connection');
+            const base = saved ? (() => { try { return JSON.parse(saved); } catch { return null; } })() : null;
+            return {
+                hostname: urlParams.get('host') || base?.hostname || 'archipelago.gg',
+                port: urlParams.has('port') ? parseInt(urlParams.get('port')!, 10) || 38281 : base?.port || 38281,
+                slotName: urlParams.get('name') || base?.slotName || 'Player1',
+                password: urlParams.get('password') || base?.password || '',
+            };
+        }
         const saved = localStorage.getItem('pokepelago_connection');
         if (saved) { try { return JSON.parse(saved); } catch (e) { console.error('Failed to parse saved connection info', e); } }
         return { hostname: 'archipelago.gg', port: 38281, slotName: 'Player1', password: '' };
     });
     const [gameMode, setGameModeState] = useState<'archipelago' | 'standalone' | null>(() => {
-        const params = new URLSearchParams(window.location.search);
-        if (params.has('splash')) return null;
+        if (urlParams.has('splash')) return null;
         return localStorage.getItem('pokepelago_gamemode') as any || null;
     });
 
@@ -464,15 +474,25 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
             setAllPokemon(data);
 
-            const wasConnected = localStorage.getItem('pokepelago_connected') === 'true';
-            const savedConnection = localStorage.getItem('pokepelago_connection');
-            const savedMode = localStorage.getItem('pokepelago_gamemode');
-            if (savedMode === 'archipelago' && wasConnected && savedConnection) {
-                // Await auto-connect so the loading spinner stays up until it resolves.
-                // This prevents a race where the user opens the Connection Manager and
-                // clicks "Connect" while isConnectingRef is still true (which would
-                // silently ignore their request).
-                try { await connect(JSON.parse(savedConnection)); } catch (e) { console.error('Auto-connect failed', e); }
+            // Auto-connect from URL query params (?host=…&port=…&name=…)
+            const qp = new URLSearchParams(window.location.search);
+            const hasUrlConnection = qp.has('host') || qp.has('port') || qp.has('name');
+            if (hasUrlConnection) {
+                setGameModeState('archipelago');
+                try { await connect(connectionInfoRef.current); } catch (e) { console.error('URL auto-connect failed', e); }
+                // Clean the URL so refreshing doesn't re-trigger
+                window.history.replaceState({}, '', window.location.pathname);
+            } else {
+                const wasConnected = localStorage.getItem('pokepelago_connected') === 'true';
+                const savedConnection = localStorage.getItem('pokepelago_connection');
+                const savedMode = localStorage.getItem('pokepelago_gamemode');
+                if (savedMode === 'archipelago' && wasConnected && savedConnection) {
+                    // Await auto-connect so the loading spinner stays up until it resolves.
+                    // This prevents a race where the user opens the Connection Manager and
+                    // clicks "Connect" while isConnectingRef is still true (which would
+                    // silently ignore their request).
+                    try { await connect(JSON.parse(savedConnection)); } catch (e) { console.error('Auto-connect failed', e); }
+                }
             }
 
             setIsLoading(false);
