@@ -164,11 +164,19 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
                 </div>
             )}
 
-            {isVisible && uiSettings.showDexNumbers && (
-                <span className="absolute bottom-0.5 left-0.5 text-[8px] text-gray-500/60 font-mono z-10 pointer-events-none">
-                    #{pokemon.id}
-                </span>
-            )}
+            {uiSettings.showDexNumbers && (() => {
+                const hasSpriteContent = isVisible && ((uiSettings.enableSprites && spriteUrl && !hasError) || (normalizedPmdUrl && !pmdError));
+                const showLarge = !hasSpriteContent;
+                return showLarge ? (
+                    <span className="text-[11px] text-gray-500/80 font-mono font-bold z-10 pointer-events-none">
+                        #{pokemon.id}
+                    </span>
+                ) : (
+                    <span className="absolute bottom-0.5 left-0.5 text-[8px] text-gray-500/60 font-mono z-10 pointer-events-none">
+                        #{pokemon.id}
+                    </span>
+                );
+            })()}
 
             {/* Shiny sparkle indicator */}
             {isShiny && isChecked && (
