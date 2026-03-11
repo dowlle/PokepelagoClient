@@ -3,6 +3,7 @@ import { useGame } from '../context/GameContext';
 import { X, ExternalLink, HelpCircle, MapPin, Sparkles, CheckCircle2, Lock, Palette } from 'lucide-react';
 import { getCleanName } from '../utils/pokemon';
 import { getDerpemonCredit } from '../services/derpemonService';
+import pokemonNamesJson from '../data/pokemon_names.json';
 import { TYPE_COLORS } from '../utils/typeColors';
 import { PmdSpriteCanvas } from './PmdSpriteCanvas';
 import { normalizePmdBaseUrl } from '../services/pmdSpriteService';
@@ -146,7 +147,11 @@ export const PokemonDetails: React.FC = () => {
     if (showInfo) {
         displayName = getCleanName(pokemon.name);
     } else if (isPokedexed) {
-        displayName = pokemon.name.slice(0, 3).toUpperCase() + '...';
+        const lang = localStorage.getItem('pokepelago_language') ?? 'en';
+        const langNames = (pokemonNamesJson as Record<string, Record<string, string>>)[selectedPokemonId.toString()];
+        const localName = lang !== 'global' && langNames?.[lang];
+        const hintBase = localName || pokemon.name;
+        displayName = hintBase.slice(0, 3).toUpperCase() + '...';
     }
 
     // Location ID = National Dex ID + locationOffset
