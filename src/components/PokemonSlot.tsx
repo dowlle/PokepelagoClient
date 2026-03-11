@@ -3,6 +3,7 @@ import type { PokemonRef } from '../types/pokemon';
 import { useGame } from '../context/GameContext';
 import { getCleanName } from '../utils/pokemon';
 import pokemonMetadata from '../data/pokemon_metadata.json';
+import pokemonNamesJson from '../data/pokemon_names.json';
 import { TYPE_COLORS } from '../utils/typeColors';
 import { PmdSpriteCanvas } from './PmdSpriteCanvas';
 import { normalizePmdBaseUrl } from '../services/pmdSpriteService';
@@ -23,6 +24,7 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
     const [isLoaded, setIsLoaded] = React.useState(false);
     const [hasError, setHasError] = React.useState(false);
     const [hasHovered, setHasHovered] = React.useState(false);
+
 
     // PMD animated sprite state
     const normalizedPmdUrl = React.useMemo(
@@ -79,7 +81,10 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
 
     const isChecked = status === 'checked';
     const isVisible = isChecked || status === 'shadow' || status === 'hint';
-    const cleanName = getCleanName(pokemon.name);
+    const lang = localStorage.getItem('pokepelago_language') ?? 'en';
+    const langNames = (pokemonNamesJson as Record<string, Record<string, string>>)[pokemon.id.toString()];
+    const localName = lang !== 'global' && langNames?.[lang];
+    const cleanName = localName || getCleanName(pokemon.name);
 
     const isReadyToGuess = !isChecked && canGuess;
 
@@ -108,7 +113,7 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
         <div
             onClick={() => setSelectedPokemonId(pokemon.id)}
             onMouseEnter={() => {
-                if (isReadyToGuess && !hasHovered) setHasHovered(true);
+                if (!uiSettings.persistentDot && isReadyToGuess && !hasHovered) setHasHovered(true);
             }}
             className={`
                 w-11 h-11 rounded-md flex items-center justify-center transition-all duration-300 relative group cursor-pointer
@@ -159,8 +164,8 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
                 </div>
             )}
 
-            {((normalizedPmdUrl ? pmdError : hasError) || (isVisible && !normalizedPmdUrl && !isLoaded)) && (
-                <span className="text-[10px] text-gray-600 font-mono z-0">
+            {isVisible && uiSettings.showDexNumbers && (
+                <span className="absolute bottom-0.5 left-0.5 text-[8px] text-gray-500/60 font-mono z-10 pointer-events-none">
                     #{pokemon.id}
                 </span>
             )}
@@ -172,8 +177,8 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
                 </div>
             )}
 
-            {/* Guessable indicator — green dot in corner, hides PERMANENTLY after hover */}
-            {isReadyToGuess && !hasHovered && (
+            {/* Guessable indicator — type-colored dot; persistent or notification-style */}
+            {isReadyToGuess && (uiSettings.persistentDot || !hasHovered) && (
                 <div className="absolute top-0.5 right-0.5 z-20 transition-opacity duration-300">
                     <span className="block w-1.5 h-1.5 rounded-full" style={typeDotStyle} />
                 </div>

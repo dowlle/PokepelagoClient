@@ -14,4 +14,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  define: {
+    __IS_BETA__: process.env.DEPLOY_TARGET === 'beta',
+  },
 })

@@ -7,8 +7,10 @@ import { Settings, Wifi, WifiOff, PanelRightClose, PanelRightOpen, MessageSquare
 import { ArchipelagoLog } from './components/ArchipelagoLog';
 import { PokemonDetails } from './components/PokemonDetails';
 import { TypeStatus } from './components/TypeStatus';
+import { GateTracker } from './components/GateTracker';
 import { SplashScreen } from './components/SplashScreen';
 import { StartGameOverlay } from './components/StartGameOverlay';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { getCleanName } from './utils/pokemon';
 
 const POKEMON_TYPES = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
@@ -22,6 +24,7 @@ const GameContent: React.FC = () => {
     setShuffleEndTime, setDerpyfiedIds, setReleasedIds, derpemonIndex, releasedIds, derpyfiedIds, setSpriteRefreshCounter, showToast,
     STARTER_OFFSET, MILESTONE_OFFSET,
     startingLocationsEnabled, gameStarted, connectionKey,
+    pokemonLoadError, retryPokemonLoad,
   } = useGame();
 
   const [adventureOverlayDismissed, setAdventureOverlayDismissed] = React.useState(false);
@@ -52,8 +55,14 @@ const GameContent: React.FC = () => {
     ).length,
     [checkedIds, STARTER_OFFSET, MILESTONE_OFFSET, releasedIds]);
 
-  // Expose debug toggle to window for GlobalGuessInput to call
+  // Set beta page title
   React.useEffect(() => {
+    if (__IS_BETA__) document.title = 'Poképelago (beta)';
+  }, []);
+
+  // Expose debug toggle to window for GlobalGuessInput to call (dev/beta only)
+  React.useEffect(() => {
+    if (!import.meta.env.DEV && !__IS_BETA__) return;
     (window as any).toggleDebug = () => setIsDebugVisible(prev => {
       const next = !prev;
       (window as any).isDebugVisible = next;
@@ -68,6 +77,32 @@ const GameContent: React.FC = () => {
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-green-500 rounded-full animate-spin border-t-transparent"></div>
           <span className="text-gray-400">Loading Pokédex...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (pokemonLoadError) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-950 text-white p-8">
+        <div className="flex flex-col items-center gap-6 max-w-md text-center">
+          <div className="text-5xl">⚠️</div>
+          <div>
+            <h1 className="text-xl font-bold text-red-400 mb-2">Failed to load Pokédex</h1>
+            <p className="text-gray-400 text-sm mb-4">
+              Could not reach PokéAPI. Check your internet connection and try again.
+              Your saved game data is safe.
+            </p>
+            <pre className="text-left text-[10px] text-red-300 bg-gray-900 border border-gray-800 rounded p-3 overflow-auto max-h-24">
+              {pokemonLoadError}
+            </pre>
+          </div>
+          <button
+            onClick={retryPokemonLoad}
+            className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-bold transition-colors"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );
@@ -199,8 +234,9 @@ const GameContent: React.FC = () => {
             </button>
           </div>
 
-          <div className="p-4 border-b border-gray-800 shrink-0">
+          <div className="p-4 border-b border-gray-800 shrink-0 flex flex-col gap-3">
             <TypeStatus />
+            <GateTracker />
           </div>
 
           <div className="flex-1 overflow-hidden">
@@ -210,8 +246,8 @@ const GameContent: React.FC = () => {
           </div>
         </aside>
 
-        {/* Debug Controls - inside Main/Sidebar container to be positioned at bottom of viewport */}
-        {isDebugVisible && (
+        {/* Debug Controls - dev/beta only */}
+        {(import.meta.env.DEV || __IS_BETA__) && isDebugVisible && (
           <div className="absolute bottom-0 left-0 right-0 z-20 bg-gray-900/95 backdrop-blur-sm border-t border-gray-800 transition-all duration-300" style={{ right: isSidebarOpen ? '320px' : '0' }}>
             <div className="max-w-screen-xl mx-auto flex flex-col gap-3 px-4 py-3">
               <div className="flex flex-wrap items-center gap-3">
@@ -268,9 +304,11 @@ const GameContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <GameProvider>
-      <GameContent />
-    </GameProvider>
+    <ErrorBoundary>
+      <GameProvider>
+        <GameContent />
+      </GameProvider>
+    </ErrorBoundary>
   );
 };
 

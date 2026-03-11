@@ -124,19 +124,18 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
 
     const handleConnectProfile = async (profile: GameProfile) => {
         setCurrentProfileId(profile.id);
-        setConnectionInfo({
+        // Build one canonical connInfo used for both form state and connect() call.
+        // password must be '' not undefined — JSON.stringify omits undefined fields,
+        // which can cause the AP server to reject the Connect packet.
+        const connInfo = {
             hostname: profile.hostname,
             port: profile.port,
             slotName: profile.slotName,
             password: profile.password || '',
-        });
+        };
+        setConnectionInfo(connInfo);
         setIsConnecting(true);
-        await connect({
-            hostname: profile.hostname,
-            port: profile.port,
-            slotName: profile.slotName,
-            password: profile.password,
-        }, profile.id);
+        await connect(connInfo, profile.id);
         setIsConnecting(false);
     };
 
@@ -512,6 +511,26 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                                 </div>
                                 <input type="checkbox" checked={uiSettings.typeDot} onChange={(e) => updateUiSettings({ typeDot: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-emerald-600 focus:ring-emerald-500" />
                             </label>
+                            <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 flex items-center justify-center text-cyan-400 font-mono text-[10px] font-bold group-hover:scale-110 transition-transform">#</div>
+                                    <div>
+                                        <div className="text-xs font-bold text-gray-200">Show Dex Numbers</div>
+                                        <div className="text-[9px] text-gray-500">Show Pokémon number on each grid tile</div>
+                                    </div>
+                                </div>
+                                <input type="checkbox" checked={uiSettings.showDexNumbers} onChange={(e) => updateUiSettings({ showDexNumbers: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-cyan-600 focus:ring-cyan-500" />
+                            </label>
+                            <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 flex items-center justify-center text-orange-400 text-[10px] group-hover:scale-110 transition-transform">📌</div>
+                                    <div>
+                                        <div className="text-xs font-bold text-gray-200">Persistent Type Dot</div>
+                                        <div className="text-[9px] text-gray-500">Keep dot visible until guessed instead of hiding on hover</div>
+                                    </div>
+                                </div>
+                                <input type="checkbox" checked={uiSettings.persistentDot} onChange={(e) => updateUiSettings({ persistentDot: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-orange-600 focus:ring-orange-500" />
+                            </label>
                         </div>
                         <div className="pt-2 border-t border-gray-800/50">
                             <button
@@ -528,6 +547,21 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                     </div>
                 )}
             </section>
+
+            {/* Support */}
+            <div className="flex items-center justify-center py-4">
+                <a
+                    href="https://ko-fi.com/dowlle"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-center gap-2 px-4 py-2 rounded-xl bg-[#FF5E5B]/10 hover:bg-[#FF5E5B]/20 border border-[#FF5E5B]/20 hover:border-[#FF5E5B]/40 transition-all"
+                >
+                    <span className="text-lg group-hover:scale-110 transition-transform">&#9749;</span>
+                    <span className="text-[11px] font-bold text-[#FF5E5B]/80 group-hover:text-[#FF5E5B] tracking-wide">
+                        Support Pokepelago on Ko-fi
+                    </span>
+                </a>
+            </div>
 
         </div>
     );

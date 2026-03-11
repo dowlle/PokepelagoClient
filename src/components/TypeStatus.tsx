@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import pokemonMetadata from '../data/pokemon_metadata.json';
 import { TYPE_COLORS } from '../utils/typeColors';
@@ -43,14 +44,25 @@ export const TypeStatus: React.FC = () => {
         return stats;
     }, [checkedIds, activeRegions, generationFilter, isConnected]);
 
+    const [isOpen, setIsOpen] = useState(true);
+
     if (!typeLocksEnabled) return null;
 
     return (
         <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-3 space-y-2">
-            <h4 className="text-[10px] font-black uppercase text-gray-500 tracking-widest border-b border-gray-800 pb-1 mb-2">
-                Type Proficiency
-            </h4>
-            <div className="grid grid-cols-3 gap-1.5">
+            <div
+                className="flex items-center justify-between cursor-pointer select-none"
+                onClick={() => setIsOpen(o => !o)}
+            >
+                <h4 className="text-[10px] font-black uppercase text-gray-500 tracking-widest">
+                    Type Proficiency
+                </h4>
+                <ChevronDown
+                    size={12}
+                    className={`text-gray-500 transition-transform duration-200 ${isOpen ? '' : '-rotate-90'}`}
+                />
+            </div>
+            {isOpen && <div className="border-t border-gray-800 pt-2"><div className="grid grid-cols-3 gap-1.5">
                 {TYPES_ORDER.map(type => {
                     const isUnlocked = typeUnlocks.has(type);
                     const color = TYPE_COLORS[type];
@@ -90,7 +102,7 @@ export const TypeStatus: React.FC = () => {
                         </button>
                     );
                 })}
-            </div>
+            </div></div>}
         </div>
     );
 };

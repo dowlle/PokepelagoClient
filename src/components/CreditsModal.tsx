@@ -13,8 +13,58 @@ const changelog: Array<{
     highlights: Array<{ label: string; text: string }>;
 }> = [
         {
+            version: '0.4.0',
+            date: 'March 2026',
+            highlights: [
+                {
+                    label: 'Localized names everywhere',
+                    text: 'Pokemon names now appear in your selected language across the entire UI: detail modal, grid tooltips, guess toasts, autocomplete, and name hints all respect your language choice.',
+                },
+                {
+                    label: 'Diacritics support',
+                    text: 'Guessing now uses Unicode normalization so accented names like "Flabébé" match correctly regardless of how you type them.',
+                },
+                {
+                    label: 'Interactive lock badges',
+                    text: 'Missing requirement badges in the Pokemon detail view are now clickable. Tap once to highlight, tap again to request an AP hint for that item. Works for Region Passes, Type Keys, Gym Badges, and all gate items.',
+                },
+                {
+                    label: 'Category filtering from Item Tracker',
+                    text: 'Click any obtained item in the sidebar Item Tracker to filter the grid. Filter by region, legendary tier, baby Pokemon, trade evolutions, fossils, Ultra Beasts, Paradox Pokemon, or specific stone evolutions.',
+                },
+                {
+                    label: 'Co-op sync',
+                    text: 'Multiple players on the same AP slot now see each other\'s guesses in real time via RoomUpdate packet handling.',
+                },
+                {
+                    label: 'World hop stability',
+                    text: 'Disconnecting now fully resets all game state. No more stale derpemon sprites, phantom filters, or leaked items from previous sessions. Orphan socket guards prevent old connections from interfering.',
+                },
+                {
+                    label: 'Dex number overlay',
+                    text: 'Each grid tile now shows the National Dex number. Toggle it on or off in Settings.',
+                },
+                {
+                    label: 'Persistent vs notification dot',
+                    text: 'Choose whether the type-colored dot stays visible permanently or disappears on hover (notification style). Configurable in Settings.',
+                },
+                {
+                    label: 'HTTPS connection fix',
+                    text: 'The client now detects secure pages and skips insecure WebSocket protocols automatically, with clearer error messages when connections fail.',
+                },
+                {
+                    label: 'Goal accuracy',
+                    text: 'Percentage and count goals no longer snap to milestones. You can now set any target count up to the total number of guessable Pokemon.',
+                },
+                {
+                    label: 'Ko-fi support',
+                    text: 'A support link has been added to the Settings panel. If you enjoy Pokepelago, consider buying us a coffee!',
+                },
+            ],
+        },
+        {
             version: '0.3.2',
-            date: 'March 2025',
+            date: 'March 2026',
             highlights: [
                 {
                     label: 'Milestone logic fix',
@@ -36,7 +86,7 @@ const changelog: Array<{
         },
         {
             version: '0.3.1',
-            date: 'Feb 2025',
+            date: 'Feb 2026',
             highlights: [
                 {
                     label: 'New APWorld logic',
@@ -66,7 +116,7 @@ const changelog: Array<{
         },
         {
             version: '0.2.0',
-            date: 'Feb 2025',
+            date: 'Feb 2026',
             highlights: [
                 {
                     label: 'Sprite URL loading',
@@ -113,7 +163,7 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({ isOpen, onClose }) =
                     <h2 className="text-3xl font-black tracking-tighter bg-linear-to-r from-green-400 via-emerald-500 to-blue-500 bg-clip-text text-transparent mb-1">
                         Poképelago
                     </h2>
-                    <p className="text-gray-500 text-sm">v0.3.2 · A Pokémon guessing game for Archipelago Multiworld</p>
+                    <p className="text-gray-500 text-sm">v0.4.0 · A Pokémon guessing game for Archipelago Multiworld</p>
                 </div>
 
                 <div className="px-8 py-6 space-y-8">
@@ -179,6 +229,35 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({ isOpen, onClose }) =
                                 <img src="https://sprites.pmdcollab.org/favicon.ico" alt="" className="w-3 h-3 shrink-0" />
                                 Mystery Dungeon sprites by SpriteCollab
                             </a>
+                        </div>
+                    </section>
+
+                    {/* Upcoming */}
+                    <section>
+                        <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 mb-4">Upcoming</h3>
+                        <div className="bg-indigo-900/10 border border-indigo-500/20 rounded-2xl p-5 space-y-3">
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm font-black text-indigo-300">APWorld v0.4.0</span>
+                                <span className="text-[9px] uppercase tracking-widest text-indigo-400 font-bold bg-indigo-900/40 px-2 py-0.5 rounded-full border border-indigo-700/40">Archipelago 0.6.7</span>
+                            </div>
+                            <div className="space-y-2">
+                                <p className="text-xs leading-relaxed">
+                                    <span className="font-bold text-gray-300">Gate lock system:</span>
+                                    <span className="text-gray-500"> Legendary tiers (sub/box/mythic via Gym Badges), trade evolutions (Link Cable), baby Pokemon (Daycare), fossils (Fossil Restorer), Ultra Beasts (Ultra Wormhole), Paradox Pokemon (Time Rift), and evolution stones. All configurable per-game via YAML options.</span>
+                                </p>
+                                <p className="text-xs leading-relaxed">
+                                    <span className="font-bold text-gray-300">Starter selection:</span>
+                                    <span className="text-gray-500"> Choose which starter Pokemon you begin with, or let the game pick randomly. Fewer pre-collected Type Keys for a less predictable start.</span>
+                                </p>
+                                <p className="text-xs leading-relaxed">
+                                    <span className="font-bold text-gray-300">Accurate goals:</span>
+                                    <span className="text-gray-500"> Percentage and count goals no longer snap to milestones. Set any target count up to the total number of guessable Pokemon.</span>
+                                </p>
+                                <p className="text-xs leading-relaxed">
+                                    <span className="font-bold text-gray-300">Integration tests:</span>
+                                    <span className="text-gray-500"> Full test suite covering all lock combinations, region combos, and edge cases. 59 tests pass across all configurations.</span>
+                                </p>
+                            </div>
                         </div>
                     </section>
 

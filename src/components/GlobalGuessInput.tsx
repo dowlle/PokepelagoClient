@@ -75,8 +75,9 @@ export const GlobalGuessInput: React.FC = () => {
         setLangMenuOpen(false);
     };
 
-    // Debug trigger
+    // Debug trigger (dev/beta only)
     useEffect(() => {
+        if (!import.meta.env.DEV && !__IS_BETA__) return;
         if (guess.toLowerCase().trim() === 'myuncleworksatnintendo') {
             if ((window as any).toggleDebug) {
                 (window as any).toggleDebug();
@@ -95,8 +96,9 @@ export const GlobalGuessInput: React.FC = () => {
         releasedIdsRef.current = releasedIds;
     }, [checkedIds, isPokemonGuessable, releasedIds]);
 
-    // Expose auto-complete for debug
+    // Expose auto-complete for debug (dev/beta only)
     useEffect(() => {
+        if (!import.meta.env.DEV && !__IS_BETA__) return;
         (window as any).runAutoComplete = async () => {
             (window as any).isAutoCompleting = true;
             console.log("Starting Auto-Complete Simulation...");
@@ -134,7 +136,7 @@ export const GlobalGuessInput: React.FC = () => {
     // Shared name-matching helper — returns true if `normalised` matches any accepted name for `p`
     // under the current selectedLanguage.
     const matchesPokemon = useCallback((p: typeof allPokemon[0], normalised: string): boolean => {
-        const strip = (s: string) => s.replace(/[^a-z0-9]/g, '');
+        const strip = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
         const sn = strip(normalised);
 
         const strMatches = (s: string): boolean => {
@@ -171,6 +173,13 @@ export const GlobalGuessInput: React.FC = () => {
         return locName ? strMatches(locName) : false;
     }, [selectedLanguage, allPokemon]);
 
+    // Resolve display name in the selected language (falls back to English clean name).
+    const displayName = useCallback((p: typeof allPokemon[0]): string => {
+        const names = pokemonNames[p.id.toString()];
+        const local = selectedLanguage !== 'global' && names?.[selectedLanguage];
+        return local || getCleanName(p.name);
+    }, [selectedLanguage, allPokemon]);
+
     // Auto-submit logic
     useEffect(() => {
         const normalised = guess.toLowerCase().trim();
@@ -185,11 +194,11 @@ export const GlobalGuessInput: React.FC = () => {
         if (match) {
             if (releasedIds.has(match.id)) {
                 recatchPokemon(match.id);
-                showToast('recaught', `Re-caught ${getCleanName(match.name)}!`);
+                showToast('recaught', `Re-caught ${displayName(match)}!`);
             } else {
                 if (startingLocationsEnabled && !gameStarted && gameMode === 'archipelago') startGame();
                 checkPokemon(match.id);
-                showToast('success', `✓ ${getCleanName(match.name)}!`);
+                showToast('success', `✓ ${displayName(match)}!`);
             }
             setGuess('');
         }
@@ -206,13 +215,13 @@ export const GlobalGuessInput: React.FC = () => {
 
         if (releasedIds.has(match.id)) {
             recatchPokemon(match.id);
-            showToast('recaught', `Re-caught ${getCleanName(match.name)}!`);
+            showToast('recaught', `Re-caught ${displayName(match)}!`);
             setGuess('');
             return;
         }
 
         if (checkedIds.has(match.id)) {
-            showToast('already', `Already guessed ${getCleanName(match.name)}`);
+            showToast('already', `Already guessed ${displayName(match)}`);
             setGuess('');
             return;
         }
@@ -226,7 +235,7 @@ export const GlobalGuessInput: React.FC = () => {
 
         if (startingLocationsEnabled && !gameStarted && gameMode === 'archipelago') startGame();
         checkPokemon(match.id);
-        showToast('success', `✓ ${getCleanName(match.name)}!`);
+        showToast('success', `✓ ${displayName(match)}!`);
         setGuess('');
     };
 
@@ -333,8 +342,8 @@ export const GlobalGuessInput: React.FC = () => {
                     </div>
                 )}
 
-                {/* Debug Hints */}
-                {window && (window as any).isDebugVisible && guess.length >= 2 && (
+                {/* Debug Hints (dev/beta only) */}
+                {(import.meta.env.DEV || __IS_BETA__) && (window as any).isDebugVisible && guess.length >= 2 && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-gray-900 border border-gray-700 rounded shadow-xl max-h-48 overflow-y-auto z-50">
                         {allPokemon
                             .filter(p => {
@@ -353,12 +362,12 @@ export const GlobalGuessInput: React.FC = () => {
                                 <button
                                     key={p.id}
                                     onClick={() => {
-                                        setGuess(getCleanName(p.name));
+                                        setGuess(displayName(p));
                                         inputRef.current?.focus();
                                     }}
                                     className="w-full text-left px-3 py-1.5 hover:bg-gray-800 text-xs flex justify-between items-center"
                                 >
-                                    <span>{getCleanName(p.name)}</span>
+                                    <span>{displayName(p)}</span>
                                     {gameMode === 'standalone' ? (
                                         <span className="text-gray-500 text-[10px] uppercase">Available</span>
                                     ) : isPokemonGuessable(p.id).canGuess ? (
