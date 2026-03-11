@@ -23,6 +23,7 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
     const [spriteUrl, setSpriteUrl] = React.useState<string | null>(null);
     const [isLoaded, setIsLoaded] = React.useState(false);
     const [hasError, setHasError] = React.useState(false);
+    const [hasHovered, setHasHovered] = React.useState(false);
 
 
     // PMD animated sprite state
@@ -111,6 +112,9 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
     return (
         <div
             onClick={() => setSelectedPokemonId(pokemon.id)}
+            onMouseEnter={() => {
+                if (!uiSettings.persistentDot && isReadyToGuess && !hasHovered) setHasHovered(true);
+            }}
             className={`
                 w-11 h-11 rounded-md flex items-center justify-center transition-all duration-300 relative group cursor-pointer
                 border
@@ -160,7 +164,7 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
                 </div>
             )}
 
-            {isVisible && (
+            {isVisible && uiSettings.showDexNumbers && (
                 <span className="absolute bottom-0.5 left-0.5 text-[8px] text-gray-500/60 font-mono z-10 pointer-events-none">
                     #{pokemon.id}
                 </span>
@@ -173,8 +177,8 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
                 </div>
             )}
 
-            {/* Guessable indicator — colored dot in corner, persists until guessed */}
-            {isReadyToGuess && (
+            {/* Guessable indicator — type-colored dot; persistent or notification-style */}
+            {isReadyToGuess && (uiSettings.persistentDot || !hasHovered) && (
                 <div className="absolute top-0.5 right-0.5 z-20 transition-opacity duration-300">
                     <span className="block w-1.5 h-1.5 rounded-full" style={typeDotStyle} />
                 </div>
