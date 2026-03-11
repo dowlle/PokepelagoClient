@@ -153,18 +153,22 @@ export function useAPConnection() {
                 });
 
                 client.items.on('itemsReceived', (items: Item[]) => {
+                    if (clientRef.current !== client) return;
                     handlersRef.current?.onItemsReceived(items, client);
                 });
 
                 client.socket.on('printJSON', (packet) => {
+                    if (clientRef.current !== client) return;
                     handlersRef.current?.onPrintJSON(packet, client);
                 });
 
                 client.socket.on('locationInfo', (packet) => {
+                    if (clientRef.current !== client) return;
                     handlersRef.current?.onLocationInfo(packet, client);
                 });
 
                 client.socket.on('roomUpdate', (packet: any) => {
+                    if (clientRef.current !== client) return;
                     handlersRef.current?.onRoomUpdate?.(packet);
                 });
 

@@ -976,6 +976,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCheckedIds(new Set());
         setHintedIds(new Set());
         setShinyIds(new Set());
+        setLogs([]);
         // derpyfiedIds and releasedIds NOT cleared — DataStorage overwrites on reconnect.
         setMasterBalls(0); setPokegears(0); setPokedexes(0);
         setUsedMasterBalls(new Set()); setUsedPokegears(new Set()); setUsedPokedexes(new Set());
