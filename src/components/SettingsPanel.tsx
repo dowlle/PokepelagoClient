@@ -548,6 +548,21 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                 )}
             </section>
 
+            {/* Support */}
+            <div className="flex items-center justify-center py-4">
+                <a
+                    href="https://ko-fi.com/dowlle"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-center gap-2 px-4 py-2 rounded-xl bg-[#FF5E5B]/10 hover:bg-[#FF5E5B]/20 border border-[#FF5E5B]/20 hover:border-[#FF5E5B]/40 transition-all"
+                >
+                    <span className="text-lg group-hover:scale-110 transition-transform">&#9749;</span>
+                    <span className="text-[11px] font-bold text-[#FF5E5B]/80 group-hover:text-[#FF5E5B] tracking-wide">
+                        Support Pokepelago on Ko-fi
+                    </span>
+                </a>
+            </div>
+
         </div>
     );
 
