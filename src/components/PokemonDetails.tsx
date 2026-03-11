@@ -42,7 +42,7 @@ export const PokemonDetails: React.FC = () => {
     const [details, setDetails] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [gifLoaded, setGifLoaded] = useState(false);
-    const [hintSent, setHintSent] = useState(false);
+    const [pendingHint, setPendingHint] = useState<string | null>(null);
     const [itemCooldown, setItemCooldown] = useState<string | null>(null);
     const [spriteUrl, setSpriteUrl] = useState<string | null>(null);
     const [scoutedItem, setScoutedItem] = useState<{ itemName: string, playerName: string } | null>(null);
@@ -64,7 +64,7 @@ export const PokemonDetails: React.FC = () => {
         if (selectedPokemonId) {
             setLoading(true);
             setGifLoaded(false);
-            setHintSent(false);
+            setPendingHint(null);
             setScoutedItem(null);
 
             // Fetch PokeAPI metadata
@@ -124,10 +124,13 @@ export const PokemonDetails: React.FC = () => {
     const showInfo = isChecked;
     const showShadow = isUnlocked && !isChecked;
 
-    const handleRequestHint = () => {
-        say(`!hint Pokemon #${selectedPokemonId}`);
-        setHintSent(true);
-        setTimeout(() => setHintSent(false), 3000);
+    const handleHintClick = (itemName: string) => {
+        if (pendingHint === itemName) {
+            say(`!hint ${itemName}`);
+            setPendingHint(null);
+        } else {
+            setPendingHint(itemName);
+        }
     };
 
     const handleUseItem = (item: 'master' | 'gear' | 'dex') => {
@@ -305,31 +308,54 @@ export const PokemonDetails: React.FC = () => {
                             </div>
                             <div className="flex flex-wrap gap-2">
                                 {missingRegion && (
-                                    <span className="px-3 py-1 bg-red-950/60 border border-red-500/30 rounded-lg text-[10px] text-red-200 uppercase font-black tracking-widest shadow-lg">
-                                        {missingRegion} Pass
+                                    <span
+                                        onClick={() => handleHintClick(`${missingRegion} Pass`)}
+                                        className={`px-3 py-1 bg-red-950/60 border rounded-lg text-[10px] text-red-200 uppercase font-black tracking-widest shadow-lg cursor-pointer transition-all hover:bg-red-900/40 ${pendingHint === `${missingRegion} Pass` ? 'border-yellow-500/80 animate-pulse' : 'border-red-500/30'}`}
+                                        title={pendingHint === `${missingRegion} Pass` ? 'Click again to hint this item' : `Click to hint ${missingRegion} Pass`}
+                                    >
+                                        {pendingHint === `${missingRegion} Pass` ? `Hint ${missingRegion} Pass?` : `${missingRegion} Pass`}
                                     </span>
                                 )}
-                                {missingTypes && missingTypes.map((t: string) => (
-                                    <span key={t} className="px-3 py-1 bg-red-950/60 border border-red-500/30 rounded-lg text-[10px] text-red-200 uppercase font-black tracking-widest shadow-lg">
-                                        {t} Unlock
-                                    </span>
-                                ))}
+                                {missingTypes && missingTypes.map((t: string) => {
+                                    const itemName = `${t} Type Key`;
+                                    return (
+                                        <span
+                                            key={t}
+                                            onClick={() => handleHintClick(itemName)}
+                                            className={`px-3 py-1 bg-red-950/60 border rounded-lg text-[10px] text-red-200 uppercase font-black tracking-widest shadow-lg cursor-pointer transition-all hover:bg-red-900/40 ${pendingHint === itemName ? 'border-yellow-500/80 animate-pulse' : 'border-red-500/30'}`}
+                                            title={pendingHint === itemName ? 'Click again to hint this item' : `Click to hint ${itemName}`}
+                                        >
+                                            {pendingHint === itemName ? `Hint ${t} Key?` : `${t} Unlock`}
+                                        </span>
+                                    );
+                                })}
                                 {missingPokemon && (missingRegion ? null : (
                                     <span className="px-3 py-1 bg-red-950/60 border border-red-500/30 rounded-lg text-[10px] text-red-200 uppercase font-black tracking-widest shadow-lg">
                                         Pokémon Item
                                     </span>
                                 ))}
-                                {reasons && reasons.map((r: string, i: number) => (
-                                    <span key={i} className="px-3 py-1 bg-red-950/60 border border-red-500/30 rounded-lg text-[10px] text-red-200 uppercase font-black tracking-widest shadow-lg">
-                                        {r}
-                                    </span>
-                                ))}
+                                {reasons && reasons.map((r: string, i: number) => {
+                                    const itemName = r;
+                                    return (
+                                        <span
+                                            key={i}
+                                            onClick={() => handleHintClick(itemName)}
+                                            className={`px-3 py-1 bg-red-950/60 border rounded-lg text-[10px] text-red-200 uppercase font-black tracking-widest shadow-lg cursor-pointer transition-all hover:bg-red-900/40 ${pendingHint === itemName ? 'border-yellow-500/80 animate-pulse' : 'border-red-500/30'}`}
+                                            title={pendingHint === itemName ? 'Click again to hint this item' : `Click to hint ${itemName}`}
+                                        >
+                                            {pendingHint === itemName ? `Hint ${r}?` : r}
+                                        </span>
+                                    );
+                                })}
                                 {!missingRegion && !missingTypes && !missingPokemon && !reasons && reason && (
                                     <span className="px-3 py-1 bg-red-950/60 border border-red-500/30 rounded-lg text-[10px] text-red-200 uppercase font-black tracking-widest shadow-lg">
                                         {reason}
                                     </span>
                                 )}
                             </div>
+                            {pendingHint && (
+                                <p className="text-[9px] text-yellow-400/70 italic">Click the highlighted badge again to send the hint request.</p>
+                            )}
                         </div>
                     )}
 
@@ -372,27 +398,6 @@ export const PokemonDetails: React.FC = () => {
                             </div>
                         )}
 
-                        {!isChecked && !isUnlocked && !isHinted && !missingRegion && (
-                            <div className="space-y-3">
-                                <p className="text-[11px] text-gray-500">Don't know where this Pokémon is? Request a hint from the server.</p>
-                                <button
-                                    onClick={handleRequestHint}
-                                    disabled={hintSent}
-                                    className={`
-                                        w-full py-3 transition-all rounded-xl text-xs font-black uppercase tracking-widest text-white shadow-lg flex items-center justify-center gap-2
-                                        ${hintSent
-                                            ? 'bg-green-600 shadow-green-900/20'
-                                            : 'bg-blue-600 hover:bg-blue-500 active:scale-95 shadow-blue-900/20'}
-                                    `}
-                                >
-                                    {hintSent ? <CheckCircle2 size={16} /> : <HelpCircle size={16} />}
-                                    {hintSent ? 'Hint Requested!' : 'Request Hint'}
-                                </button>
-                                {hintSent && (
-                                    <p className="text-[9px] text-center text-gray-500 italic">Check the log to see if you have enough hint points!</p>
-                                )}
-                            </div>
-                        )}
 
                         {isUnlocked && !isChecked && (
                             <div className={`bg-blue-900/10 border border-blue-500/20 rounded-xl p-4 flex items-middle gap-3 ${!canGuess ? 'opacity-50 grayscale' : ''}`}>

@@ -195,6 +195,8 @@ interface GameContextType extends GameState {
     setTypeFilter: React.Dispatch<React.SetStateAction<string[]>>;
     dexFilter: Set<'guessable' | 'guessed'>;
     setDexFilter: React.Dispatch<React.SetStateAction<Set<'guessable' | 'guessed'>>>;
+    categoryFilter: string | null;
+    setCategoryFilter: React.Dispatch<React.SetStateAction<string | null>>;
     pokemonLoadError: string | null;
     retryPokemonLoad: () => void;
     // New lock gate state (exposed for TrackerSidebar and other consumers)
@@ -255,6 +257,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [currentProfileId, setCurrentProfileId] = useState<string | null>(null);
     const [typeFilter, setTypeFilter] = useState<string[]>([]);
     const [dexFilter, setDexFilter] = useState<Set<'guessable' | 'guessed'>>(new Set());
+    const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
 
     // ── Gate item state (new lock systems) ──────────────────────────────────────
     const [gymBadges, setGymBadges] = useState(0);
@@ -985,6 +988,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSpriteRefreshCounter(0);
         setTypeFilter([]);
         setDexFilter(new Set());
+        setCategoryFilter(null);
         setSelectedPokemonId(null);
         setMasterBalls(0); setPokegears(0); setPokedexes(0);
         setUsedMasterBalls(new Set()); setUsedPokegears(new Set()); setUsedPokedexes(new Set());
@@ -1208,6 +1212,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             currentProfileId, setCurrentProfileId,
             typeFilter, setTypeFilter,
             dexFilter, setDexFilter,
+            categoryFilter, setCategoryFilter,
             pokemonLoadError, retryPokemonLoad,
             gymBadges, hasLinkCable, daycareCount, hasFossilRestorer, hasUltraWormhole, hasTimeRift,
             unlockedStones, legendaryLocksEnabled, tradeLocksEnabled, babyLocksEnabled, daycareRequired,

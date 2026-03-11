@@ -5,11 +5,12 @@ import { useGame } from '../context/GameContext';
 import { PokemonSlot } from './PokemonSlot';
 import { Lock, GripVertical, ChevronDown } from 'lucide-react';
 import pokemonMetadata from '../data/pokemon_metadata.json';
+import { SUB_LEGENDARY_IDS, BOX_LEGENDARY_IDS, MYTHIC_IDS, BABY_IDS, TRADE_EVO_IDS, FOSSIL_IDS, ULTRA_BEAST_IDS, PARADOX_IDS, STONE_EVO_IDS } from '../data/pokemon_gates';
 
 const REGION_LAYOUT_KEY = 'pokepelago_region_layout';
 
 export const DexGrid: React.FC = () => {
-    const { allPokemon, unlockedIds, checkedIds, hintedIds, shinyIds, generationFilter, uiSettings, gameMode, isPokemonGuessable, shuffleEndTime, releasedIds, activeRegions, regionPasses, regionLocksEnabled, startingRegion, typeFilter, dexFilter, setDexFilter } = useGame();
+    const { allPokemon, unlockedIds, checkedIds, hintedIds, shinyIds, generationFilter, uiSettings, gameMode, isPokemonGuessable, shuffleEndTime, releasedIds, activeRegions, regionPasses, regionLocksEnabled, startingRegion, typeFilter, dexFilter, setDexFilter, categoryFilter } = useGame();
 
     const [now, setNow] = useState(Date.now());
 
@@ -209,7 +210,36 @@ export const DexGrid: React.FC = () => {
                     });
                 }
 
-                if ((typeFilter.length > 0 || dexFilter.size > 0) && pokemonInGen.length === 0) return null;
+                // Category filter (from GateTracker clicks)
+                if (categoryFilter) {
+                    pokemonInGen = pokemonInGen.filter(p => {
+                        switch (categoryFilter) {
+                            case 'sub-legendary': return SUB_LEGENDARY_IDS.has(p.id);
+                            case 'box-legendary': return BOX_LEGENDARY_IDS.has(p.id);
+                            case 'mythic': return MYTHIC_IDS.has(p.id);
+                            case 'baby': return BABY_IDS.has(p.id);
+                            case 'trade-evo': return TRADE_EVO_IDS.has(p.id);
+                            case 'fossil': return FOSSIL_IDS.has(p.id);
+                            case 'ultra-beast': return ULTRA_BEAST_IDS.has(p.id);
+                            case 'paradox': return PARADOX_IDS.has(p.id);
+                            default: {
+                                // Region filter: "region-Kanto" etc.
+                                if (categoryFilter.startsWith('region-')) {
+                                    const region = categoryFilter.slice(7);
+                                    return gen.region === region;
+                                }
+                                // Stone filter: "stone-fire" etc.
+                                if (categoryFilter.startsWith('stone-')) {
+                                    const stone = categoryFilter.slice(6);
+                                    return STONE_EVO_IDS[stone]?.has(p.id) ?? false;
+                                }
+                                return true;
+                            }
+                        }
+                    });
+                }
+
+                if ((typeFilter.length > 0 || dexFilter.size > 0 || categoryFilter) && pokemonInGen.length === 0) return null;
 
                 const shuffleOrder = new Map<number, number>();
                 if (isShuffled) {

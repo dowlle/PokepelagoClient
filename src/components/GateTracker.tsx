@@ -32,10 +32,10 @@ const STONE_SPRITE_NAMES: Record<string, string> = {
 };
 
 const SPECIAL_ITEMS = [
-    { key: 'linkCable',      label: 'Link Cable',      enabledKey: 'tradeLocksEnabled',      haveKey: 'hasLinkCable' },
-    { key: 'fossilRestorer', label: 'Fossil Restorer', enabledKey: 'fossilLocksEnabled',     haveKey: 'hasFossilRestorer' },
-    { key: 'ultraWormhole',  label: 'Ultra Wormhole',  enabledKey: 'ultraBeastLocksEnabled', haveKey: 'hasUltraWormhole' },
-    { key: 'timeRift',       label: 'Time Rift',       enabledKey: 'paradoxLocksEnabled',    haveKey: 'hasTimeRift' },
+    { key: 'linkCable',      label: 'Link Cable',      enabledKey: 'tradeLocksEnabled',      haveKey: 'hasLinkCable',      filterKey: 'trade-evo' },
+    { key: 'fossilRestorer', label: 'Fossil Restorer', enabledKey: 'fossilLocksEnabled',     haveKey: 'hasFossilRestorer', filterKey: 'fossil' },
+    { key: 'ultraWormhole',  label: 'Ultra Wormhole',  enabledKey: 'ultraBeastLocksEnabled', haveKey: 'hasUltraWormhole',  filterKey: 'ultra-beast' },
+    { key: 'timeRift',       label: 'Time Rift',       enabledKey: 'paradoxLocksEnabled',    haveKey: 'hasTimeRift',       filterKey: 'paradox' },
 ] as const;
 
 export const GateTracker: React.FC = () => {
@@ -49,9 +49,25 @@ export const GateTracker: React.FC = () => {
         paradoxLocksEnabled, hasTimeRift,
         stoneLocksEnabled, unlockedStones,
         regionLocksEnabled, regionPasses, activeRegions, startingRegion,
+        say, categoryFilter, setCategoryFilter,
     } = useGame();
 
+    const [pendingHint, setPendingHint] = useState<string | null>(null);
+
     if (!isConnected || gameMode !== 'archipelago') return null;
+
+    const handleHintClick = (itemName: string) => {
+        if (pendingHint === itemName) {
+            say(`!hint ${itemName}`);
+            setPendingHint(null);
+        } else {
+            setPendingHint(itemName);
+        }
+    };
+
+    const handleFilterClick = (filter: string) => {
+        setCategoryFilter(prev => prev === filter ? null : filter);
+    };
 
     const hasAnyGate =
         legendaryLocksEnabled ||
@@ -88,15 +104,21 @@ export const GateTracker: React.FC = () => {
                             const filled = i < gymBadges;
                             const tier = i < 6 ? 'sub' : i < 7 ? 'box' : 'mythic';
                             const tierColor = tier === 'mythic' ? '#F59E0B' : tier === 'box' ? '#A78BFA' : '#60A5FA';
+                            const filterName = tier === 'mythic' ? 'mythic' : tier === 'box' ? 'box-legendary' : 'sub-legendary';
+                            const isActiveFilter = categoryFilter === filterName;
                             return (
                                 <div
                                     key={i}
-                                    className="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all"
+                                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer hover:scale-110 ${isActiveFilter ? 'ring-1 ring-white/50' : ''} ${!filled && pendingHint === 'Gym Badge' ? 'animate-pulse' : ''}`}
                                     style={{
-                                        borderColor: filled ? tierColor : '#374151',
+                                        borderColor: filled ? tierColor : (!filled && pendingHint === 'Gym Badge') ? '#EAB308' : '#374151',
                                         backgroundColor: filled ? `${tierColor}33` : 'transparent',
                                     }}
-                                    title={`Badge ${i + 1} — unlocks ${tier === 'mythic' ? 'Mythics' : tier === 'box' ? 'Box Legendaries' : 'Sub-Legendaries'}`}
+                                    title={filled
+                                        ? `Click to filter ${tier === 'mythic' ? 'Mythics' : tier === 'box' ? 'Box Legendaries' : 'Sub-Legendaries'}`
+                                        : pendingHint === 'Gym Badge' ? 'Click again to hint Gym Badge' : 'Click to hint Gym Badge'
+                                    }
+                                    onClick={() => filled ? handleFilterClick(filterName) : handleHintClick('Gym Badge')}
                                 >
                                     {filled && (
                                         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tierColor }} />
@@ -115,21 +137,30 @@ export const GateTracker: React.FC = () => {
             )}
 
             {/* Daycare (shown separately since it has a count) */}
-            {babyLocksEnabled && (
-                <div className="flex items-center gap-2">
-                    <div
-                        className="flex-1 flex items-center justify-between px-2 py-1 rounded border text-[9px] font-bold transition-all"
-                        style={{
-                            borderColor: daycareCount >= daycareRequired ? '#22C55E66' : '#37415144',
-                            backgroundColor: daycareCount >= daycareRequired ? '#22C55E1A' : '#1f293744',
-                            color: daycareCount >= daycareRequired ? '#4ADE80' : '#6B7280',
-                        }}
-                    >
-                        <span>Daycare</span>
-                        <span className="font-normal">{daycareCount}/{daycareRequired}</span>
+            {babyLocksEnabled && (() => {
+                const have = daycareCount >= daycareRequired;
+                const isActiveFilter = categoryFilter === 'baby';
+                return (
+                    <div className="flex items-center gap-2">
+                        <div
+                            className={`flex-1 flex items-center justify-between px-2 py-1 rounded border text-[9px] font-bold transition-all cursor-pointer hover:brightness-125 ${isActiveFilter ? 'ring-1 ring-white/50' : ''} ${!have && pendingHint === 'Daycare' ? 'animate-pulse' : ''}`}
+                            style={{
+                                borderColor: have ? '#22C55E66' : (pendingHint === 'Daycare' ? '#EAB30866' : '#37415144'),
+                                backgroundColor: have ? '#22C55E1A' : '#1f293744',
+                                color: have ? '#4ADE80' : '#6B7280',
+                            }}
+                            title={have
+                                ? (isActiveFilter ? 'Click to clear filter' : 'Click to filter Baby Pokemon')
+                                : (pendingHint === 'Daycare' ? 'Click again to hint Daycare' : 'Click to hint Daycare')
+                            }
+                            onClick={() => have ? handleFilterClick('baby') : handleHintClick('Daycare')}
+                        >
+                            <span>Daycare</span>
+                            <span className="font-normal">{daycareCount}/{daycareRequired}</span>
+                        </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
 
             {/* Special single-copy items */}
             {SPECIAL_ITEMS.some(item => {
@@ -152,18 +183,25 @@ export const GateTracker: React.FC = () => {
                             : item.haveKey === 'hasFossilRestorer' ? hasFossilRestorer
                             : item.haveKey === 'hasUltraWormhole' ? hasUltraWormhole
                             : hasTimeRift;
+                        const isActiveFilter = categoryFilter === item.filterKey;
+                        const isPending = !have && pendingHint === item.label;
                         return (
                             <div
                                 key={item.key}
-                                className="flex items-center gap-2 px-2 py-1 rounded border text-[9px] font-bold transition-all"
+                                className={`flex items-center gap-2 px-2 py-1 rounded border text-[9px] font-bold transition-all cursor-pointer hover:brightness-125 ${isActiveFilter ? 'ring-1 ring-white/50' : ''} ${isPending ? 'animate-pulse' : ''}`}
                                 style={{
-                                    borderColor: have ? '#22C55E66' : '#37415144',
+                                    borderColor: have ? '#22C55E66' : (isPending ? '#EAB30866' : '#37415144'),
                                     backgroundColor: have ? '#22C55E1A' : '#1f293744',
                                     color: have ? '#4ADE80' : '#6B7280',
                                 }}
+                                title={have
+                                    ? (isActiveFilter ? 'Click to clear filter' : `Click to filter ${item.label} Pokemon`)
+                                    : (isPending ? `Click again to hint ${item.label}` : `Click to hint ${item.label}`)
+                                }
+                                onClick={() => have ? handleFilterClick(item.filterKey) : handleHintClick(item.label)}
                             >
                                 <span className="text-[10px]">{have ? '✓' : '○'}</span>
-                                <span>{item.label}</span>
+                                <span>{isPending ? `Hint ${item.label}?` : item.label}</span>
                             </div>
                         );
                     })}
@@ -179,16 +217,24 @@ export const GateTracker: React.FC = () => {
                             const have = unlockedStones.has(stone);
                             const color = STONE_COLORS[stone] ?? '#9CA3AF';
                             const spriteName = STONE_SPRITE_NAMES[stone];
+                            const stoneLabel = `${stone.charAt(0).toUpperCase()}${stone.slice(1)} Stone`;
+                            const filterName = `stone-${stone}`;
+                            const isActiveFilter = categoryFilter === filterName;
+                            const isPending = !have && pendingHint === stoneLabel;
                             return (
                                 <div
                                     key={stone}
-                                    title={`${stone.charAt(0).toUpperCase()}${stone.slice(1)} Stone${have ? ' (obtained)' : ' (needed)'}`}
-                                    className="w-8 h-8 rounded border flex items-center justify-center transition-all"
+                                    title={have
+                                        ? (isActiveFilter ? 'Click to clear filter' : `Click to filter ${stoneLabel} evolutions`)
+                                        : (isPending ? `Click again to hint ${stoneLabel}` : `Click to hint ${stoneLabel}`)
+                                    }
+                                    className={`w-8 h-8 rounded border flex items-center justify-center transition-all cursor-pointer hover:scale-110 ${isActiveFilter ? 'ring-1 ring-white/50' : ''} ${isPending ? 'animate-pulse' : ''}`}
                                     style={{
-                                        borderColor: have ? `${color}88` : '#37415166',
+                                        borderColor: have ? `${color}88` : (isPending ? '#EAB30888' : '#37415166'),
                                         backgroundColor: have ? `${color}22` : '#1f293744',
-                                        opacity: have ? 1 : 0.35,
+                                        opacity: have ? 1 : (isPending ? 0.7 : 0.35),
                                     }}
+                                    onClick={() => have ? handleFilterClick(filterName) : handleHintClick(stoneLabel)}
                                 >
                                     <img
                                         src={`${STONE_SPRITE_BASE}/${spriteName}.png`}
@@ -211,22 +257,41 @@ export const GateTracker: React.FC = () => {
                         {Object.keys(activeRegions).map(region => {
                             const isStarting = region === startingRegion;
                             const have = isStarting || regionPasses.has(region);
+                            const filterName = `region-${region}`;
+                            const isActiveFilter = categoryFilter === filterName;
+                            const hintName = `${region} Pass`;
+                            const isPending = !have && pendingHint === hintName;
                             return (
                                 <div
                                     key={region}
-                                    className="px-1.5 py-0.5 rounded text-[8px] font-bold border transition-all"
+                                    className={`px-1.5 py-0.5 rounded text-[8px] font-bold border transition-all cursor-pointer hover:brightness-125 ${isActiveFilter ? 'ring-1 ring-white/50' : ''} ${isPending ? 'animate-pulse' : ''}`}
                                     style={{
-                                        borderColor: have ? '#F59E0B66' : '#37415144',
+                                        borderColor: have ? '#F59E0B66' : (isPending ? '#EAB30866' : '#37415144'),
                                         backgroundColor: have ? '#F59E0B1A' : '#1f293744',
                                         color: have ? '#FCD34D' : '#4B5563',
                                     }}
+                                    title={have
+                                        ? (isActiveFilter ? 'Click to clear filter' : `Click to filter ${region} Pokemon`)
+                                        : (isPending ? `Click again to hint ${hintName}` : `Click to hint ${hintName}`)
+                                    }
+                                    onClick={() => have ? handleFilterClick(filterName) : handleHintClick(hintName)}
                                 >
-                                    {isStarting ? `${region} ★` : `${have ? '✓' : '○'} ${region}`}
+                                    {isPending ? `Hint ${region}?` : isStarting ? `${region} ★` : `${have ? '✓' : '○'} ${region}`}
                                 </div>
                             );
                         })}
                     </div>
                 </div>
+            )}
+            {pendingHint && (
+                <p className="text-[8px] text-yellow-400/70 italic">Click again to hint {pendingHint}.</p>
+            )}
+            {categoryFilter && (
+                <p className="text-[8px] text-blue-400/70 italic">
+                    Filtering by: {categoryFilter.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                    {' — '}
+                    <span className="underline cursor-pointer" onClick={() => setCategoryFilter(null)}>clear</span>
+                </p>
             )}
             </>}
         </div>
