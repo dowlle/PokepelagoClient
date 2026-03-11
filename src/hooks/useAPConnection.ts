@@ -67,7 +67,11 @@ export function useAPConnection() {
             pingTimeoutRef.current = null;
         }
 
-        const protocolsToTry = info.hostname.includes('://') ? [''] : ['wss://', 'ws://'];
+        const isSecurePage = typeof window !== 'undefined' && window.location.protocol === 'https:';
+        const isLocalhost = /^(localhost|127\.0\.0\.1)$/i.test(info.hostname);
+        const protocolsToTry = info.hostname.includes('://')
+            ? ['']
+            : (isSecurePage && !isLocalhost) ? ['wss://'] : ['wss://', 'ws://'];
         let lastError: any = null;
         const oldClient = clientRef.current;
 
@@ -237,6 +241,8 @@ export function useAPConnection() {
             friendlyMsg = 'Server is offline or unreachable. Check the host and port.';
         else if (rawMsg.includes('SSL') || rawMsg.includes('ERR_SSL') || rawMsg.includes('wss'))
             friendlyMsg = 'Secure connection failed. Try using ws:// instead of wss://.';
+        else if (rawMsg.includes('insecure'))
+            friendlyMsg = 'Cannot connect with ws:// from an HTTPS page. The server needs to support wss://.';
         else if (rawMsg.includes('Invalid Slot') || rawMsg.includes('InvalidSlot'))
             friendlyMsg = `Slot "${info.slotName}" not found. Check that your name matches the YAML exactly.`;
         else if (rawMsg.includes('Invalid Password') || rawMsg.includes('InvalidPassword'))
