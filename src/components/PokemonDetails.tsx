@@ -143,13 +143,14 @@ export const PokemonDetails: React.FC = () => {
     const isPokedexed = usedPokedexes.has(selectedPokemonId);
     const { canGuess, reason, reasons, missingRegion, missingTypes, missingPokemon } = isPokemonGuessable(selectedPokemonId);
 
+    const lang = localStorage.getItem('pokepelago_language') ?? 'en';
+    const langNames = (pokemonNamesJson as Record<string, Record<string, string>>)[selectedPokemonId.toString()];
+    const localName = lang !== 'global' && langNames?.[lang];
+
     let displayName = '???';
     if (showInfo) {
-        displayName = getCleanName(pokemon.name);
+        displayName = localName || getCleanName(pokemon.name);
     } else if (isPokedexed) {
-        const lang = localStorage.getItem('pokepelago_language') ?? 'en';
-        const langNames = (pokemonNamesJson as Record<string, Record<string, string>>)[selectedPokemonId.toString()];
-        const localName = lang !== 'global' && langNames?.[lang];
         const hintBase = localName || pokemon.name;
         displayName = hintBase.slice(0, 3).toUpperCase() + '...';
     }
