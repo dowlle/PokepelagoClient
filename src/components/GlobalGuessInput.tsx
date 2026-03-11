@@ -136,7 +136,7 @@ export const GlobalGuessInput: React.FC = () => {
     // Shared name-matching helper — returns true if `normalised` matches any accepted name for `p`
     // under the current selectedLanguage.
     const matchesPokemon = useCallback((p: typeof allPokemon[0], normalised: string): boolean => {
-        const strip = (s: string) => s.replace(/[^a-z0-9]/g, '');
+        const strip = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
         const sn = strip(normalised);
 
         const strMatches = (s: string): boolean => {
