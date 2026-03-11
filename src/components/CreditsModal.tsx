@@ -234,7 +234,7 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({ isOpen, onClose }) =
                         <div className="bg-indigo-900/10 border border-indigo-500/20 rounded-2xl p-5 space-y-3">
                             <div className="flex items-center gap-2">
                                 <span className="text-sm font-black text-indigo-300">APWorld v0.4.0</span>
-                                <span className="text-[9px] uppercase tracking-widest text-indigo-400 font-bold bg-indigo-900/40 px-2 py-0.5 rounded-full border border-indigo-700/40">Archipelago 0.6.7</span>
+                                <span className="text-[9px] uppercase tracking-widest text-indigo-400 font-bold bg-indigo-900/40 px-2 py-0.5 rounded-full border border-indigo-700/40">Built for Archipelago 0.6.7</span>
                             </div>
                             <div className="space-y-2">
                                 <p className="text-xs leading-relaxed">
