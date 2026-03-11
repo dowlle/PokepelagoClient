@@ -103,6 +103,8 @@ export interface UISettings {
     enableShadows: boolean;
     spriteSet: 'normal' | 'derpemon';
     typeDot: boolean;
+    showDexNumbers: boolean;
+    persistentDot: boolean;
 }
 
 interface ConnectionInfo {
@@ -295,6 +297,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const defaults: UISettings = {
             widescreen: false, masonry: false, enableSprites: true,
             enableShadows: false, spriteSet: 'normal', typeDot: true,
+            showDexNumbers: true, persistentDot: true,
         };
         return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
     });
@@ -977,7 +980,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setHintedIds(new Set());
         setShinyIds(new Set());
         setLogs([]);
-        // derpyfiedIds and releasedIds NOT cleared — DataStorage overwrites on reconnect.
+        setDerpyfiedIds(new Set());
+        setReleasedIds(new Set());
+        setSpriteRefreshCounter(0);
+        setTypeFilter([]);
+        setDexFilter(new Set());
+        setSelectedPokemonId(null);
         setMasterBalls(0); setPokegears(0); setPokedexes(0);
         setUsedMasterBalls(new Set()); setUsedPokegears(new Set()); setUsedPokedexes(new Set());
         setShuffleEndTime(0);
