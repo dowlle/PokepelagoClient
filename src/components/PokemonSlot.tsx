@@ -3,6 +3,7 @@ import type { PokemonRef } from '../types/pokemon';
 import { useGame } from '../context/GameContext';
 import { getCleanName } from '../utils/pokemon';
 import pokemonMetadata from '../data/pokemon_metadata.json';
+import pokemonNamesJson from '../data/pokemon_names.json';
 import { TYPE_COLORS } from '../utils/typeColors';
 import { PmdSpriteCanvas } from './PmdSpriteCanvas';
 import { normalizePmdBaseUrl } from '../services/pmdSpriteService';
@@ -79,7 +80,10 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
 
     const isChecked = status === 'checked';
     const isVisible = isChecked || status === 'shadow' || status === 'hint';
-    const cleanName = getCleanName(pokemon.name);
+    const lang = localStorage.getItem('pokepelago_language') ?? 'en';
+    const langNames = (pokemonNamesJson as Record<string, Record<string, string>>)[pokemon.id.toString()];
+    const localName = lang !== 'global' && langNames?.[lang];
+    const cleanName = localName || getCleanName(pokemon.name);
 
     const isReadyToGuess = !isChecked && canGuess;
 
