@@ -53,10 +53,6 @@ const changelog: Array<{
                     text: 'The client now detects secure pages and skips insecure WebSocket protocols automatically, with clearer error messages when connections fail.',
                 },
                 {
-                    label: 'Goal accuracy',
-                    text: 'Percentage and count goals no longer snap to milestones. You can now set any target count up to the total number of guessable Pokemon.',
-                },
-                {
                     label: 'Ko-fi support',
                     text: 'A support link has been added to the Settings panel. If you enjoy Pokepelago, consider buying us a coffee!',
                 },
