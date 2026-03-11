@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
 import { GENERATIONS } from '../types/pokemon';
-import { X, Server, Wifi, LayoutGrid, Maximize, Image, Trash2, Upload, Link2, ChevronDown, Filter, Monitor, BookOpen } from 'lucide-react';
+import { X, Server, Wifi, LayoutGrid, Maximize, Image, Trash2, Upload, Link2, ChevronDown, Filter, Monitor, BookOpen, Tv } from 'lucide-react';
 import { importFromFiles, clearAllSprites } from '../services/spriteService';
 import { ConnectionManager } from './ConnectionManager';
 import { getProfiles, saveProfile } from '../services/connectionManagerService';
@@ -43,6 +43,10 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
     const [isConnecting, setIsConnecting] = useState(false);
     const [importProgress, setImportProgress] = useState<number | null>(null);
     const [isManagerOpen, setIsManagerOpen] = useState(false);
+
+    // Twitch settings (persisted in localStorage, read by useTwitchChat in GlobalGuessInput)
+    const [twitchEnabled, setTwitchEnabled] = useState(() => localStorage.getItem('pokepelago_twitch_enabled') === 'true');
+    const [twitchChannel, setTwitchChannel] = useState(() => localStorage.getItem('pokepelago_twitch_channel') ?? '');
 
     const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
         try {
@@ -544,6 +548,66 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                                 Reset Game Mode
                             </button>
                         </div>
+                    </div>
+                )}
+            </section>
+
+            {/* Twitch Integration */}
+            <section className="border border-gray-800 rounded-xl overflow-hidden">
+                <AccordionHeader
+                    sectionKey="twitch"
+                    icon={<Tv size={13} className="text-purple-400" />}
+                    label="Twitch Chat Guessing"
+                    badge={twitchEnabled && twitchChannel ? <span className="text-[9px] text-purple-400 bg-purple-900/20 px-1.5 py-0.5 rounded border border-purple-700/30 normal-case font-normal tracking-normal">● Active</span> : undefined}
+                />
+                {openSections['twitch'] && (
+                    <div className="px-4 py-4 space-y-4 border-t border-gray-800">
+                        <p className="text-[10px] text-gray-400 leading-relaxed">
+                            Let your Twitch chat guess Pokémon for you! Viewers type <code className="text-purple-300 bg-purple-900/20 px-1 rounded">!guess pikachu</code> in chat and it counts as a guess in your game.
+                        </p>
+
+                        <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
+                            <div className="flex items-center gap-2">
+                                <Tv size={16} className="text-purple-400 group-hover:scale-110 transition-transform" />
+                                <div>
+                                    <div className="text-xs font-bold text-gray-200">Enable Chat Guessing</div>
+                                    <div className="text-[9px] text-gray-500">Connect to Twitch IRC (read-only, no login needed)</div>
+                                </div>
+                            </div>
+                            <input
+                                type="checkbox"
+                                checked={twitchEnabled}
+                                onChange={(e) => {
+                                    setTwitchEnabled(e.target.checked);
+                                    localStorage.setItem('pokepelago_twitch_enabled', String(e.target.checked));
+                                    window.dispatchEvent(new Event('pokepelago_twitch_changed'));
+                                }}
+                                className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-purple-600 focus:ring-purple-500"
+                            />
+                        </label>
+
+                        {twitchEnabled && (
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="block text-[10px] text-gray-400 mb-1 uppercase tracking-tight">Channel Name</label>
+                                    <input
+                                        type="text"
+                                        value={twitchChannel}
+                                        onChange={(e) => {
+                                            setTwitchChannel(e.target.value);
+                                            localStorage.setItem('pokepelago_twitch_channel', e.target.value);
+                                            window.dispatchEvent(new Event('pokepelago_twitch_changed'));
+                                        }}
+                                        placeholder="your_twitch_channel"
+                                        className="w-full px-3 py-2 bg-gray-950 border border-gray-700 rounded text-xs text-white outline-none focus:border-purple-500 transition-colors"
+                                    />
+                                </div>
+                                <div className="text-[9px] text-gray-500 space-y-1">
+                                    <p>Viewers can guess with: <code className="text-purple-300 bg-purple-900/20 px-1 rounded">!guess &lt;pokemon name&gt;</code></p>
+                                    <p>Rate limited to 1 guess per viewer every 5 seconds. Wrong guesses are silently ignored.</p>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </section>
