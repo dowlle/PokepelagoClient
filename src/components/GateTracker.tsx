@@ -53,6 +53,7 @@ export const GateTracker: React.FC = () => {
     } = useGame();
 
     const [pendingHint, setPendingHint] = useState<string | null>(null);
+    const [isOpen, setIsOpen] = useState(true);
 
     if (!isConnected || gameMode !== 'archipelago') return null;
 
@@ -76,8 +77,6 @@ export const GateTracker: React.FC = () => {
         (regionLocksEnabled && Object.keys(activeRegions).length > 1);
 
     if (!hasAnyGate) return null;
-
-    const [isOpen, setIsOpen] = useState(true);
 
     return (
         <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-3 space-y-3">
