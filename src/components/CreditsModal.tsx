@@ -53,10 +53,6 @@ const changelog: Array<{
                     text: 'The client now detects secure pages and skips insecure WebSocket protocols automatically, with clearer error messages when connections fail.',
                 },
                 {
-                    label: 'Goal accuracy',
-                    text: 'Percentage and count goals no longer snap to milestones. You can now set any target count up to the total number of guessable Pokemon.',
-                },
-                {
                     label: 'Ko-fi support',
                     text: 'A support link has been added to the Settings panel. If you enjoy Pokepelago, consider buying us a coffee!',
                 },
@@ -238,7 +234,7 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({ isOpen, onClose }) =
                         <div className="bg-indigo-900/10 border border-indigo-500/20 rounded-2xl p-5 space-y-3">
                             <div className="flex items-center gap-2">
                                 <span className="text-sm font-black text-indigo-300">APWorld v0.4.0</span>
-                                <span className="text-[9px] uppercase tracking-widest text-indigo-400 font-bold bg-indigo-900/40 px-2 py-0.5 rounded-full border border-indigo-700/40">Archipelago 0.6.7</span>
+                                <span className="text-[9px] uppercase tracking-widest text-indigo-400 font-bold bg-indigo-900/40 px-2 py-0.5 rounded-full border border-indigo-700/40">Built for Archipelago 0.6.7</span>
                             </div>
                             <div className="space-y-2">
                                 <p className="text-xs leading-relaxed">
