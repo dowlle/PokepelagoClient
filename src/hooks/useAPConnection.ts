@@ -24,6 +24,8 @@ export interface ConnectionHandlers {
     onPrintJSON: (packet: any, client: Client) => void;
     /** Called for location scout responses. */
     onLocationInfo: (packet: any, client: Client) => void;
+    /** Called when the server broadcasts a room update (e.g. co-op partner checked locations). */
+    onRoomUpdate?: (packet: any) => void;
 }
 
 export function useAPConnection() {
@@ -160,6 +162,10 @@ export function useAPConnection() {
 
                 client.socket.on('locationInfo', (packet) => {
                     handlersRef.current?.onLocationInfo(packet, client);
+                });
+
+                client.socket.on('roomUpdate', (packet: any) => {
+                    handlersRef.current?.onRoomUpdate?.(packet);
                 });
 
                 // ── DataPackage cache ────────────────────────────────────────────────────

@@ -1122,14 +1122,34 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
     }, []);
 
+    const onRoomUpdate = useCallback((packet: any) => {
+        const o = offsetsRef.current;
+        const newChecked: number[] | undefined = packet.checked_locations;
+        if (!newChecked || newChecked.length === 0) return;
+        setCheckedIds(prev => {
+            const next = new Set(prev);
+            let changed = false;
+            for (const locId of newChecked) {
+                if (locId >= o.LOCATION_OFFSET && locId <= o.LOCATION_OFFSET + 200_000) {
+                    const pokemonId = locId - o.LOCATION_OFFSET;
+                    if (!next.has(pokemonId)) {
+                        next.add(pokemonId);
+                        changed = true;
+                    }
+                }
+            }
+            return changed ? next : prev;
+        });
+    }, []);
+
     // ── Public connect / disconnect ───────────────────────────────────────────────
     const connect = useCallback(async (info: ConnectionInfo, profileId?: string) => {
         if (profileId) setCurrentProfileId(profileId);
         storageReadyRef.current = false;
         await apConnection.connect(info, profileId, {
-            onConnected, onDisconnected, onItemsReceived, onPrintJSON, onLocationInfo,
+            onConnected, onDisconnected, onItemsReceived, onPrintJSON, onLocationInfo, onRoomUpdate,
         });
-    }, [apConnection, onConnected, onDisconnected, onItemsReceived, onPrintJSON, onLocationInfo]);
+    }, [apConnection, onConnected, onDisconnected, onItemsReceived, onPrintJSON, onLocationInfo, onRoomUpdate]);
 
     const disconnect = useCallback(() => {
         apConnection.disconnect();
