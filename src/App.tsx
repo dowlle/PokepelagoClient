@@ -3,7 +3,7 @@ import { GameProvider, useGame } from './context/GameContext';
 import { DexGrid } from './components/DexGrid';
 import { GlobalGuessInput } from './components/GlobalGuessInput';
 import { SettingsPanel } from './components/SettingsPanel';
-import { Settings, Wifi, WifiOff, PanelRightClose, PanelRightOpen, MessageSquare } from 'lucide-react';
+import { Settings, Wifi, WifiOff, PanelRightClose, PanelRightOpen, MessageSquare, Tv } from 'lucide-react';
 import { ArchipelagoLog } from './components/ArchipelagoLog';
 import { PokemonDetails } from './components/PokemonDetails';
 import { TypeStatus } from './components/TypeStatus';
@@ -11,7 +11,12 @@ import { GateTracker } from './components/GateTracker';
 import { SplashScreen } from './components/SplashScreen';
 import { StartGameOverlay } from './components/StartGameOverlay';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { TwitchLeaderboard } from './components/TwitchLeaderboard';
+import { OverlayView } from './components/OverlayView';
+import { TwitchProvider } from './context/TwitchContext';
 import { getCleanName } from './utils/pokemon';
+
+const isOverlayMode = new URLSearchParams(window.location.search).has('overlay');
 
 const POKEMON_TYPES = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
 
@@ -33,8 +38,18 @@ const GameContent: React.FC = () => {
     setAdventureOverlayDismissed(false);
   }, [connectionKey]);
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
-  const [sidebarTab, setSidebarTab] = React.useState<'log' | 'settings'>(() => {
-    const defaultTab = localStorage.getItem('pokepelago_defaultTab') as 'log' | 'settings';
+  const [twitchIntegration, setTwitchIntegration] = React.useState(() => localStorage.getItem('pokepelago_twitch_integration') === 'true');
+  React.useEffect(() => {
+    const handler = () => {
+      const enabled = localStorage.getItem('pokepelago_twitch_integration') === 'true';
+      setTwitchIntegration(enabled);
+      if (!enabled) setSidebarTab(prev => prev === 'twitch' ? 'log' : prev);
+    };
+    window.addEventListener('pokepelago_twitch_integration_changed', handler);
+    return () => window.removeEventListener('pokepelago_twitch_integration_changed', handler);
+  }, []);
+  const [sidebarTab, setSidebarTab] = React.useState<'log' | 'settings' | 'twitch'>(() => {
+    const defaultTab = localStorage.getItem('pokepelago_defaultTab') as 'log' | 'settings' | 'twitch';
     if (defaultTab) {
       localStorage.removeItem('pokepelago_defaultTab');
       return defaultTab;
@@ -232,6 +247,15 @@ const GameContent: React.FC = () => {
               <Settings size={14} />
               Settings
             </button>
+            {twitchIntegration && (
+            <button
+              onClick={() => setSidebarTab('twitch')}
+              className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 ${sidebarTab === 'twitch' ? 'text-purple-400 bg-purple-900/20 border-b-2 border-purple-500' : 'text-gray-500 hover:text-gray-300'}`}
+            >
+              <Tv size={14} />
+              Twitch
+            </button>
+            )}
           </div>
 
           <div className="p-4 border-b border-gray-800 shrink-0 flex flex-col gap-3">
@@ -240,7 +264,8 @@ const GameContent: React.FC = () => {
           </div>
 
           <div className="flex-1 overflow-hidden">
-            {sidebarTab === 'log' ? <ArchipelagoLog /> : (
+            {sidebarTab === 'log' ? <ArchipelagoLog /> :
+              sidebarTab === 'twitch' && twitchIntegration ? <TwitchLeaderboard /> : (
               <SettingsPanel isOpen={true} onClose={() => setIsSidebarOpen(false)} isEmbedded />
             )}
           </div>
@@ -306,7 +331,9 @@ const App: React.FC = () => {
   return (
     <ErrorBoundary>
       <GameProvider>
-        <GameContent />
+        <TwitchProvider>
+          {isOverlayMode ? <OverlayView /> : <GameContent />}
+        </TwitchProvider>
       </GameProvider>
     </ErrorBoundary>
   );

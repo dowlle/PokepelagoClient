@@ -216,6 +216,7 @@ interface GameContextType extends GameState {
     paradoxLocksEnabled: boolean;
     stoneLocksEnabled: boolean;
     startingStarter: string | null;
+    connectedTeamSlot: { team: number; slot: number } | null;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -486,13 +487,21 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (hasUrlConnection) {
                 setGameModeState('archipelago');
                 try { await connect(connectionInfoRef.current); } catch (e) { console.error('URL auto-connect failed', e); }
-                // Clean the URL so refreshing doesn't re-trigger
-                window.history.replaceState({}, '', window.location.pathname);
+                // Clean connection params from URL, but preserve other params (e.g. overlay=1)
+                const cleanUrl = new URL(window.location.href);
+                cleanUrl.searchParams.delete('host');
+                cleanUrl.searchParams.delete('port');
+                cleanUrl.searchParams.delete('name');
+                cleanUrl.searchParams.delete('password');
+                const remaining = cleanUrl.search;
+                window.history.replaceState({}, '', window.location.pathname + remaining);
             } else {
                 const wasConnected = localStorage.getItem('pokepelago_connected') === 'true';
                 const savedConnection = localStorage.getItem('pokepelago_connection');
                 const savedMode = localStorage.getItem('pokepelago_gamemode');
                 if (savedMode === 'archipelago' && wasConnected && savedConnection) {
+                    // Ensure gameMode is set (important for overlay tabs where it may not be persisted)
+                    setGameModeState('archipelago');
                     // Await auto-connect so the loading spinner stays up until it resolves.
                     // This prevents a race where the user opens the Connection Manager and
                     // clicks "Connect" while isConnectingRef is still true (which would
@@ -1217,6 +1226,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             gymBadges, hasLinkCable, daycareCount, hasFossilRestorer, hasUltraWormhole, hasTimeRift,
             unlockedStones, legendaryLocksEnabled, tradeLocksEnabled, babyLocksEnabled, daycareRequired,
             fossilLocksEnabled, ultraBeastLocksEnabled, paradoxLocksEnabled, stoneLocksEnabled, startingStarter,
+            connectedTeamSlot,
         }}>
             {children}
             {dexsanityLocalWarning && (

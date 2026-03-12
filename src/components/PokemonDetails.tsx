@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useGame } from '../context/GameContext';
-import { X, ExternalLink, HelpCircle, MapPin, Sparkles, CheckCircle2, Lock, Palette } from 'lucide-react';
+import { useTwitch } from '../context/TwitchContext';
+import { X, ExternalLink, HelpCircle, MapPin, Sparkles, CheckCircle2, Lock, Palette, User } from 'lucide-react';
 import { getCleanName } from '../utils/pokemon';
 import { getDerpemonCredit } from '../services/derpemonService';
 import pokemonNamesJson from '../data/pokemon_names.json';
@@ -38,6 +39,7 @@ export const PokemonDetails: React.FC = () => {
         locationOffset,
         pmdSpriteUrl
     } = useGame();
+    const { getCredit } = useTwitch();
 
     const [details, setDetails] = useState<any>(null);
     const [loading, setLoading] = useState(false);
@@ -473,6 +475,19 @@ export const PokemonDetails: React.FC = () => {
                             </div>
                         )}
                     </div>
+
+                    {/* Guess Credit */}
+                    {isChecked && selectedPokemonId && getCredit(selectedPokemonId) && (
+                        <div className="flex items-center justify-center gap-1.5 text-[10px] text-purple-400/70 animate-in fade-in duration-500">
+                            <User size={10} />
+                            <span>
+                                Guessed by{' '}
+                                <span className="font-bold text-purple-400">
+                                    {getCredit(selectedPokemonId) === 'You' ? 'You' : `@${getCredit(selectedPokemonId)}`}
+                                </span>
+                            </span>
+                        </div>
+                    )}
 
                     {/* Derpemon Creator Credit */}
                     {derpemonCreator && (isUnlocked || isChecked) && (

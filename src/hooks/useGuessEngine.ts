@@ -46,6 +46,7 @@ export type GuessResult = {
     type: 'success' | 'error' | 'already' | 'recaught';
     message: string;
     pokemonName?: string;
+    pokemonId?: number;
 };
 
 export function useGuessEngine(selectedLanguage: LanguageCode) {
@@ -103,11 +104,11 @@ export function useGuessEngine(selectedLanguage: LanguageCode) {
 
         if (releasedIds.has(match.id)) {
             recatchPokemon(match.id);
-            return { type: 'recaught', message: `Re-caught ${displayName(match)}!`, pokemonName: displayName(match) };
+            return { type: 'recaught', message: `Re-caught ${displayName(match)}!`, pokemonName: displayName(match), pokemonId: match.id };
         }
 
         if (checkedIds.has(match.id)) {
-            return { type: 'already', message: `Already guessed ${displayName(match)}`, pokemonName: displayName(match) };
+            return { type: 'already', message: `Already guessed ${displayName(match)}`, pokemonName: displayName(match), pokemonId: match.id };
         }
 
         const guessCheck = isPokemonGuessable(match.id);
@@ -118,7 +119,7 @@ export function useGuessEngine(selectedLanguage: LanguageCode) {
 
         if (startingLocationsEnabled && !gameStarted && gameMode === 'archipelago') startGame();
         checkPokemon(match.id);
-        return { type: 'success', message: `✓ ${displayName(match)}!`, pokemonName: displayName(match) };
+        return { type: 'success', message: `✓ ${displayName(match)}!`, pokemonName: displayName(match), pokemonId: match.id };
     }, [allPokemon, matchesPokemon, displayName, checkedIds, releasedIds, isPokemonGuessable, checkPokemon, recatchPokemon, gameMode, startingLocationsEnabled, gameStarted, startGame]);
 
     return { matchesPokemon, displayName, attemptGuess };

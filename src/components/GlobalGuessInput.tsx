@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useGame } from '../context/GameContext';
+import { useTwitch } from '../context/TwitchContext';
 import { getCleanName } from '../utils/pokemon';
 import { CreditsModal } from './CreditsModal';
 import { useGuessEngine, POKEMON_LANGUAGES, pokemonNames, type LanguageCode } from '../hooks/useGuessEngine';
@@ -7,6 +8,7 @@ import { useTwitchChat } from '../hooks/useTwitchChat';
 
 export const GlobalGuessInput: React.FC = () => {
     const { allPokemon, checkedIds, isPokemonGuessable, activePokemonLimit, releasedIds, toast, showToast, STARTER_OFFSET, MILESTONE_OFFSET, goalCount, gameMode } = useGame();
+    const { addGuess } = useTwitch();
     const [guess, setGuess] = useState('');
     const inputRef = useRef<HTMLInputElement>(null);
     const [isCreditsOpen, setIsCreditsOpen] = useState(false);
@@ -20,21 +22,25 @@ export const GlobalGuessInput: React.FC = () => {
     const { matchesPokemon, displayName, attemptGuess } = useGuessEngine(selectedLanguage);
 
     // Twitch chat guessing (settings from localStorage, managed in SettingsPanel)
+    const [twitchIntegration, setTwitchIntegration] = useState(() => localStorage.getItem('pokepelago_twitch_integration') === 'true');
     const [twitchEnabled, setTwitchEnabled] = useState(() => localStorage.getItem('pokepelago_twitch_enabled') === 'true');
     const [twitchChannel, setTwitchChannel] = useState(() => localStorage.getItem('pokepelago_twitch_channel') ?? '');
     useEffect(() => {
         const handler = () => {
+            setTwitchIntegration(localStorage.getItem('pokepelago_twitch_integration') === 'true');
             setTwitchEnabled(localStorage.getItem('pokepelago_twitch_enabled') === 'true');
             setTwitchChannel(localStorage.getItem('pokepelago_twitch_channel') ?? '');
         };
         window.addEventListener('storage', handler);
         window.addEventListener('pokepelago_twitch_changed', handler);
+        window.addEventListener('pokepelago_twitch_integration_changed', handler);
         return () => {
             window.removeEventListener('storage', handler);
             window.removeEventListener('pokepelago_twitch_changed', handler);
+            window.removeEventListener('pokepelago_twitch_integration_changed', handler);
         };
     }, []);
-    useTwitchChat({ enabled: twitchEnabled, channelName: twitchChannel, selectedLanguage });
+    useTwitchChat({ enabled: twitchIntegration && twitchEnabled, channelName: twitchChannel, selectedLanguage });
 
     // Close language menu when clicking outside
     useEffect(() => {
@@ -121,13 +127,19 @@ export const GlobalGuessInput: React.FC = () => {
 
         if (match) {
             const result = attemptGuess(match.name);
+            if ((result.type === 'success' || result.type === 'recaught') && result.pokemonId != null && result.pokemonName) {
+                addGuess(result.pokemonId, result.pokemonName, null, result.type);
+            }
             showToast(result.type, result.message);
             setGuess('');
         }
-    }, [guess, allPokemon, checkedIds, isPokemonGuessable, releasedIds, matchesPokemon, attemptGuess, showToast]);
+    }, [guess, allPokemon, checkedIds, isPokemonGuessable, releasedIds, matchesPokemon, attemptGuess, showToast, addGuess]);
 
     const handleManualGuess = (name: string) => {
         const result = attemptGuess(name);
+        if ((result.type === 'success' || result.type === 'recaught') && result.pokemonId != null && result.pokemonName) {
+            addGuess(result.pokemonId, result.pokemonName, null, result.type);
+        }
         showToast(result.type, result.message);
         if (result.type !== 'error') setGuess('');
     };

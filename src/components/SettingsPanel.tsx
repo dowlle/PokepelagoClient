@@ -1,11 +1,170 @@
 import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
 import { GENERATIONS } from '../types/pokemon';
-import { X, Server, Wifi, LayoutGrid, Maximize, Image, Trash2, Upload, Link2, ChevronDown, Filter, Monitor, BookOpen, Tv } from 'lucide-react';
+import { X, Server, Wifi, LayoutGrid, Maximize, Image, Trash2, Upload, Link2, ChevronDown, Filter, Monitor, BookOpen, Tv, LogIn, LogOut, Copy } from 'lucide-react';
 import { importFromFiles, clearAllSprites } from '../services/spriteService';
 import { ConnectionManager } from './ConnectionManager';
+import { getTwitchAuthUrl, getTwitchToken, getTwitchUsername, clearTwitchAuth, hasTwitchClientId } from '../services/twitchAuthService';
 import { getProfiles, saveProfile } from '../services/connectionManagerService';
 import type { GameProfile } from '../services/connectionManagerService';
+
+const OBS_MODULES = [
+    { key: 'progress', label: 'Progress Bar' },
+    { key: 'types', label: 'Type Tracker' },
+    { key: 'items', label: 'Item Tracker' },
+    { key: 'feed', label: 'Live Feed' },
+    { key: 'guessers', label: 'Leaderboard' },
+    { key: 'dex', label: 'Dex Grid' },
+] as const;
+
+const DEX_FILTERS = [
+    { key: 'all', label: 'All' },
+    { key: 'guessable', label: 'Guessable' },
+    { key: 'guessed', label: 'Guessed' },
+] as const;
+
+const ObsOverlayBuilder: React.FC<{
+    connectionInfo: { hostname: string; port: number; slotName: string; password?: string };
+    spriteRepoUrl: string;
+    pmdSpriteUrl: string;
+}> = ({ connectionInfo, spriteRepoUrl, pmdSpriteUrl }) => {
+    const [modules, setModules] = useState<Set<string>>(() => new Set(OBS_MODULES.map(m => m.key)));
+    const [dexFilter, setDexFilter] = useState<string>('all');
+    const [carousel, setCarousel] = useState(false);
+    const [carouselSpeed, setCarouselSpeed] = useState(10);
+    const [copied, setCopied] = useState(false);
+
+    const toggleModule = (key: string) => {
+        setModules(prev => {
+            const next = new Set(prev);
+            if (next.has(key)) next.delete(key);
+            else next.add(key);
+            return next;
+        });
+    };
+
+    const buildUrl = () => {
+        const url = new URL(window.location.origin + window.location.pathname);
+        url.searchParams.set('overlay', '1');
+        url.searchParams.set('host', connectionInfo.hostname);
+        url.searchParams.set('port', String(connectionInfo.port));
+        url.searchParams.set('name', connectionInfo.slotName);
+        if (connectionInfo.password) url.searchParams.set('password', connectionInfo.password);
+        if (spriteRepoUrl) url.searchParams.set('sprites', spriteRepoUrl);
+        if (pmdSpriteUrl) url.searchParams.set('pmd', pmdSpriteUrl);
+        const enabledModules = OBS_MODULES.map(m => m.key).filter(k => modules.has(k));
+        if (enabledModules.length > 0 && enabledModules.length < OBS_MODULES.length) {
+            url.searchParams.set('modules', enabledModules.join(','));
+        }
+        if (modules.has('dex') && dexFilter !== 'all') {
+            url.searchParams.set('dexfilter', dexFilter);
+        }
+        if (carousel) {
+            url.searchParams.set('carousel', String(carouselSpeed));
+        }
+        return url.toString();
+    };
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(buildUrl());
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    return (
+        <div className="space-y-3 pt-2 border-t border-gray-800">
+            <div className="text-[10px] text-gray-400 uppercase tracking-tight font-bold">OBS Overlay</div>
+
+            {/* Module toggles */}
+            <div className="grid grid-cols-2 gap-1">
+                {OBS_MODULES.map(({ key, label }) => (
+                    <label
+                        key={key}
+                        className={`flex items-center gap-1.5 px-2 py-1.5 rounded border text-[10px] font-bold cursor-pointer transition-all ${
+                            modules.has(key)
+                                ? 'bg-purple-900/30 border-purple-700/50 text-purple-300'
+                                : 'bg-gray-800/30 border-gray-700/30 text-gray-600'
+                        }`}
+                    >
+                        <input
+                            type="checkbox"
+                            checked={modules.has(key)}
+                            onChange={() => toggleModule(key)}
+                            className="w-3 h-3 rounded border-gray-700 bg-gray-900 text-purple-600 focus:ring-purple-500"
+                        />
+                        {label}
+                    </label>
+                ))}
+            </div>
+
+            {/* Dex filter */}
+            {modules.has('dex') && (
+                <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-gray-500 font-bold">Dex View:</span>
+                    <div className="flex gap-1 flex-1">
+                        {DEX_FILTERS.map(({ key, label }) => (
+                            <button
+                                key={key}
+                                onClick={() => setDexFilter(key)}
+                                className={`flex-1 py-1 text-[9px] font-bold rounded transition-all ${
+                                    dexFilter === key
+                                        ? 'bg-green-900/40 text-green-400 border border-green-700/50'
+                                        : 'bg-gray-800/30 text-gray-600 border border-gray-700/30'
+                                }`}
+                            >
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Carousel toggle */}
+            <div className="flex items-center gap-2">
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                        type="checkbox"
+                        checked={carousel}
+                        onChange={(e) => setCarousel(e.target.checked)}
+                        className="w-3 h-3 rounded border-gray-700 bg-gray-900 text-purple-600 focus:ring-purple-500"
+                    />
+                    <span className="text-[10px] text-gray-400 font-bold">Carousel</span>
+                </label>
+                {carousel && (
+                    <div className="flex items-center gap-1.5 ml-auto">
+                        <input
+                            type="range"
+                            min={3}
+                            max={30}
+                            value={carouselSpeed}
+                            onChange={(e) => setCarouselSpeed(Number(e.target.value))}
+                            className="w-16 h-1 accent-purple-500"
+                        />
+                        <span className="text-[9px] text-gray-500 font-mono w-6 text-right">{carouselSpeed}s</span>
+                    </div>
+                )}
+            </div>
+
+            {/* URL preview */}
+            <div className="bg-gray-950/60 rounded border border-gray-800/50 p-2 break-all text-[8px] text-gray-500 font-mono max-h-16 overflow-y-auto select-all">
+                {buildUrl()}
+            </div>
+
+            {/* Copy button */}
+            <button
+                onClick={handleCopy}
+                className={`w-full flex items-center justify-center gap-2 py-2.5 border rounded-lg text-xs font-bold transition-all ${
+                    copied
+                        ? 'bg-green-900/30 border-green-700/50 text-green-400'
+                        : 'bg-gray-800/50 hover:bg-gray-800 text-gray-300 border-gray-700/50 hover:border-gray-600'
+                }`}
+            >
+                <Copy size={14} />
+                {copied ? 'Copied!' : 'Copy OBS Overlay URL'}
+            </button>
+        </div>
+    );
+};
 
 interface SettingsPanelProps {
     isOpen: boolean;
@@ -47,6 +206,16 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
     // Twitch settings (persisted in localStorage, read by useTwitchChat in GlobalGuessInput)
     const [twitchEnabled, setTwitchEnabled] = useState(() => localStorage.getItem('pokepelago_twitch_enabled') === 'true');
     const [twitchChannel, setTwitchChannel] = useState(() => localStorage.getItem('pokepelago_twitch_channel') ?? '');
+    const [twitchAuthUser, setTwitchAuthUser] = useState(() => getTwitchUsername());
+    const [chatFeedback, setChatFeedback] = useState(() => localStorage.getItem('pokepelago_twitch_chat_feedback') !== 'false');
+    const [twitchIntegration, setTwitchIntegration] = useState(() => localStorage.getItem('pokepelago_twitch_integration') === 'true');
+
+    // Listen for auth changes
+    React.useEffect(() => {
+        const handler = () => setTwitchAuthUser(getTwitchUsername());
+        window.addEventListener('pokepelago_twitch_auth_changed', handler);
+        return () => window.removeEventListener('pokepelago_twitch_auth_changed', handler);
+    }, []);
 
     const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
         try {
@@ -535,6 +704,25 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                                 </div>
                                 <input type="checkbox" checked={uiSettings.persistentDot} onChange={(e) => updateUiSettings({ persistentDot: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-orange-600 focus:ring-orange-500" />
                             </label>
+                            <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
+                                <div className="flex items-center gap-2">
+                                    <Tv size={16} className="text-purple-400 group-hover:scale-110 transition-transform" />
+                                    <div>
+                                        <div className="text-xs font-bold text-gray-200">Enable Twitch Integration</div>
+                                        <div className="text-[9px] text-gray-500">Show Twitch chat guessing and leaderboard features</div>
+                                    </div>
+                                </div>
+                                <input
+                                    type="checkbox"
+                                    checked={twitchIntegration}
+                                    onChange={(e) => {
+                                        setTwitchIntegration(e.target.checked);
+                                        localStorage.setItem('pokepelago_twitch_integration', String(e.target.checked));
+                                        window.dispatchEvent(new Event('pokepelago_twitch_integration_changed'));
+                                    }}
+                                    className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-purple-600 focus:ring-purple-500"
+                                />
+                            </label>
                         </div>
                         <div className="pt-2 border-t border-gray-800/50">
                             <button
@@ -553,6 +741,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
             </section>
 
             {/* Twitch Integration */}
+            {twitchIntegration && (
             <section className="border border-gray-800 rounded-xl overflow-hidden">
                 <AccordionHeader
                     sectionKey="twitch"
@@ -606,11 +795,71 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                                     <p>Viewers can guess with: <code className="text-purple-300 bg-purple-900/20 px-1 rounded">!guess &lt;pokemon name&gt;</code></p>
                                     <p>Rate limited to 1 guess per viewer every 5 seconds. Wrong guesses are silently ignored.</p>
                                 </div>
+
+                                {/* OAuth / Chat Feedback */}
+                                {hasTwitchClientId() && (
+                                    <div className="space-y-3 pt-2 border-t border-gray-800">
+                                        <div className="text-[10px] text-gray-400 uppercase tracking-tight font-bold">Chat Feedback (Optional)</div>
+                                        {twitchAuthUser ? (
+                                            <div className="flex items-center justify-between p-3 bg-purple-900/10 border border-purple-700/30 rounded-lg">
+                                                <div className="flex items-center gap-2">
+                                                    <LogIn size={14} className="text-purple-400" />
+                                                    <div>
+                                                        <div className="text-xs font-bold text-purple-300">@{twitchAuthUser}</div>
+                                                        <div className="text-[9px] text-gray-500">Authenticated — bot can post to chat</div>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => { clearTwitchAuth(); setTwitchAuthUser(null); }}
+                                                    className="p-1.5 rounded hover:bg-gray-800 text-gray-500 hover:text-red-400 transition-colors"
+                                                    title="Disconnect Twitch account"
+                                                >
+                                                    <LogOut size={14} />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                onClick={() => { window.location.href = getTwitchAuthUrl(); }}
+                                                className="w-full flex items-center justify-center gap-2 py-2.5 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 hover:border-purple-500/50 rounded-lg text-xs font-bold transition-all"
+                                            >
+                                                <LogIn size={14} />
+                                                Connect Twitch Account
+                                            </button>
+                                        )}
+                                        <p className="text-[9px] text-gray-600">Login lets the bot post correct guess confirmations back to your chat.</p>
+
+                                        {twitchAuthUser && (
+                                            <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer">
+                                                <div>
+                                                    <div className="text-xs font-bold text-gray-200">Post correct guesses to chat</div>
+                                                    <div className="text-[9px] text-gray-500">Bot confirms correct guesses in your Twitch chat</div>
+                                                </div>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={chatFeedback}
+                                                    onChange={(e) => {
+                                                        setChatFeedback(e.target.checked);
+                                                        localStorage.setItem('pokepelago_twitch_chat_feedback', String(e.target.checked));
+                                                    }}
+                                                    className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-purple-600 focus:ring-purple-500"
+                                                />
+                                            </label>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* OBS Overlay URL Builder */}
+                                {isConnected && <ObsOverlayBuilder
+                                    connectionInfo={connectionInfo}
+                                    spriteRepoUrl={spriteRepoUrl}
+                                    pmdSpriteUrl={pmdSpriteUrl}
+                                />}
                             </div>
                         )}
                     </div>
                 )}
             </section>
+            )}
 
             {/* Support */}
             <div className="flex items-center justify-center py-4">
