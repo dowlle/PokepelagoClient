@@ -451,7 +451,7 @@ export const PokemonDetails: React.FC = () => {
                                         <div className="w-10 h-10 flex items-center justify-center mb-1">
                                             <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/ss-ticket.png" style={{ imageRendering: 'pixelated' }} className={`w-8 h-8 object-contain transition-opacity duration-200 ${pokedexSpriteLoaded ? 'opacity-100' : 'opacity-0'}`} alt="SS Ticket" onLoad={() => setPokedexSpriteLoaded(true)} />
                                         </div>
-                                        <span className="text-[10px] font-black uppercase tracking-tighter text-gray-300">Hints</span>
+                                        <span className="text-[10px] font-black uppercase tracking-tighter text-gray-300">Dex</span>
                                         <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-600 rounded-full border-2 border-gray-900 flex items-center justify-center text-[10px] font-black text-white shadow-lg">
                                             {pokedexes}
                                         </div>
