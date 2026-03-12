@@ -16,5 +16,6 @@ export default defineConfig({
   ],
   define: {
     __IS_BETA__: process.env.DEPLOY_TARGET === 'beta',
+    __TWITCH_ENABLED__: process.env.VITE_TWITCH_CHAT === 'true',
   },
 })

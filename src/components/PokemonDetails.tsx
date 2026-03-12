@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useGame } from '../context/GameContext';
-import { X, ExternalLink, HelpCircle, MapPin, Sparkles, CheckCircle2, Lock, Palette } from 'lucide-react';
+import { useTwitch } from '../context/TwitchContext';
+import { X, ExternalLink, HelpCircle, MapPin, Sparkles, CheckCircle2, Lock, Palette, User } from 'lucide-react';
 import { getCleanName } from '../utils/pokemon';
 import { getDerpemonCredit } from '../services/derpemonService';
 import pokemonNamesJson from '../data/pokemon_names.json';
@@ -38,6 +39,7 @@ export const PokemonDetails: React.FC = () => {
         locationOffset,
         pmdSpriteUrl
     } = useGame();
+    const { getCredit } = useTwitch();
 
     const [details, setDetails] = useState<any>(null);
     const [loading, setLoading] = useState(false);
@@ -449,7 +451,7 @@ export const PokemonDetails: React.FC = () => {
                                         <div className="w-10 h-10 flex items-center justify-center mb-1">
                                             <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/ss-ticket.png" style={{ imageRendering: 'pixelated' }} className={`w-8 h-8 object-contain transition-opacity duration-200 ${pokedexSpriteLoaded ? 'opacity-100' : 'opacity-0'}`} alt="SS Ticket" onLoad={() => setPokedexSpriteLoaded(true)} />
                                         </div>
-                                        <span className="text-[10px] font-black uppercase tracking-tighter text-gray-300">Hints</span>
+                                        <span className="text-[10px] font-black uppercase tracking-tighter text-gray-300">Dex</span>
                                         <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-600 rounded-full border-2 border-gray-900 flex items-center justify-center text-[10px] font-black text-white shadow-lg">
                                             {pokedexes}
                                         </div>
@@ -473,6 +475,19 @@ export const PokemonDetails: React.FC = () => {
                             </div>
                         )}
                     </div>
+
+                    {/* Guess Credit */}
+                    {isChecked && selectedPokemonId && getCredit(selectedPokemonId) && (
+                        <div className="flex items-center justify-center gap-1.5 text-[10px] text-purple-400/70 animate-in fade-in duration-500">
+                            <User size={10} />
+                            <span>
+                                Guessed by{' '}
+                                <span className="font-bold text-purple-400">
+                                    {getCredit(selectedPokemonId) === 'You' ? 'You' : `@${getCredit(selectedPokemonId)}`}
+                                </span>
+                            </span>
+                        </div>
+                    )}
 
                     {/* Derpemon Creator Credit */}
                     {derpemonCreator && (isUnlocked || isChecked) && (

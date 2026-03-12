@@ -12,12 +12,14 @@ export function useSpriteManager(params: {
     const { uiSettings, derpyfiedIds, derpemonIndex } = params;
 
     const [spriteCount, setSpriteCount] = useState(0);
-    const [spriteRepoUrl, setSpriteRepoUrlState] = useState<string>(
-        () => localStorage.getItem('pokepelago_spriteRepoUrl') || ''
-    );
-    const [pmdSpriteUrl, setPmdSpriteUrlState] = useState<string>(
-        () => localStorage.getItem('pokepelago_pmdSpriteUrl') || ''
-    );
+    const [spriteRepoUrl, setSpriteRepoUrlState] = useState<string>(() => {
+        const qp = new URLSearchParams(window.location.search);
+        return qp.get('sprites') || localStorage.getItem('pokepelago_spriteRepoUrl') || '';
+    });
+    const [pmdSpriteUrl, setPmdSpriteUrlState] = useState<string>(() => {
+        const qp = new URLSearchParams(window.location.search);
+        return qp.get('pmd') || localStorage.getItem('pokepelago_pmdSpriteUrl') || '';
+    });
     const [spriteRefreshCounter, setSpriteRefreshCounter] = useState<number>(0);
 
     // Refs kept in sync every render so getSpriteUrl always reads the latest value

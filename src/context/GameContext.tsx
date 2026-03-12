@@ -216,6 +216,7 @@ interface GameContextType extends GameState {
     paradoxLocksEnabled: boolean;
     stoneLocksEnabled: boolean;
     startingStarter: string | null;
+    connectedTeamSlot: { team: number; slot: number } | null;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -486,13 +487,24 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (hasUrlConnection) {
                 setGameModeState('archipelago');
                 try { await connect(connectionInfoRef.current); } catch (e) { console.error('URL auto-connect failed', e); }
-                // Clean the URL so refreshing doesn't re-trigger
-                window.history.replaceState({}, '', window.location.pathname);
+                // Clean connection params from URL, but preserve other params (e.g. overlay=1)
+                // Skip for overlay mode — keeping params lets refresh reconnect automatically
+                if (!qp.has('overlay')) {
+                    const cleanUrl = new URL(window.location.href);
+                    cleanUrl.searchParams.delete('host');
+                    cleanUrl.searchParams.delete('port');
+                    cleanUrl.searchParams.delete('name');
+                    cleanUrl.searchParams.delete('password');
+                    const remaining = cleanUrl.search;
+                    window.history.replaceState({}, '', window.location.pathname + remaining);
+                }
             } else {
                 const wasConnected = localStorage.getItem('pokepelago_connected') === 'true';
                 const savedConnection = localStorage.getItem('pokepelago_connection');
                 const savedMode = localStorage.getItem('pokepelago_gamemode');
                 if (savedMode === 'archipelago' && wasConnected && savedConnection) {
+                    // Ensure gameMode is set (important for overlay tabs where it may not be persisted)
+                    setGameModeState('archipelago');
                     // Await auto-connect so the loading spinner stays up until it resolves.
                     // This prevents a race where the user opens the Connection Manager and
                     // clicks "Connect" while isConnectingRef is still true (which would
@@ -1159,15 +1171,47 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const connect = useCallback(async (info: ConnectionInfo, profileId?: string) => {
         if (profileId) setCurrentProfileId(profileId);
         storageReadyRef.current = false;
+        const isOverlay = urlParams.has('overlay');
         await apConnection.connect(info, profileId, {
             onConnected, onDisconnected, onItemsReceived, onPrintJSON, onLocationInfo, onRoomUpdate,
-        });
-    }, [apConnection, onConnected, onDisconnected, onItemsReceived, onPrintJSON, onLocationInfo, onRoomUpdate]);
+        }, isOverlay ? ['Tracker'] : undefined);
+    }, [apConnection, onConnected, onDisconnected, onItemsReceived, onPrintJSON, onLocationInfo, onRoomUpdate, urlParams]);
 
     const disconnect = useCallback(() => {
         apConnection.disconnect();
         onDisconnected();
     }, [apConnection, onDisconnected]);
+
+    // ── Overlay auto-reconnect ────────────────────────────────────────────────────
+    // When the overlay loses connection, retry with exponential backoff (3s → 6s → 12s, max 30s)
+    const overlayReconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const overlayBackoffRef = useRef(3000);
+    useEffect(() => {
+        const isOverlay = urlParams.has('overlay');
+        if (!isOverlay || gameMode !== 'archipelago') return;
+
+        if (isConnected) {
+            // Connected — reset backoff
+            overlayBackoffRef.current = 3000;
+            if (overlayReconnectRef.current) { clearTimeout(overlayReconnectRef.current); overlayReconnectRef.current = null; }
+            return;
+        }
+
+        // Disconnected in overlay mode — schedule reconnect
+        if (isConnectingRef.current) return; // already connecting
+        overlayReconnectRef.current = setTimeout(async () => {
+            overlayReconnectRef.current = null;
+            if (isConnectingRef.current) return;
+            try {
+                await connect(connectionInfoRef.current);
+            } catch {
+                // Will trigger re-render with isConnected still false → effect retries with higher backoff
+            }
+            overlayBackoffRef.current = Math.min(overlayBackoffRef.current * 2, 30000);
+        }, overlayBackoffRef.current);
+
+        return () => { if (overlayReconnectRef.current) { clearTimeout(overlayReconnectRef.current); overlayReconnectRef.current = null; } };
+    }, [isConnected, gameMode, connect, urlParams, isConnectingRef]);
 
     // ── Derived ──────────────────────────────────────────────────────────────────
     const { STARTER_OFFSET, STARTER_COUNT } = offsetsRef.current;
@@ -1217,6 +1261,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             gymBadges, hasLinkCable, daycareCount, hasFossilRestorer, hasUltraWormhole, hasTimeRift,
             unlockedStones, legendaryLocksEnabled, tradeLocksEnabled, babyLocksEnabled, daycareRequired,
             fossilLocksEnabled, ultraBeastLocksEnabled, paradoxLocksEnabled, stoneLocksEnabled, startingStarter,
+            connectedTeamSlot,
         }}>
             {children}
             {dexsanityLocalWarning && (

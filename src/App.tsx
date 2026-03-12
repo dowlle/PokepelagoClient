@@ -3,7 +3,7 @@ import { GameProvider, useGame } from './context/GameContext';
 import { DexGrid } from './components/DexGrid';
 import { GlobalGuessInput } from './components/GlobalGuessInput';
 import { SettingsPanel } from './components/SettingsPanel';
-import { Settings, Wifi, WifiOff, PanelRightClose, PanelRightOpen, MessageSquare } from 'lucide-react';
+import { Settings, Wifi, WifiOff, PanelRightClose, PanelRightOpen, PanelLeftClose, PanelLeftOpen, MessageSquare, Tv, LayoutGrid } from 'lucide-react';
 import { ArchipelagoLog } from './components/ArchipelagoLog';
 import { PokemonDetails } from './components/PokemonDetails';
 import { TypeStatus } from './components/TypeStatus';
@@ -11,7 +11,12 @@ import { GateTracker } from './components/GateTracker';
 import { SplashScreen } from './components/SplashScreen';
 import { StartGameOverlay } from './components/StartGameOverlay';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { TwitchLeaderboard } from './components/TwitchLeaderboard';
+import { OverlayView } from './components/OverlayView';
+import { TwitchProvider } from './context/TwitchContext';
 import { getCleanName } from './utils/pokemon';
+
+const isOverlayMode = new URLSearchParams(window.location.search).has('overlay');
 
 const POKEMON_TYPES = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
 
@@ -33,13 +38,24 @@ const GameContent: React.FC = () => {
     setAdventureOverlayDismissed(false);
   }, [connectionKey]);
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
-  const [sidebarTab, setSidebarTab] = React.useState<'log' | 'settings'>(() => {
-    const defaultTab = localStorage.getItem('pokepelago_defaultTab') as 'log' | 'settings';
-    if (defaultTab) {
+  const [isLogOpen, setIsLogOpen] = React.useState(false);
+  const [twitchIntegration, setTwitchIntegration] = React.useState(() => localStorage.getItem('pokepelago_twitch_integration') === 'true');
+  React.useEffect(() => {
+    const handler = () => {
+      const enabled = localStorage.getItem('pokepelago_twitch_integration') === 'true';
+      setTwitchIntegration(enabled);
+      if (!enabled) setSidebarTab(prev => prev === 'twitch' ? 'tracker' : prev);
+    };
+    window.addEventListener('pokepelago_twitch_integration_changed', handler);
+    return () => window.removeEventListener('pokepelago_twitch_integration_changed', handler);
+  }, []);
+  const [sidebarTab, setSidebarTab] = React.useState<'tracker' | 'settings' | 'twitch'>(() => {
+    const defaultTab = localStorage.getItem('pokepelago_defaultTab') as 'tracker' | 'settings' | 'twitch';
+    if (defaultTab && (defaultTab === 'tracker' || defaultTab === 'settings' || defaultTab === 'twitch')) {
       localStorage.removeItem('pokepelago_defaultTab');
       return defaultTab;
     }
-    return 'log';
+    return 'tracker';
   });
   const [isDebugVisible, setIsDebugVisible] = React.useState(false);
   const [debugType, setDebugType] = React.useState(POKEMON_TYPES[0]);
@@ -167,6 +183,19 @@ const GameContent: React.FC = () => {
       <div className="z-20 bg-gray-900 border-b border-gray-800 shrink-0">
         <div className={`${uiSettings.widescreen ? 'max-w-none px-8' : 'max-w-screen-xl'} mx-auto flex items-center justify-between px-4 py-2`}>
           <div className="flex items-center gap-3">
+            {/* Log sidebar toggle */}
+            <button
+              onClick={() => {
+                const next = !isLogOpen;
+                setIsLogOpen(next);
+                if (next && window.innerWidth < 768) setIsSidebarOpen(false);
+              }}
+              className={`p-1.5 rounded transition-all ${isLogOpen ? 'bg-blue-600 text-white' : 'hover:bg-gray-800 text-gray-400'}`}
+              title={isLogOpen ? "Hide Log" : "Show Log"}
+            >
+              {isLogOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
+            </button>
+
             {/* Connection status */}
             <div className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded ${isConnected ? 'bg-green-900/30 text-green-400' : 'bg-gray-800 text-gray-500'}`}>
               {isConnected ? <Wifi size={12} /> : <WifiOff size={12} />}
@@ -191,7 +220,11 @@ const GameContent: React.FC = () => {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              onClick={() => {
+                const next = !isSidebarOpen;
+                setIsSidebarOpen(next);
+                if (next && window.innerWidth < 768) setIsLogOpen(false);
+              }}
               className={`p-1.5 rounded transition-all ${isSidebarOpen ? 'bg-blue-600 text-white' : 'hover:bg-gray-800 text-gray-400'}`}
               title={isSidebarOpen ? "Hide Sidebar" : "Show Sidebar"}
             >
@@ -202,6 +235,34 @@ const GameContent: React.FC = () => {
       </div>
 
       <div className="flex-1 flex overflow-hidden relative">
+        {/* Left sidebar backdrop (mobile) */}
+        {isLogOpen && (
+          <div
+            className="fixed inset-0 bg-black/40 z-20 md:hidden"
+            onClick={() => setIsLogOpen(false)}
+          />
+        )}
+
+        {/* Left Sidebar - Log */}
+        <aside
+          className={`
+            flex flex-col bg-gray-900/95 backdrop-blur-md transition-[width,transform] duration-300 border-r border-gray-800
+            fixed left-0 top-0 bottom-0 z-30 pt-20
+            md:relative md:top-auto md:bottom-auto md:z-auto md:pt-0
+            ${isLogOpen ? 'w-80' : 'w-0 -translate-x-full md:translate-x-0 overflow-hidden border-none'}
+          `}
+        >
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800 shrink-0">
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
+              <MessageSquare size={14} />
+              Log
+            </span>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <ArchipelagoLog />
+          </div>
+        </aside>
+
         {/* Main Content */}
         <main className={`flex-1 overflow-y-auto [scrollbar-gutter:stable] pb-16 ${uiSettings.widescreen ? 'px-6' : 'px-4'}`}>
           <div className={`${uiSettings.widescreen ? 'max-w-none' : 'max-w-screen-xl'} mx-auto pt-6`}>
@@ -209,21 +270,31 @@ const GameContent: React.FC = () => {
           </div>
         </main>
 
-        {/* Sidebar */}
+        {/* Right sidebar backdrop (mobile) */}
+        {isSidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/40 z-20 md:hidden"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
+
+        {/* Right Sidebar - Tracker / Settings / Twitch */}
         <aside
           className={`
-            border-l border-gray-800 bg-gray-900/40 backdrop-blur-md transition-all duration-300 flex flex-col
-            ${isSidebarOpen ? 'w-80 translate-x-0' : 'w-0 translate-x-full overflow-hidden border-none'}
+            flex flex-col bg-gray-900/95 backdrop-blur-md transition-[width,transform] duration-300 border-l border-gray-800
+            fixed right-0 top-0 bottom-0 z-30 pt-20
+            md:relative md:top-auto md:bottom-auto md:z-auto md:pt-0
+            ${isSidebarOpen ? 'w-80' : 'w-0 translate-x-full md:translate-x-0 overflow-hidden border-none'}
           `}
         >
           {/* Tabs */}
           <div className="flex border-b border-gray-800 shrink-0">
             <button
-              onClick={() => setSidebarTab('log')}
-              className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 ${sidebarTab === 'log' ? 'text-blue-400 bg-blue-900/20 border-b-2 border-blue-500' : 'text-gray-500 hover:text-gray-300'}`}
+              onClick={() => setSidebarTab('tracker')}
+              className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 ${sidebarTab === 'tracker' ? 'text-blue-400 bg-blue-900/20 border-b-2 border-blue-500' : 'text-gray-500 hover:text-gray-300'}`}
             >
-              <MessageSquare size={14} />
-              Log
+              <LayoutGrid size={14} />
+              Tracker
             </button>
             <button
               onClick={() => setSidebarTab('settings')}
@@ -232,15 +303,26 @@ const GameContent: React.FC = () => {
               <Settings size={14} />
               Settings
             </button>
-          </div>
-
-          <div className="p-4 border-b border-gray-800 shrink-0 flex flex-col gap-3">
-            <TypeStatus />
-            <GateTracker />
+            {__TWITCH_ENABLED__ && twitchIntegration && (
+            <button
+              onClick={() => setSidebarTab('twitch')}
+              className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 ${sidebarTab === 'twitch' ? 'text-purple-400 bg-purple-900/20 border-b-2 border-purple-500' : 'text-gray-500 hover:text-gray-300'}`}
+            >
+              <Tv size={14} />
+              Twitch
+            </button>
+            )}
           </div>
 
           <div className="flex-1 overflow-hidden">
-            {sidebarTab === 'log' ? <ArchipelagoLog /> : (
+            {sidebarTab === 'tracker' ? (
+              <div className="p-4 flex flex-col gap-3 overflow-y-auto h-full">
+                <TypeStatus />
+                <GateTracker />
+              </div>
+            ) : sidebarTab === 'twitch' && __TWITCH_ENABLED__ && twitchIntegration ? (
+              <TwitchLeaderboard />
+            ) : (
               <SettingsPanel isOpen={true} onClose={() => setIsSidebarOpen(false)} isEmbedded />
             )}
           </div>
@@ -248,7 +330,7 @@ const GameContent: React.FC = () => {
 
         {/* Debug Controls - dev/beta only */}
         {(import.meta.env.DEV || __IS_BETA__) && isDebugVisible && (
-          <div className="absolute bottom-0 left-0 right-0 z-20 bg-gray-900/95 backdrop-blur-sm border-t border-gray-800 transition-all duration-300" style={{ right: isSidebarOpen ? '320px' : '0' }}>
+          <div className="absolute bottom-0 left-0 right-0 z-20 bg-gray-900/95 backdrop-blur-sm border-t border-gray-800 transition-all duration-300 hidden md:block" style={{ right: isSidebarOpen ? '320px' : '0', left: isLogOpen ? '320px' : '0' }}>
             <div className="max-w-screen-xl mx-auto flex flex-col gap-3 px-4 py-3">
               <div className="flex flex-wrap items-center gap-3">
                 <span className="text-xs text-gray-500 uppercase tracking-wider font-bold shrink-0">Debug Controls</span>
@@ -306,7 +388,9 @@ const App: React.FC = () => {
   return (
     <ErrorBoundary>
       <GameProvider>
-        <GameContent />
+        <TwitchProvider>
+          {isOverlayMode ? <OverlayView /> : <GameContent />}
+        </TwitchProvider>
       </GameProvider>
     </ErrorBoundary>
   );
