@@ -1171,10 +1171,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const connect = useCallback(async (info: ConnectionInfo, profileId?: string) => {
         if (profileId) setCurrentProfileId(profileId);
         storageReadyRef.current = false;
+        const isOverlay = urlParams.has('overlay');
         await apConnection.connect(info, profileId, {
             onConnected, onDisconnected, onItemsReceived, onPrintJSON, onLocationInfo, onRoomUpdate,
-        });
-    }, [apConnection, onConnected, onDisconnected, onItemsReceived, onPrintJSON, onLocationInfo, onRoomUpdate]);
+        }, isOverlay ? ['Tracker'] : undefined);
+    }, [apConnection, onConnected, onDisconnected, onItemsReceived, onPrintJSON, onLocationInfo, onRoomUpdate, urlParams]);
 
     const disconnect = useCallback(() => {
         apConnection.disconnect();

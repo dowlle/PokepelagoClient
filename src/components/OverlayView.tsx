@@ -1,7 +1,7 @@
 import React from 'react';
 import { useGame } from '../context/GameContext';
 import { useTwitch, type GuessFeedEntry } from '../context/TwitchContext';
-import { Trophy, Clock, Target } from 'lucide-react';
+import { Trophy, Clock, Target, MessageSquare } from 'lucide-react';
 import { TypeStatus } from './TypeStatus';
 import { GateTracker } from './GateTracker';
 import { PokemonSlot } from './PokemonSlot';
@@ -9,9 +9,9 @@ import type { PokemonRef } from '../types/pokemon';
 import { GENERATIONS } from '../types/pokemon';
 
 type GridFilter = 'all' | 'guessable' | 'guessed';
-type OverlayModule = 'progress' | 'types' | 'items' | 'feed' | 'guessers' | 'dex';
+type OverlayModule = 'progress' | 'types' | 'items' | 'feed' | 'guessers' | 'dex' | 'log';
 
-const ALL_MODULES: OverlayModule[] = ['progress', 'types', 'items', 'feed', 'guessers', 'dex'];
+const ALL_MODULES: OverlayModule[] = ['progress', 'types', 'items', 'feed', 'guessers', 'dex', 'log'];
 
 const urlParams = new URLSearchParams(window.location.search);
 
@@ -201,6 +201,7 @@ export const OverlayView: React.FC = () => {
         STARTER_OFFSET, MILESTONE_OFFSET,
         isPokemonGuessable, hintedIds, shinyIds, unlockedIds,
         uiSettings, gameMode, activeRegions, generationFilter, isConnected,
+        logs,
     } = useGame();
     const { leaderboard, guessFeed } = useTwitch();
 
@@ -378,6 +379,8 @@ export const OverlayView: React.FC = () => {
         { key: 'guessed', label: 'Guessed' },
     ];
 
+    const recentLogs = React.useMemo(() => logs.slice(0, 20), [logs]);
+
     const renderModule = (mod?: OverlayModule) => {
         if (!mod || !enabledModulesSet.has(mod)) return null;
 
@@ -434,6 +437,37 @@ export const OverlayView: React.FC = () => {
                                     </span>
                                     <span className="text-purple-300 font-medium truncate flex-1">@{username}</span>
                                     <span className="text-gray-400 font-mono font-bold">{count}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ) : null;
+            case 'log':
+                return recentLogs.length > 0 ? (
+                    <div className={`bg-gray-900/80 backdrop-blur-sm rounded-xl border border-gray-800/50 overflow-hidden${
+                        carouselInterval > 0 ? ' h-full flex flex-col' : ''
+                    }`}>
+                        <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-800/50 shrink-0">
+                            <MessageSquare size={14} className="text-cyan-400" />
+                            <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider">AP Log</span>
+                        </div>
+                        <div className={carouselInterval > 0 ? 'flex-1 min-h-0 overflow-hidden' : 'overflow-hidden'}>
+                            {recentLogs.map(entry => (
+                                <div key={entry.id} className={`text-sm py-1.5 px-3 border-b border-gray-800/20 ${
+                                    entry.isMe ? 'opacity-100' : 'opacity-60'
+                                }`}>
+                                    {entry.parts ? entry.parts.map((part, i) => (
+                                        <span key={i} className={
+                                            part.type === 'player' ? 'text-cyan-300 font-bold' :
+                                            part.type === 'item' ? 'text-purple-300 font-bold' :
+                                            part.type === 'location' ? 'text-green-300 font-bold' :
+                                            part.color ? '' : 'text-gray-300'
+                                        } style={part.color ? { color: part.color } : undefined}>
+                                            {part.text}
+                                        </span>
+                                    )) : (
+                                        <span className="text-gray-300">{entry.text}</span>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -527,7 +561,7 @@ export const OverlayView: React.FC = () => {
                     <CarouselSlide slideKey={currentPageKey}>
                         <div className="flex flex-col gap-4" style={{ height: pageAvailableHeight }}>
                             {currentPage.map(mod => (
-                                <div key={mod} className={mod === 'dex' ? 'flex-1 min-h-0' : 'shrink-0'}>
+                                <div key={mod} className={mod === 'dex' || mod === 'log' ? 'flex-1 min-h-0' : 'shrink-0'}>
                                     {renderModule(mod)}
                                 </div>
                             ))}

@@ -15,6 +15,7 @@ const OBS_MODULES = [
     { key: 'feed', label: 'Live Feed' },
     { key: 'guessers', label: 'Leaderboard' },
     { key: 'dex', label: 'Dex Grid' },
+    { key: 'log', label: 'AP Log' },
 ] as const;
 
 const DEX_FILTERS = [

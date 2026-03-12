@@ -46,7 +46,7 @@ export function useAPConnection() {
     // handlersRef always holds the latest callbacks without re-registering socket listeners.
     const handlersRef = useRef<ConnectionHandlers | null>(null);
 
-    const connect = async (info: ConnectionInfo, _profileId?: string, handlers?: ConnectionHandlers) => {
+    const connect = async (info: ConnectionInfo, _profileId?: string, handlers?: ConnectionHandlers, tags?: string[]) => {
         if (handlers) handlersRef.current = handlers;
 
         if (isConnectingRef.current) {
@@ -187,6 +187,7 @@ export function useAPConnection() {
                 await client.login(url, info.slotName, 'Pokepelago', {
                     password: info.password,
                     items: itemsHandlingFlags.all,
+                    ...(tags && tags.length > 0 ? { tags } : {}),
                 });
 
                 // Save DataPackage back to cache after successful login
