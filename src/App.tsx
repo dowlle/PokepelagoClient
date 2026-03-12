@@ -180,9 +180,9 @@ const GameContent: React.FC = () => {
     <div className="h-screen flex flex-col bg-gray-950 text-white font-sans overflow-hidden">
       <GlobalGuessInput />
 
-      {/* Toolbar - now relative in flex flow */}
-      <div className="z-20 bg-gray-900 border-b border-gray-800 shrink-0">
-        <div className={`${uiSettings.widescreen ? 'max-w-none px-8' : 'max-w-screen-xl'} mx-auto flex items-center justify-between px-4 py-2`}>
+      {/* Toolbar - hidden on mobile (merged into DexGrid filter bar), visible on md+ */}
+      <div className="z-20 bg-gray-900 border-b border-gray-800 shrink-0 hidden md:block">
+        <div className={`${uiSettings.widescreen ? 'max-w-none px-8' : 'max-w-screen-xl'} mx-auto flex items-center justify-between px-2 py-1 sm:px-4 sm:py-2`}>
           <div className="flex items-center gap-3">
             {/* Log sidebar toggle (desktop only) */}
             <button
@@ -261,8 +261,8 @@ const GameContent: React.FC = () => {
         </aside>
 
         {/* Main Content */}
-        <main className={`flex-1 overflow-y-auto [scrollbar-gutter:stable] pb-20 md:pb-16 ${uiSettings.widescreen ? 'px-6' : 'px-4'}`}>
-          <div className={`${uiSettings.widescreen ? 'max-w-none' : 'max-w-screen-xl'} mx-auto pt-4 md:pt-6`}>
+        <main className={`flex-1 overflow-y-auto [scrollbar-gutter:stable] pb-20 md:pb-16 ${uiSettings.widescreen ? 'px-6' : 'px-1 sm:px-4'}`}>
+          <div className={`${uiSettings.widescreen ? 'max-w-none' : 'max-w-screen-xl'} mx-auto pt-2 md:pt-6`}>
             <DexGrid />
           </div>
         </main>
@@ -370,7 +370,7 @@ const GameContent: React.FC = () => {
 
       {/* Mobile bottom sheet panel */}
       <div className={`
-        fixed inset-x-0 bottom-14 z-40 md:hidden
+        fixed inset-x-0 bottom-20 z-40 md:hidden
         bg-gray-900 border-t border-gray-800 rounded-t-2xl
         transition-transform duration-300
         ${mobilePanel ? 'translate-y-0' : 'translate-y-full'}
@@ -393,6 +393,24 @@ const GameContent: React.FC = () => {
             <SettingsPanel isOpen={true} onClose={() => setMobilePanel(null)} isEmbedded />
           ) : null}
         </div>
+      </div>
+
+      {/* Mobile status strip — sits above bottom nav */}
+      <div className="fixed bottom-14 inset-x-0 z-50 md:hidden bg-gray-900/95 backdrop-blur-sm border-t border-gray-800 flex items-center justify-center gap-3 px-3 py-1">
+        <div className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded ${isConnected ? 'bg-green-900/30 text-green-400' : 'bg-gray-800 text-gray-500'}`}>
+          {isConnected ? <Wifi size={10} /> : <WifiOff size={10} />}
+          {isConnected ? 'Connected' : 'Offline'}
+        </div>
+        {goal && (
+          <span className="text-[10px] text-gray-500 bg-blue-900/20 px-1.5 py-0.5 rounded border border-blue-800/30">
+            <span className="text-blue-400 font-bold">
+              {goal.type === 'any_pokemon' ? `${guessedPokemonCount}/${goal.amount}` :
+                goal.type === 'region_completion' ? `${goal.region}` :
+                  goal.type === 'percentage' ? `${Math.round((guessedPokemonCount / allPokemon.length) * 100)}%/${goal.amount}%` :
+                    goal.type === 'all_legendaries' ? `Legendaries` : '?'}
+            </span>
+          </span>
+        )}
       </div>
 
       {/* Mobile bottom nav bar */}

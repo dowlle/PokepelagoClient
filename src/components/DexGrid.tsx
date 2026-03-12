@@ -135,8 +135,8 @@ export const DexGrid: React.FC = () => {
     const activeCount = generationFilter.length;
 
     const containerClass = uiSettings.masonry
-        ? `columns-1 ${activeCount > 1 ? 'sm:columns-2' : ''} ${activeCount > 2 ? 'lg:columns-3' : ''} ${activeCount > 3 ? 'xl:columns-4' : ''} ${activeCount > 4 ? '2xl:columns-5' : ''} gap-4 px-4 pb-32 space-y-4`
-        : `grid grid-cols-1 ${activeCount > 1 ? 'sm:grid-cols-2' : ''} ${activeCount > 2 ? 'lg:grid-cols-3' : ''} ${activeCount > 3 ? 'xl:grid-cols-4' : ''} ${activeCount > 4 ? '2xl:grid-cols-5' : ''} gap-4 px-4 pb-32 items-start`;
+        ? `columns-1 ${activeCount > 1 ? 'sm:columns-2' : ''} ${activeCount > 2 ? 'lg:columns-3' : ''} ${activeCount > 3 ? 'xl:columns-4' : ''} ${activeCount > 4 ? '2xl:columns-5' : ''} gap-3 sm:gap-4 px-1 sm:px-4 pb-32 space-y-3 sm:space-y-4`
+        : `grid grid-cols-1 ${activeCount > 1 ? 'sm:grid-cols-2' : ''} ${activeCount > 2 ? 'lg:grid-cols-3' : ''} ${activeCount > 3 ? 'xl:grid-cols-4' : ''} ${activeCount > 4 ? '2xl:grid-cols-5' : ''} gap-3 sm:gap-4 px-1 sm:px-4 pb-32 items-start`;
 
     const toggleDexFilter = (key: 'guessable' | 'guessed') => {
         setDexFilter(prev => {
@@ -152,7 +152,7 @@ export const DexGrid: React.FC = () => {
     return (
         <div className="flex flex-col">
             {/* Dex filter bar */}
-            <div className="flex items-center gap-2 px-4 pt-1 pb-3">
+            <div className="flex items-center gap-2 px-2 pt-1 pb-2 sm:px-4 sm:pb-3">
                 <span className="text-[10px] font-black uppercase text-gray-600 tracking-widest">Show:</span>
                 <button
                     onClick={() => toggleDexFilter('guessable')}
@@ -281,7 +281,7 @@ export const DexGrid: React.FC = () => {
                     >
                         {/* Header: drag handle + toggle */}
                         <div
-                            className="flex items-center gap-2 p-4 cursor-pointer select-none"
+                            className="flex items-center gap-2 p-3 sm:p-4 cursor-pointer select-none"
                             onClick={() => toggleRegion(gen.label)}
                         >
                             <div
@@ -322,8 +322,8 @@ export const DexGrid: React.FC = () => {
                         </div>
 
                         {/* Body — always mounted so sprites stay loaded; hidden via CSS only */}
-                        <div className={`px-4 pb-4 ${isRegionOpen ? '' : 'hidden'}`}>
-                            <div className="flex flex-wrap gap-1.5 justify-start">
+                        <div className={`px-2 pb-3 sm:px-4 sm:pb-4 ${isRegionOpen ? '' : 'hidden'}`}>
+                            <div className="flex flex-wrap gap-1 sm:gap-1.5 justify-start">
                                 {pokemonInGen.map(p => (
                                     <PokemonSlot
                                         key={p.id}
