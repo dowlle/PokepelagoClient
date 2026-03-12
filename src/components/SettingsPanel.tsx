@@ -29,7 +29,7 @@ const ObsOverlayBuilder: React.FC<{
     pmdSpriteUrl: string;
 }> = ({ connectionInfo, spriteRepoUrl, pmdSpriteUrl }) => {
     const [modules, setModules] = useState<Set<string>>(() => new Set(OBS_MODULES.map(m => m.key)));
-    const [dexFilter, setDexFilter] = useState<string>('all');
+    const [dexFilters, setDexFilters] = useState<Set<string>>(() => new Set(['all']));
     const [carousel, setCarousel] = useState(false);
     const [carouselSpeed, setCarouselSpeed] = useState(10);
     const [copied, setCopied] = useState(false);
@@ -56,8 +56,12 @@ const ObsOverlayBuilder: React.FC<{
         if (enabledModules.length > 0 && enabledModules.length < OBS_MODULES.length) {
             url.searchParams.set('modules', enabledModules.join(','));
         }
-        if (modules.has('dex') && dexFilter !== 'all') {
-            url.searchParams.set('dexfilter', dexFilter);
+        if (modules.has('dex')) {
+            const selected = DEX_FILTERS.map(f => f.key).filter(k => dexFilters.has(k));
+            // Only emit param if not just 'all' (the default)
+            if (!(selected.length === 1 && selected[0] === 'all')) {
+                url.searchParams.set('dexfilter', selected.join(','));
+            }
         }
         if (carousel) {
             url.searchParams.set('carousel', String(carouselSpeed));
@@ -100,14 +104,22 @@ const ObsOverlayBuilder: React.FC<{
             {/* Dex filter */}
             {modules.has('dex') && (
                 <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-gray-500 font-bold">Dex View:</span>
+                    <span className="text-[10px] text-gray-500 font-bold">Dex Views:</span>
                     <div className="flex gap-1 flex-1">
                         {DEX_FILTERS.map(({ key, label }) => (
                             <button
                                 key={key}
-                                onClick={() => setDexFilter(key)}
+                                onClick={() => setDexFilters(prev => {
+                                    const next = new Set(prev);
+                                    if (next.has(key)) {
+                                        if (next.size > 1) next.delete(key); // keep at least one
+                                    } else {
+                                        next.add(key);
+                                    }
+                                    return next;
+                                })}
                                 className={`flex-1 py-1 text-[9px] font-bold rounded transition-all ${
-                                    dexFilter === key
+                                    dexFilters.has(key)
                                         ? 'bg-green-900/40 text-green-400 border border-green-700/50'
                                         : 'bg-gray-800/30 text-gray-600 border border-gray-700/30'
                                 }`}
