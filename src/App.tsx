@@ -57,6 +57,7 @@ const GameContent: React.FC = () => {
     }
     return 'tracker';
   });
+  const [mobilePanel, setMobilePanel] = React.useState<'log' | 'tracker' | 'settings' | 'twitch' | null>(null);
   const [isDebugVisible, setIsDebugVisible] = React.useState(false);
   const [debugType, setDebugType] = React.useState(POKEMON_TYPES[0]);
 
@@ -179,18 +180,17 @@ const GameContent: React.FC = () => {
     <div className="h-screen flex flex-col bg-gray-950 text-white font-sans overflow-hidden">
       <GlobalGuessInput />
 
-      {/* Toolbar - now relative in flex flow */}
-      <div className="z-20 bg-gray-900 border-b border-gray-800 shrink-0">
-        <div className={`${uiSettings.widescreen ? 'max-w-none px-8' : 'max-w-screen-xl'} mx-auto flex items-center justify-between px-4 py-2`}>
+      {/* Toolbar - hidden on mobile (merged into DexGrid filter bar), visible on md+ */}
+      <div className="z-20 bg-gray-900 border-b border-gray-800 shrink-0 hidden md:block">
+        <div className={`${uiSettings.widescreen ? 'max-w-none px-8' : 'max-w-screen-xl'} mx-auto flex items-center justify-between px-2 py-1 sm:px-4 sm:py-2`}>
           <div className="flex items-center gap-3">
-            {/* Log sidebar toggle */}
+            {/* Log sidebar toggle (desktop only) */}
             <button
               onClick={() => {
                 const next = !isLogOpen;
                 setIsLogOpen(next);
-                if (next && window.innerWidth < 768) setIsSidebarOpen(false);
               }}
-              className={`p-1.5 rounded transition-all ${isLogOpen ? 'bg-blue-600 text-white' : 'hover:bg-gray-800 text-gray-400'}`}
+              className={`hidden md:block p-1.5 rounded transition-all ${isLogOpen ? 'bg-blue-600 text-white' : 'hover:bg-gray-800 text-gray-400'}`}
               title={isLogOpen ? "Hide Log" : "Show Log"}
             >
               {isLogOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
@@ -202,17 +202,24 @@ const GameContent: React.FC = () => {
               {isConnected ? 'Connected' : 'Offline'}
             </div>
 
-            <span className="text-xs text-gray-500">
+            <span className="hidden md:inline text-xs text-gray-500">
               Guessable: <span className="text-orange-400 font-bold">{allPokemon.filter(p => !checkedIds.has(p.id) && isPokemonGuessable(p.id).canGuess).length}</span>
             </span>
 
             {goal && (
               <span className="text-xs text-gray-500 bg-blue-900/20 px-2 py-1 rounded border border-blue-800/30">
-                Goal: <span className="text-blue-400 font-bold">
-                  {goal.type === 'any_pokemon' ? `Catch ${goal.amount} Pokémon (${guessedPokemonCount}/${goal.amount})` :
-                    goal.type === 'region_completion' ? `Catch all ${goal.region} Pokémon` :
-                      goal.type === 'percentage' ? `Find ${goal.amount}% of Pokémon (${Math.round((guessedPokemonCount / allPokemon.length) * 100)}%)` :
-                        goal.type === 'all_legendaries' ? `Catch All Legendaries` : 'Unknown'}
+                <span className="hidden md:inline">Goal: </span>
+                <span className="text-blue-400 font-bold">
+                  {goal.type === 'any_pokemon' ? `${guessedPokemonCount}/${goal.amount}` :
+                    goal.type === 'region_completion' ? `${goal.region}` :
+                      goal.type === 'percentage' ? `${Math.round((guessedPokemonCount / allPokemon.length) * 100)}%/${goal.amount}%` :
+                        goal.type === 'all_legendaries' ? `Legendaries` : '?'}
+                </span>
+                <span className="hidden md:inline text-blue-400 font-bold">
+                  {goal.type === 'any_pokemon' ? ` Pokémon` :
+                    goal.type === 'region_completion' ? ` — Catch All` :
+                      goal.type === 'percentage' ? ` Pokémon` :
+                        goal.type === 'all_legendaries' ? ` — Catch All` : ''}
                 </span>
               </span>
             )}
@@ -223,9 +230,8 @@ const GameContent: React.FC = () => {
               onClick={() => {
                 const next = !isSidebarOpen;
                 setIsSidebarOpen(next);
-                if (next && window.innerWidth < 768) setIsLogOpen(false);
               }}
-              className={`p-1.5 rounded transition-all ${isSidebarOpen ? 'bg-blue-600 text-white' : 'hover:bg-gray-800 text-gray-400'}`}
+              className={`hidden md:block p-1.5 rounded transition-all ${isSidebarOpen ? 'bg-blue-600 text-white' : 'hover:bg-gray-800 text-gray-400'}`}
               title={isSidebarOpen ? "Hide Sidebar" : "Show Sidebar"}
             >
               {isSidebarOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
@@ -235,21 +241,12 @@ const GameContent: React.FC = () => {
       </div>
 
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Left sidebar backdrop (mobile) */}
-        {isLogOpen && (
-          <div
-            className="fixed inset-0 bg-black/40 z-20 md:hidden"
-            onClick={() => setIsLogOpen(false)}
-          />
-        )}
-
-        {/* Left Sidebar - Log */}
+        {/* Left Sidebar - Log (desktop only) */}
         <aside
           className={`
-            flex flex-col bg-gray-900/95 backdrop-blur-md transition-[width,transform] duration-300 border-r border-gray-800
-            fixed left-0 top-0 bottom-0 z-30 pt-20
-            md:relative md:top-auto md:bottom-auto md:z-auto md:pt-0
-            ${isLogOpen ? 'w-80' : 'w-0 -translate-x-full md:translate-x-0 overflow-hidden border-none'}
+            hidden md:flex flex-col bg-gray-900/95 backdrop-blur-md transition-[width,transform] duration-300 border-r border-gray-800
+            relative
+            ${isLogOpen ? 'w-80' : 'w-0 overflow-hidden border-none'}
           `}
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800 shrink-0">
@@ -264,27 +261,18 @@ const GameContent: React.FC = () => {
         </aside>
 
         {/* Main Content */}
-        <main className={`flex-1 overflow-y-auto [scrollbar-gutter:stable] pb-16 ${uiSettings.widescreen ? 'px-6' : 'px-4'}`}>
-          <div className={`${uiSettings.widescreen ? 'max-w-none' : 'max-w-screen-xl'} mx-auto pt-6`}>
+        <main className={`flex-1 overflow-y-auto [scrollbar-gutter:stable] pb-20 md:pb-16 ${uiSettings.widescreen ? 'px-6' : 'px-1 sm:px-4'}`}>
+          <div className={`${uiSettings.widescreen ? 'max-w-none' : 'max-w-screen-xl'} mx-auto pt-2 md:pt-6`}>
             <DexGrid />
           </div>
         </main>
 
-        {/* Right sidebar backdrop (mobile) */}
-        {isSidebarOpen && (
-          <div
-            className="fixed inset-0 bg-black/40 z-20 md:hidden"
-            onClick={() => setIsSidebarOpen(false)}
-          />
-        )}
-
-        {/* Right Sidebar - Tracker / Settings / Twitch */}
+        {/* Right Sidebar - Tracker / Settings / Twitch (desktop only) */}
         <aside
           className={`
-            flex flex-col bg-gray-900/95 backdrop-blur-md transition-[width,transform] duration-300 border-l border-gray-800
-            fixed right-0 top-0 bottom-0 z-30 pt-20
-            md:relative md:top-auto md:bottom-auto md:z-auto md:pt-0
-            ${isSidebarOpen ? 'w-80' : 'w-0 translate-x-full md:translate-x-0 overflow-hidden border-none'}
+            hidden md:flex flex-col bg-gray-900/95 backdrop-blur-md transition-[width,transform] duration-300 border-l border-gray-800
+            relative
+            ${isSidebarOpen ? 'w-80' : 'w-0 overflow-hidden border-none'}
           `}
         >
           {/* Tabs */}
@@ -374,6 +362,90 @@ const GameContent: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Mobile bottom sheet backdrop */}
+      {mobilePanel && (
+        <div className="fixed inset-0 bg-black/40 z-40 md:hidden" onClick={() => setMobilePanel(null)} />
+      )}
+
+      {/* Mobile bottom sheet panel */}
+      <div className={`
+        fixed inset-x-0 bottom-20 z-40 md:hidden
+        bg-gray-900 border-t border-gray-800 rounded-t-2xl
+        transition-transform duration-300
+        ${mobilePanel ? 'translate-y-0' : 'translate-y-full'}
+        h-[85vh] flex flex-col
+      `}>
+        <div className="flex justify-center py-2 shrink-0">
+          <div className="w-10 h-1 rounded-full bg-gray-700" />
+        </div>
+        <div className="flex-1 overflow-hidden">
+          {mobilePanel === 'log' ? (
+            <ArchipelagoLog />
+          ) : mobilePanel === 'tracker' ? (
+            <div className="p-4 flex flex-col gap-3 overflow-y-auto h-full">
+              <TypeStatus />
+              <GateTracker />
+            </div>
+          ) : mobilePanel === 'twitch' && __TWITCH_ENABLED__ && twitchIntegration ? (
+            <TwitchLeaderboard />
+          ) : mobilePanel === 'settings' ? (
+            <SettingsPanel isOpen={true} onClose={() => setMobilePanel(null)} isEmbedded />
+          ) : null}
+        </div>
+      </div>
+
+      {/* Mobile status strip — sits above bottom nav */}
+      <div className="fixed bottom-14 inset-x-0 z-50 md:hidden bg-gray-900/95 backdrop-blur-sm border-t border-gray-800 flex items-center justify-center gap-3 px-3 py-1">
+        <div className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded ${isConnected ? 'bg-green-900/30 text-green-400' : 'bg-gray-800 text-gray-500'}`}>
+          {isConnected ? <Wifi size={10} /> : <WifiOff size={10} />}
+          {isConnected ? 'Connected' : 'Offline'}
+        </div>
+        {goal && (
+          <span className="text-[10px] text-gray-500 bg-blue-900/20 px-1.5 py-0.5 rounded border border-blue-800/30">
+            <span className="text-blue-400 font-bold">
+              {goal.type === 'any_pokemon' ? `${guessedPokemonCount}/${goal.amount}` :
+                goal.type === 'region_completion' ? `${goal.region}` :
+                  goal.type === 'percentage' ? `${Math.round((guessedPokemonCount / allPokemon.length) * 100)}%/${goal.amount}%` :
+                    goal.type === 'all_legendaries' ? `Legendaries` : '?'}
+            </span>
+          </span>
+        )}
+      </div>
+
+      {/* Mobile bottom nav bar */}
+      <nav className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-gray-900 border-t border-gray-800 flex h-14">
+        <button
+          onClick={() => setMobilePanel(prev => prev === 'log' ? null : 'log')}
+          className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${mobilePanel === 'log' ? 'text-blue-400' : 'text-gray-500'}`}
+        >
+          <MessageSquare size={18} />
+          <span className="text-[10px] font-bold">Log</span>
+        </button>
+        <button
+          onClick={() => setMobilePanel(prev => prev === 'tracker' ? null : 'tracker')}
+          className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${mobilePanel === 'tracker' ? 'text-blue-400' : 'text-gray-500'}`}
+        >
+          <LayoutGrid size={18} />
+          <span className="text-[10px] font-bold">Tracker</span>
+        </button>
+        <button
+          onClick={() => setMobilePanel(prev => prev === 'settings' ? null : 'settings')}
+          className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${mobilePanel === 'settings' ? 'text-blue-400' : 'text-gray-500'}`}
+        >
+          <Settings size={18} />
+          <span className="text-[10px] font-bold">Settings</span>
+        </button>
+        {__TWITCH_ENABLED__ && twitchIntegration && (
+          <button
+            onClick={() => setMobilePanel(prev => prev === 'twitch' ? null : 'twitch')}
+            className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${mobilePanel === 'twitch' ? 'text-purple-400' : 'text-gray-500'}`}
+          >
+            <Tv size={18} />
+            <span className="text-[10px] font-bold">Twitch</span>
+          </button>
+        )}
+      </nav>
 
       <PokemonDetails />
 

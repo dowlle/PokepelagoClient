@@ -155,7 +155,7 @@ export const GlobalGuessInput: React.FC = () => {
     return (
         <>
         <div className="relative z-30 bg-gray-950 border-b border-gray-800 shrink-0">
-            <div className="max-w-7xl mx-auto flex items-center gap-3 px-4 py-3">
+            <div className="max-w-7xl mx-auto flex items-center gap-3 px-2 py-2 sm:px-4 sm:py-3">
                 {/* Logo */}
                 <h1
                     className="text-xl font-black tracking-tight bg-linear-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent whitespace-nowrap hidden sm:block cursor-pointer hover:opacity-75 transition-opacity select-none"
@@ -167,19 +167,16 @@ export const GlobalGuessInput: React.FC = () => {
 
                 {/* Input */}
                 <form onSubmit={handleSubmit} className="flex-1 relative max-w-md">
-                    <div className="flex items-center gap-2">
-                        <span className="text-gray-400 text-sm whitespace-nowrap">Name a Pokémon:</span>
-                        <input
-                            ref={inputRef}
-                            type="text"
-                            value={guess}
-                            onChange={(e) => setGuess(e.target.value)}
-                            placeholder=""
-                            className="flex-1 px-3 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm outline-none focus:border-green-500 transition-colors"
-                            autoComplete="off"
-                            spellCheck={false}
-                        />
-                    </div>
+                    <input
+                        ref={inputRef}
+                        type="text"
+                        value={guess}
+                        onChange={(e) => setGuess(e.target.value)}
+                        placeholder="Name a Pokémon..."
+                        className="w-full px-3 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm outline-none focus:border-green-500 transition-colors"
+                        autoComplete="off"
+                        spellCheck={false}
+                    />
                 </form>
 
                 {/* Language Selector */}
@@ -226,7 +223,7 @@ export const GlobalGuessInput: React.FC = () => {
                     const displayGoal = goalCount ?? activePokemonLimit;
                     const isGoalMet = guessedCount >= displayGoal;
                     return (
-                        <div className="flex items-center gap-1 text-sm whitespace-nowrap">
+                        <div className="hidden sm:flex items-center gap-1 text-sm whitespace-nowrap">
                             <span className={`font-bold ${isGoalMet ? 'text-yellow-400' : 'text-green-400'}`}>
                                 {guessedCount}
                             </span>
