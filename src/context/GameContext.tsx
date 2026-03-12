@@ -488,13 +488,16 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setGameModeState('archipelago');
                 try { await connect(connectionInfoRef.current); } catch (e) { console.error('URL auto-connect failed', e); }
                 // Clean connection params from URL, but preserve other params (e.g. overlay=1)
-                const cleanUrl = new URL(window.location.href);
-                cleanUrl.searchParams.delete('host');
-                cleanUrl.searchParams.delete('port');
-                cleanUrl.searchParams.delete('name');
-                cleanUrl.searchParams.delete('password');
-                const remaining = cleanUrl.search;
-                window.history.replaceState({}, '', window.location.pathname + remaining);
+                // Skip for overlay mode — keeping params lets refresh reconnect automatically
+                if (!qp.has('overlay')) {
+                    const cleanUrl = new URL(window.location.href);
+                    cleanUrl.searchParams.delete('host');
+                    cleanUrl.searchParams.delete('port');
+                    cleanUrl.searchParams.delete('name');
+                    cleanUrl.searchParams.delete('password');
+                    const remaining = cleanUrl.search;
+                    window.history.replaceState({}, '', window.location.pathname + remaining);
+                }
             } else {
                 const wasConnected = localStorage.getItem('pokepelago_connected') === 'true';
                 const savedConnection = localStorage.getItem('pokepelago_connection');
@@ -1177,6 +1180,37 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         apConnection.disconnect();
         onDisconnected();
     }, [apConnection, onDisconnected]);
+
+    // ── Overlay auto-reconnect ────────────────────────────────────────────────────
+    // When the overlay loses connection, retry with exponential backoff (3s → 6s → 12s, max 30s)
+    const overlayReconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const overlayBackoffRef = useRef(3000);
+    useEffect(() => {
+        const isOverlay = urlParams.has('overlay');
+        if (!isOverlay || gameMode !== 'archipelago') return;
+
+        if (isConnected) {
+            // Connected — reset backoff
+            overlayBackoffRef.current = 3000;
+            if (overlayReconnectRef.current) { clearTimeout(overlayReconnectRef.current); overlayReconnectRef.current = null; }
+            return;
+        }
+
+        // Disconnected in overlay mode — schedule reconnect
+        if (isConnectingRef.current) return; // already connecting
+        overlayReconnectRef.current = setTimeout(async () => {
+            overlayReconnectRef.current = null;
+            if (isConnectingRef.current) return;
+            try {
+                await connect(connectionInfoRef.current);
+            } catch {
+                // Will trigger re-render with isConnected still false → effect retries with higher backoff
+            }
+            overlayBackoffRef.current = Math.min(overlayBackoffRef.current * 2, 30000);
+        }, overlayBackoffRef.current);
+
+        return () => { if (overlayReconnectRef.current) { clearTimeout(overlayReconnectRef.current); overlayReconnectRef.current = null; } };
+    }, [isConnected, gameMode, connect, urlParams, isConnectingRef]);
 
     // ── Derived ──────────────────────────────────────────────────────────────────
     const { STARTER_OFFSET, STARTER_COUNT } = offsetsRef.current;
