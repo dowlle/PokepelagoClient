@@ -4,7 +4,7 @@ import { GENERATIONS } from '../types/pokemon';
 import { X, Server, Wifi, LayoutGrid, Maximize, Image, Trash2, Upload, Link2, ChevronDown, Filter, Monitor, BookOpen, Tv, LogIn, LogOut, Copy } from 'lucide-react';
 import { importFromFiles, clearAllSprites } from '../services/spriteService';
 import { ConnectionManager } from './ConnectionManager';
-import { getTwitchAuthUrl, getTwitchToken, getTwitchUsername, clearTwitchAuth, hasTwitchClientId } from '../services/twitchAuthService';
+import { getTwitchAuthUrl, getTwitchUsername, clearTwitchAuth, hasTwitchClientId } from '../services/twitchAuthService';
 import { getProfiles, saveProfile } from '../services/connectionManagerService';
 import type { GameProfile } from '../services/connectionManagerService';
 

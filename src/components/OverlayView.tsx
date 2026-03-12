@@ -200,7 +200,7 @@ export const OverlayView: React.FC = () => {
         allPokemon, checkedIds, releasedIds, goalCount, activePokemonLimit,
         STARTER_OFFSET, MILESTONE_OFFSET,
         isPokemonGuessable, hintedIds, shinyIds, unlockedIds,
-        uiSettings, gameMode, activeRegions, generationFilter, isConnected,
+        gameMode, activeRegions, generationFilter, isConnected,
         logs,
     } = useGame();
     const { leaderboard, guessFeed } = useTwitch();
