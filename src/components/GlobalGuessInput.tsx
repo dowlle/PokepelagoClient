@@ -40,7 +40,7 @@ export const GlobalGuessInput: React.FC = () => {
             window.removeEventListener('pokepelago_twitch_integration_changed', handler);
         };
     }, []);
-    useTwitchChat({ enabled: twitchIntegration && twitchEnabled, channelName: twitchChannel, selectedLanguage });
+    useTwitchChat({ enabled: __TWITCH_ENABLED__ && twitchIntegration && twitchEnabled, channelName: twitchChannel, selectedLanguage });
 
     // Close language menu when clicking outside
     useEffect(() => {

@@ -717,6 +717,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                                 </div>
                                 <input type="checkbox" checked={uiSettings.persistentDot} onChange={(e) => updateUiSettings({ persistentDot: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-orange-600 focus:ring-orange-500" />
                             </label>
+                            {__TWITCH_ENABLED__ && (
                             <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
                                 <div className="flex items-center gap-2">
                                     <Tv size={16} className="text-purple-400 group-hover:scale-110 transition-transform" />
@@ -736,6 +737,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                                     className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-purple-600 focus:ring-purple-500"
                                 />
                             </label>
+                            )}
                         </div>
                         <div className="pt-2 border-t border-gray-800/50">
                             <button
