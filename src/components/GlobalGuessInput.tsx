@@ -167,19 +167,16 @@ export const GlobalGuessInput: React.FC = () => {
 
                 {/* Input */}
                 <form onSubmit={handleSubmit} className="flex-1 relative max-w-md">
-                    <div className="flex items-center gap-2">
-                        <span className="text-gray-400 text-sm whitespace-nowrap">Name a Pokémon:</span>
-                        <input
-                            ref={inputRef}
-                            type="text"
-                            value={guess}
-                            onChange={(e) => setGuess(e.target.value)}
-                            placeholder=""
-                            className="flex-1 px-3 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm outline-none focus:border-green-500 transition-colors"
-                            autoComplete="off"
-                            spellCheck={false}
-                        />
-                    </div>
+                    <input
+                        ref={inputRef}
+                        type="text"
+                        value={guess}
+                        onChange={(e) => setGuess(e.target.value)}
+                        placeholder="Name a Pokémon..."
+                        className="w-full px-3 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm outline-none focus:border-green-500 transition-colors"
+                        autoComplete="off"
+                        spellCheck={false}
+                    />
                 </form>
 
                 {/* Language Selector */}
@@ -226,7 +223,7 @@ export const GlobalGuessInput: React.FC = () => {
                     const displayGoal = goalCount ?? activePokemonLimit;
                     const isGoalMet = guessedCount >= displayGoal;
                     return (
-                        <div className="flex items-center gap-1 text-sm whitespace-nowrap">
+                        <div className="hidden sm:flex items-center gap-1 text-sm whitespace-nowrap">
                             <span className={`font-bold ${isGoalMet ? 'text-yellow-400' : 'text-green-400'}`}>
                                 {guessedCount}
                             </span>

@@ -146,10 +146,13 @@ export const DexGrid: React.FC = () => {
         });
     };
 
+    const guessableCount = allPokemon.filter(p => !checkedIds.has(p.id) && isPokemonGuessable(p.id).canGuess).length;
+    const guessedCount = allPokemon.filter(p => checkedIds.has(p.id) && !releasedIds.has(p.id)).length;
+
     return (
         <div className="flex flex-col">
             {/* Dex filter bar */}
-            <div className="flex items-center gap-2 px-4 pt-3 pb-1">
+            <div className="flex items-center gap-2 px-4 pt-1 pb-3">
                 <span className="text-[10px] font-black uppercase text-gray-600 tracking-widest">Show:</span>
                 <button
                     onClick={() => toggleDexFilter('guessable')}
@@ -159,7 +162,7 @@ export const DexGrid: React.FC = () => {
                             : 'border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-400'
                     }`}
                 >
-                    Guessable
+                    Guessable <span className="text-orange-400">{guessableCount}</span>
                 </button>
                 <button
                     onClick={() => toggleDexFilter('guessed')}
@@ -169,7 +172,7 @@ export const DexGrid: React.FC = () => {
                             : 'border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-400'
                     }`}
                 >
-                    Guessed
+                    Guessed <span className="text-green-400">{guessedCount}</span>
                 </button>
                 {dexFilter.size > 0 && (
                     <button
