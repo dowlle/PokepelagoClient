@@ -246,7 +246,7 @@ const GameContent: React.FC = () => {
         {/* Left Sidebar - Log */}
         <aside
           className={`
-            flex flex-col bg-gray-900/95 backdrop-blur-md transition-all duration-300 border-r border-gray-800
+            flex flex-col bg-gray-900/95 backdrop-blur-md transition-[width,transform] duration-300 border-r border-gray-800
             fixed left-0 top-0 bottom-0 z-30 pt-20
             md:relative md:top-auto md:bottom-auto md:z-auto md:pt-0
             ${isLogOpen ? 'w-80' : 'w-0 -translate-x-full md:translate-x-0 overflow-hidden border-none'}
@@ -281,7 +281,7 @@ const GameContent: React.FC = () => {
         {/* Right Sidebar - Tracker / Settings / Twitch */}
         <aside
           className={`
-            flex flex-col bg-gray-900/95 backdrop-blur-md transition-all duration-300 border-l border-gray-800
+            flex flex-col bg-gray-900/95 backdrop-blur-md transition-[width,transform] duration-300 border-l border-gray-800
             fixed right-0 top-0 bottom-0 z-30 pt-20
             md:relative md:top-auto md:bottom-auto md:z-auto md:pt-0
             ${isSidebarOpen ? 'w-80' : 'w-0 translate-x-full md:translate-x-0 overflow-hidden border-none'}
