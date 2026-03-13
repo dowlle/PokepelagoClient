@@ -815,9 +815,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         setUnlockedIds(newUnlocked);
 
-        // Reconstruct shinyIds
-        const shinyCount = receivedItems.filter(i => i.id === o.ITEM_OFFSET + 6020).length;
-        setShinyIds(shinyCount > 0 ? new Set(Array.from(newUnlocked).slice(0, shinyCount)) : new Set());
+        // Shiny IDs are now loaded from DataStorage (see .then() below), not reconstructed here.
 
         // Reconstruct gate items
         setGymBadges(receivedItems.filter(i => i.id === o.ITEM_OFFSET + 6000).length);
@@ -950,9 +948,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const derpKey = `pokepelago_team_${team}_slot_${slot}_derpyfied`;
         const relKey = `pokepelago_team_${team}_slot_${slot}_released`;
         const recaughtKey = `pokepelago_team_${team}_slot_${slot}_recaught`;
+        const shinyKey = `pokepelago_team_${team}_slot_${slot}_shiny_pokemon`;
         const caughtKey = !slotData.dexsanity ? `pokepelago_team_${team}_slot_${slot}_caught` : null;
 
-        const keysToWatch = [mbKey, pgKey, pdKey, derpKey, relKey, recaughtKey, ...(caughtKey ? [caughtKey] : [])];
+        const keysToWatch = [mbKey, pgKey, pdKey, derpKey, relKey, recaughtKey, shinyKey, ...(caughtKey ? [caughtKey] : [])];
         // Validate that DataStorage values are finite integers in the valid Pokémon ID range.
         const validIds = (raw: unknown): number[] =>
             Array.isArray(raw) ? (raw as unknown[]).filter((v): v is number => Number.isFinite(v) && (v as number) >= 1 && (v as number) <= 1025) : [];
@@ -975,6 +974,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 onDataStorageReleaseUpdate(validIds(value));
             } else if (key === recaughtKey) {
                 onDataStorageRecaughtUpdate(new Set(validIds(value)));
+            } else if (key === shinyKey) {
+                setShinyIds(new Set(validIds(value)));
             } else if (caughtKey && key === caughtKey) {
                 setCheckedIds(prev => new Set([...prev, ...usedIds]));
             }
@@ -994,6 +995,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUsedPokegears(pgUsed);
             setPokedexes(Math.max(0, pdTotal - pdUsed.size));
             setUsedPokedexes(pdUsed);
+
+            // Reconstruct shiny IDs from DataStorage
+            const storedShinies = validIds(data[shinyKey] ?? []);
+            setShinyIds(new Set(storedShinies));
 
             initFromDataStorage(
                 Array.isArray(data[derpKey]) ? validIds(data[derpKey]) : null,
@@ -1051,15 +1056,26 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (item.id > o.ITEM_OFFSET && item.id <= o.ITEM_OFFSET + 1025) {
                 unlockPokemon(item.id - o.ITEM_OFFSET);
             } else if (item.id === o.ITEM_OFFSET + 6020) {
-                setUnlockedIds(unlocked => {
-                    const pokemonIds = Array.from(unlocked);
+                // Shiny Charm: randomly assign shiny to a caught Pokemon
+                setCheckedIds(checked => {
+                    const caughtPokemon = Array.from(checked).filter(id => id >= 1 && id <= 1025);
                     setShinyIds(prev => {
+                        const candidates = caughtPokemon.filter(id => !prev.has(id));
+                        if (candidates.length === 0) return prev;
+                        const pick = candidates[Math.floor(Math.random() * candidates.length)];
                         const next = new Set(prev);
-                        const targetIdx = prev.size;
-                        if (targetIdx < pokemonIds.length) next.add(pokemonIds[targetIdx]);
+                        next.add(pick);
+                        // Persist to DataStorage
+                        if (clientRef.current?.authenticated) {
+                            const t = clientRef.current.players.self.team;
+                            const s = clientRef.current.players.self.slot;
+                            clientRef.current.storage.prepare(
+                                `pokepelago_team_${t}_slot_${s}_shiny_pokemon`, []
+                            ).add([pick]).commit();
+                        }
                         return next;
                     });
-                    return unlocked;
+                    return checked;
                 });
             } else if (item.id === o.ITEM_OFFSET + 6000) {
                 setGymBadges(prev => prev + 1);
