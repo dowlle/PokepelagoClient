@@ -23,13 +23,14 @@ interface UseGoalCheckerParams {
     typeUnlocks: Set<string>;
     unlockedIds: Set<number>;
     slotMilestones?: number[];
+    slotTypeMilestones?: Record<string, number[]>;
 }
 
 export function useGoalChecker({
     clientRef, offsetsRef, isNewApWorldRef, checkedIds, setCheckedIds,
     releasedIds, isConnected, goalCount, gameMode,
     currentProfileId, typeLocksEnabled, typeUnlocks, unlockedIds,
-    slotMilestones,
+    slotMilestones, slotTypeMilestones,
 }: UseGoalCheckerParams) {
     const celebrationTriggered = useRef(false);
 
@@ -87,7 +88,7 @@ export function useGoalChecker({
                 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost',
                 'Dragon', 'Fairy', 'Steel', 'Dark',
             ];
-            const typeSteps = [1, 2, 5, 10, 20, 35, 50];
+            const fallbackSteps = [1, 2, 5, 10, 20, 35, 50];
 
             // Legacy APWorld: Kanto starters were pre-collected, not in typeCounts — offset by 1.
             // New APWorld: starters are guessed normally and counted.
@@ -98,9 +99,10 @@ export function useGoalChecker({
             typesList.forEach((typeName, index) => {
                 const rawCount = typeCounts[typeName] || 0;
                 const offset = starterTypeOffsets[typeName] || 0;
+                const typeSteps = slotTypeMilestones?.[typeName] ?? fallbackSteps;
 
                 typeSteps.forEach(step => {
-                    if (rawCount >= step + offset) {
+                    if (rawCount + offset >= step) {
                         const apLocationId = LOCATION_OFFSET + TYPE_MILESTONE_OFFSET + (index * TYPE_MILESTONE_MULTIPLIER) + step;
                         const localId = apLocationId - LOCATION_OFFSET;
                         if (!checkedIds.has(localId)) {
@@ -112,7 +114,7 @@ export function useGoalChecker({
                 });
             });
         }
-    }, [checkedIds, isConnected, gameMode, typeLocksEnabled, typeUnlocks, unlockedIds, slotMilestones]);
+    }, [checkedIds, isConnected, gameMode, typeLocksEnabled, typeUnlocks, unlockedIds, slotMilestones, slotTypeMilestones]);
 
 
     // Victory: send CLIENT_GOAL when guessedCount >= goalCount

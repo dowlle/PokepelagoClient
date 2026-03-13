@@ -250,6 +250,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [regionLocksEnabled, setRegionLocksEnabled] = useState<boolean>(false);
     const [goalCount, setGoalCount] = useState<number | undefined>(undefined);
     const [slotMilestones, setSlotMilestones] = useState<number[] | undefined>(undefined);
+    const [slotTypeMilestones, setSlotTypeMilestones] = useState<Record<string, number[]> | undefined>(undefined);
     const [startingLocationsEnabled, setStartingLocationsEnabled] = useState(true);
     const [connectedTeamSlot, setConnectedTeamSlot] = useState<{ team: number; slot: number } | null>(null);
     const [dexsanityLocalWarning, setDexsanityLocalWarning] = useState(false);
@@ -402,6 +403,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isConnected, goalCount, gameMode,
         currentProfileId, typeLocksEnabled, typeUnlocks, unlockedIds,
         slotMilestones,
+        slotTypeMilestones,
     });
 
     // ── Persistence Effects ──────────────────────────────────────────────────────
@@ -896,6 +898,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (Array.isArray(rawMilestones) && rawMilestones.every((n: unknown) => typeof n === 'number')) {
             setSlotMilestones(rawMilestones as number[]);
         }
+        const rawTypeMilestones = slotData.type_milestones;
+        if (rawTypeMilestones && typeof rawTypeMilestones === 'object' && !Array.isArray(rawTypeMilestones)) {
+            setSlotTypeMilestones(rawTypeMilestones as Record<string, number[]>);
+        }
         if (typeof slotData.starter_count === 'number') {
             offsetsRef.current = { ...offsetsRef.current, STARTER_COUNT: slotData.starter_count };
         }
@@ -1028,6 +1034,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setShuffleEndTime(0);
         setConnectedTeamSlot(null);
         setSlotMilestones(undefined);
+        setSlotTypeMilestones(undefined);
         // Reset gate items
         setGymBadges(0);
         setHasLinkCable(false);
