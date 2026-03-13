@@ -979,6 +979,22 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setCheckedIds(prev => new Set([...prev, ...usedIds]));
             }
         }).then((data) => {
+            // Reconstruct useful item counts from received items + DataStorage used sets
+            const mbUsed = new Set(validIds(data[mbKey] ?? []));
+            const pgUsed = new Set(validIds(data[pgKey] ?? []));
+            const pdUsed = new Set(validIds(data[pdKey] ?? []));
+
+            const mbTotal = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 1).length;
+            const pgTotal = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 2).length;
+            const pdTotal = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 3).length;
+
+            setMasterBalls(Math.max(0, mbTotal - mbUsed.size));
+            setUsedMasterBalls(mbUsed);
+            setPokegears(Math.max(0, pgTotal - pgUsed.size));
+            setUsedPokegears(pgUsed);
+            setPokedexes(Math.max(0, pdTotal - pdUsed.size));
+            setUsedPokedexes(pdUsed);
+
             initFromDataStorage(
                 Array.isArray(data[derpKey]) ? validIds(data[derpKey]) : null,
                 Array.isArray(data[relKey]) ? validIds(data[relKey]) : null,
