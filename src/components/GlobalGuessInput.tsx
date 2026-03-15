@@ -163,7 +163,12 @@ export const GlobalGuessInput: React.FC = () => {
                     title="Credits & Changelog"
                 >
                     Poképelago
+                    {__IS_BETA__ && <span className="ml-1.5 text-[10px] font-bold uppercase tracking-widest text-amber-400 bg-amber-900/30 border border-amber-700/50 rounded px-1.5 py-0.5 align-middle">beta</span>}
                 </h1>
+                {/* Mobile beta badge — visible when logo is hidden */}
+                {__IS_BETA__ && (
+                    <span className="sm:hidden text-[9px] font-bold uppercase tracking-widest text-amber-400 bg-amber-900/30 border border-amber-700/50 rounded px-1.5 py-0.5 shrink-0">beta</span>
+                )}
 
                 {/* Input */}
                 <form onSubmit={handleSubmit} className="flex-1 relative max-w-md">
