@@ -217,6 +217,11 @@ interface GameContextType extends GameState {
     stoneLocksEnabled: boolean;
     startingStarter: string | null;
     connectedTeamSlot: { team: number; slot: number } | null;
+    slotMilestones: number[] | undefined;
+    slotTypeMilestones: Record<string, number[]> | undefined;
+    TYPE_MILESTONE_OFFSET: number;
+    TYPE_MILESTONE_MULTIPLIER: number;
+    recheckMilestones: () => { globalSent: number; typeSent: number };
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -599,6 +604,87 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, [isConnected, checkedIds, gameMode]);
 
+    // Force re-send all reached milestone checks to the AP server.
+    // This fixes stuck logic when milestones were previously missed due to wrong fallback lists.
+    const recheckMilestones = useCallback(() => {
+        const result = { globalSent: 0, typeSent: 0 };
+        if (!clientRef.current?.authenticated) return result;
+
+        const {
+            LOCATION_OFFSET, MILESTONE_OFFSET, TYPE_MILESTONE_OFFSET,
+            TYPE_MILESTONE_MULTIPLIER, STARTER_OFFSET,
+        } = offsetsRef.current;
+        const typesMap = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
+
+        // Count catches and type counts
+        const typeCounts: Record<string, number> = {};
+        let totalCatches = 0;
+        checkedIds.forEach(id => {
+            if (id >= STARTER_OFFSET && id < STARTER_OFFSET + 20) return;
+            if (id >= MILESTONE_OFFSET) return;
+            if (id >= 1 && id <= 1025) {
+                totalCatches++;
+                const data = (pokemonMetadata as any)[id];
+                if (!data) return;
+                data.types.forEach((t: string) => {
+                    const cType = t.charAt(0).toUpperCase() + t.slice(1);
+                    typeCounts[cType] = (typeCounts[cType] || 0) + 1;
+                });
+            }
+        });
+
+        const newChecked = new Set<number>();
+
+        // Global milestones
+        if (slotMilestones) {
+            slotMilestones.forEach(count => {
+                if (totalCatches >= count) {
+                    const apLocationId = LOCATION_OFFSET + MILESTONE_OFFSET + count;
+                    const localId = MILESTONE_OFFSET + count;
+                    console.log(`[recheckMilestones] Sending global milestone: ${count} (apId=${apLocationId})`);
+                    clientRef.current!.check(apLocationId);
+                    newChecked.add(localId);
+                    result.globalSent++;
+                }
+            });
+        }
+
+        // Type milestones
+        if (slotTypeMilestones) {
+            const starterTypeOffsets: Record<string, number> = isNewApWorldRef.current ? {} : {
+                Grass: 1, Poison: 1, Fire: 1, Water: 1,
+            };
+            typesMap.forEach((typeName, index) => {
+                const typeSteps = slotTypeMilestones[typeName];
+                if (!typeSteps) return;
+                const rawCount = typeCounts[typeName] || 0;
+                const offset = starterTypeOffsets[typeName] || 0;
+                typeSteps.forEach(step => {
+                    if (rawCount + offset >= step) {
+                        const apLocationId = LOCATION_OFFSET + TYPE_MILESTONE_OFFSET + (index * TYPE_MILESTONE_MULTIPLIER) + step;
+                        const localId = TYPE_MILESTONE_OFFSET + (index * TYPE_MILESTONE_MULTIPLIER) + step;
+                        console.log(`[recheckMilestones] Sending type milestone: ${step} ${typeName} (apId=${apLocationId})`);
+                        clientRef.current!.check(apLocationId);
+                        newChecked.add(localId);
+                        result.typeSent++;
+                    }
+                });
+            });
+        }
+
+        // Update local checkedIds to include all sent milestones
+        if (newChecked.size > 0) {
+            setCheckedIds(prev => {
+                const next = new Set(prev);
+                newChecked.forEach(id => next.add(id));
+                return next;
+            });
+        }
+
+        console.log(`[recheckMilestones] Done: ${result.globalSent} global + ${result.typeSent} type milestones sent`);
+        return result;
+    }, [checkedIds, slotMilestones, slotTypeMilestones]);
+
     const isPokemonGuessable = useCallback((id: number) => {
         const data = (pokemonMetadata as any)[id];
         if (!data) return { canGuess: true };
@@ -901,6 +987,61 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const rawTypeMilestones = slotData.type_milestones;
         if (rawTypeMilestones && typeof rawTypeMilestones === 'object' && !Array.isArray(rawTypeMilestones)) {
             setSlotTypeMilestones(rawTypeMilestones as Record<string, number[]>);
+        }
+
+        // Derive milestones from the server's location list when slot_data doesn't
+        // provide them (legacy APWorlds). checked + missing = all locations for this slot.
+        if (!rawMilestones || !rawTypeMilestones) {
+            const allLocs = [
+                ...(packet.checked_locations || []),
+                ...(packet.missing_locations || []),
+            ];
+            const typesMap = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
+
+            if (!rawMilestones) {
+                const milestoneMin = o.LOCATION_OFFSET + o.MILESTONE_OFFSET;
+                const milestoneMax = o.LOCATION_OFFSET + o.TYPE_MILESTONE_OFFSET;
+                const derived = allLocs
+                    .filter(id => id >= milestoneMin && id < milestoneMax)
+                    .map(id => id - milestoneMin)
+                    .sort((a, b) => a - b);
+                if (derived.length > 0) {
+                    console.log(`[onConnected] Derived ${derived.length} global milestones from location list:`, derived);
+                    setSlotMilestones(derived);
+                }
+            }
+
+            if (!rawTypeMilestones) {
+                const typeBase = o.LOCATION_OFFSET + o.TYPE_MILESTONE_OFFSET;
+                const mult = o.TYPE_MILESTONE_MULTIPLIER;
+                const derivedType: Record<string, number[]> = {};
+                allLocs.forEach(id => {
+                    const offset = id - typeBase;
+                    if (offset < 0) return;
+                    let typeIndex = Math.floor(offset / mult);
+                    let step = offset % mult;
+                    // Legacy APWorld (mult=50): step 50 collides with the next type's
+                    // base (e.g. Normal step 50 = Fire step 0). Treat step 0 as step=mult
+                    // belonging to the previous type.
+                    if (step === 0 && typeIndex > 0) {
+                        typeIndex -= 1;
+                        step = mult;
+                    }
+                    if (typeIndex < 0 || typeIndex >= typesMap.length) return;
+                    if (step <= 0) return;
+                    const typeName = typesMap[typeIndex];
+                    if (!derivedType[typeName]) derivedType[typeName] = [];
+                    derivedType[typeName].push(step);
+                });
+                // Sort each type's steps
+                for (const key of Object.keys(derivedType)) {
+                    derivedType[key].sort((a, b) => a - b);
+                }
+                if (Object.keys(derivedType).length > 0) {
+                    console.log(`[onConnected] Derived type milestones from location list:`, derivedType);
+                    setSlotTypeMilestones(derivedType);
+                }
+            }
         }
         if (typeof slotData.starter_count === 'number') {
             offsetsRef.current = { ...offsetsRef.current, STARTER_COUNT: slotData.starter_count };
@@ -1301,6 +1442,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             unlockedStones, legendaryLocksEnabled, tradeLocksEnabled, babyLocksEnabled, daycareRequired,
             fossilLocksEnabled, ultraBeastLocksEnabled, paradoxLocksEnabled, stoneLocksEnabled, startingStarter,
             connectedTeamSlot,
+            slotMilestones,
+            slotTypeMilestones,
+            TYPE_MILESTONE_OFFSET: offsetsRef.current.TYPE_MILESTONE_OFFSET,
+            TYPE_MILESTONE_MULTIPLIER: offsetsRef.current.TYPE_MILESTONE_MULTIPLIER,
+            recheckMilestones,
         }}>
             {children}
             {dexsanityLocalWarning && (

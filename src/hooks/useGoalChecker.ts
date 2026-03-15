@@ -61,14 +61,13 @@ export function useGoalChecker({
         });
 
         // 1. Global Milestone Locations
-        // The milestone list is sourced from slot_data (new APWorld) so the client always uses
-        // the server's authoritative values (A5 in docs/recommendations.md).
-        // Legacy APWorld does not send milestones in slot_data; fall back to the hardcoded list.
-        const LEGACY_MILESTONES = [
-            1, 2, 5, 10, 15, 20, 30, 40, 50, 60, 70, 80, 90, 100, 150, 250, 400, 600, 800, 1000,
-            148, 248, 383, 490, 646, 718, 806, 895, 1022,
-        ].filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b);
-        const globalMilestones = slotMilestones ?? LEGACY_MILESTONES;
+        // The milestone list is sourced from slot_data (new APWorld) or derived from the
+        // server's location list on connect (legacy APWorlds). If neither is available yet,
+        // skip — milestones will be checked once the data arrives and triggers a re-render.
+        if (!slotMilestones) {
+            console.log('[GoalChecker] No milestone data available yet, skipping global milestones');
+        }
+        const globalMilestones = slotMilestones ?? [];
 
         globalMilestones.forEach(count => {
             if (totalCatches >= count) {
@@ -88,7 +87,12 @@ export function useGoalChecker({
                 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost',
                 'Dragon', 'Fairy', 'Steel', 'Dark',
             ];
-            const fallbackSteps = [1, 2, 5, 10, 20, 35, 50];
+            // Type milestones are sourced from slot_data or derived from the server's
+            // location list on connect. If not available yet, skip.
+            if (!slotTypeMilestones) {
+                console.log('[GoalChecker] No type milestone data available yet, skipping type milestones');
+                return;
+            }
 
             // Legacy APWorld: Kanto starters were pre-collected, not in typeCounts — offset by 1.
             // New APWorld: starters are guessed normally and counted.
@@ -99,7 +103,8 @@ export function useGoalChecker({
             typesList.forEach((typeName, index) => {
                 const rawCount = typeCounts[typeName] || 0;
                 const offset = starterTypeOffsets[typeName] || 0;
-                const typeSteps = slotTypeMilestones?.[typeName] ?? fallbackSteps;
+                const typeSteps = slotTypeMilestones[typeName];
+                if (!typeSteps || typeSteps.length === 0) return;
 
                 typeSteps.forEach(step => {
                     if (rawCount + offset >= step) {
