@@ -126,7 +126,7 @@ export const GlobalGuessInput: React.FC = () => {
         });
 
         if (match) {
-            const result = attemptGuess(match.name);
+            const result = attemptGuess(guess);
             if ((result.type === 'success' || result.type === 'recaught') && result.pokemonId != null && result.pokemonName) {
                 addGuess(result.pokemonId, result.pokemonName, null, result.type);
             }
