@@ -19,7 +19,7 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({ isLogOpen, isSidebarOpen
         derpemonIndex, releasedIds, derpyfiedIds, setSpriteRefreshCounter, showToast,
         STARTER_OFFSET, MILESTONE_OFFSET, TYPE_MILESTONE_OFFSET, TYPE_MILESTONE_MULTIPLIER,
         slotMilestones, slotTypeMilestones,
-        isConnected, gameMode, detectedApWorldVersion,
+        isConnected, detectedApWorldVersion,
         recheckMilestones,
     } = useGame();
 
