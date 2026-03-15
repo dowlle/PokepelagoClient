@@ -13,23 +13,19 @@ import { StartGameOverlay } from './components/StartGameOverlay';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { TwitchLeaderboard } from './components/TwitchLeaderboard';
 import { OverlayView } from './components/OverlayView';
+import { DebugPanel } from './components/DebugPanel';
 import { TwitchProvider } from './context/TwitchContext';
-import { getCleanName } from './utils/pokemon';
 
 const isOverlayMode = new URLSearchParams(window.location.search).has('overlay');
 
-const POKEMON_TYPES = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
-
 const GameContent: React.FC = () => {
   const {
-    allPokemon, unlockedIds, checkedIds, unlockPokemon, isLoading, isConnected,
+    allPokemon, checkedIds, isLoading, isConnected,
     uiSettings, goal, gameMode, isPokemonGuessable,
-    typeUnlocks,
-    unlockType, lockType, clearAllTypes,
-    setShuffleEndTime, setDerpyfiedIds, setReleasedIds, derpemonIndex, releasedIds, derpyfiedIds, setSpriteRefreshCounter, showToast,
     STARTER_OFFSET, MILESTONE_OFFSET,
     startingLocationsEnabled, gameStarted, connectionKey,
     pokemonLoadError, retryPokemonLoad,
+    releasedIds,
   } = useGame();
 
   const [adventureOverlayDismissed, setAdventureOverlayDismissed] = React.useState(false);
@@ -59,7 +55,6 @@ const GameContent: React.FC = () => {
   });
   const [mobilePanel, setMobilePanel] = React.useState<'log' | 'tracker' | 'settings' | 'twitch' | null>(null);
   const [isDebugVisible, setIsDebugVisible] = React.useState(false);
-  const [debugType, setDebugType] = React.useState(POKEMON_TYPES[0]);
 
   // Only count Pokémon guess locations (IDs 1-1025).
   // Excludes Oak's Lab, Milestone, Type Milestone, and released (ran away) Pokémon.
@@ -124,53 +119,6 @@ const GameContent: React.FC = () => {
       </div>
     );
   }
-
-  // Debug: unlock random Pokemon
-  const unlockRandom = () => {
-    if (allPokemon.length === 0) return;
-    const eligible = allPokemon.filter(p => !unlockedIds.has(p.id));
-    if (eligible.length === 0) return;
-    const pick = eligible[Math.floor(Math.random() * eligible.length)];
-    unlockPokemon(pick.id);
-  };
-
-  const unlockBatch = () => {
-    // Unlock 10 random pokemon
-    const eligible = allPokemon.filter(p => !unlockedIds.has(p.id));
-    const count = Math.min(10, eligible.length);
-    const shuffled = [...eligible].sort(() => Math.random() - 0.5);
-    shuffled.slice(0, count).forEach(p => unlockPokemon(p.id));
-  };
-
-  const unlockAll = () => {
-    if (confirm('Unlock EVERY Pokemon? This might lag for a second.')) {
-      allPokemon.forEach(p => unlockPokemon(p.id));
-    }
-  };
-
-  const triggerDerpTrap = () => {
-    const available = allPokemon.filter(p => !derpyfiedIds.has(p.id) && derpemonIndex[p.id]);
-    if (available.length > 0) {
-      const p = available[Math.floor(Math.random() * available.length)];
-      setDerpyfiedIds(prev => new Set(prev).add(p.id));
-      setSpriteRefreshCounter((c: number) => c + 1);
-
-      if (checkedIds.has(p.id)) {
-        showToast('trap', `${getCleanName(p.name)} turned derpy!`);
-      } else {
-        showToast('trap', `A Pokémon turned derpy!`);
-      }
-    }
-  };
-
-  const triggerReleaseTrap = () => {
-    const valid = Array.from(checkedIds).filter(id => id !== 1 && id !== 4 && id !== 7 && !releasedIds.has(id));
-    if (valid.length > 0) {
-      const id = valid[Math.floor(Math.random() * valid.length)];
-      setReleasedIds(prev => new Set(prev).add(id));
-      showToast('trap', 'Oh no! A Pokémon ran away!');
-    }
-  };
 
   if (!gameMode) {
     return <SplashScreen />;
@@ -318,48 +266,7 @@ const GameContent: React.FC = () => {
 
         {/* Debug Controls - dev/beta only */}
         {(import.meta.env.DEV || __IS_BETA__) && isDebugVisible && (
-          <div className="absolute bottom-0 left-0 right-0 z-20 bg-gray-900/95 backdrop-blur-sm border-t border-gray-800 transition-all duration-300 hidden md:block" style={{ right: isSidebarOpen ? '320px' : '0', left: isLogOpen ? '320px' : '0' }}>
-            <div className="max-w-screen-xl mx-auto flex flex-col gap-3 px-4 py-3">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="text-xs text-gray-500 uppercase tracking-wider font-bold shrink-0">Debug Controls</span>
-                <div className="flex flex-wrap gap-2">
-                  <button onClick={() => (window as any).runAutoComplete?.()} className="px-3 py-1 bg-green-900/50 hover:bg-green-900/80 text-green-200 rounded text-xs border border-green-700/50 whitespace-nowrap">Auto-Complete Start</button>
-                  <button onClick={() => (window as any).stopAutoComplete?.()} className="px-3 py-1 bg-red-900/50 hover:bg-red-900/80 text-red-200 rounded text-xs border border-red-700/50 whitespace-nowrap">Auto-Complete Stop</button>
-                  <button onClick={unlockRandom} className="px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded text-xs border border-gray-700 whitespace-nowrap">Unlock 1</button>
-                  <button onClick={unlockBatch} className="px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded text-xs border border-gray-700 whitespace-nowrap">Unlock 10</button>
-                  <button onClick={unlockAll} className="px-3 py-1 bg-red-900/50 hover:bg-red-900/80 text-red-200 rounded text-xs border border-red-700/50 whitespace-nowrap">Unlock ALL</button>
-                  <div className="w-px h-4 bg-gray-700 mx-1"></div>
-                  <button onClick={() => setShuffleEndTime(Date.now() + 30000)} className="px-3 py-1 bg-purple-900/50 hover:bg-purple-900/80 text-purple-200 rounded text-xs border border-purple-700/50 whitespace-nowrap">Shuffle Trap (30s)</button>
-                  <button onClick={triggerDerpTrap} className="px-3 py-1 bg-purple-900/50 hover:bg-purple-900/80 text-purple-200 rounded text-xs border border-purple-700/50 whitespace-nowrap">Derp Trap</button>
-                  <button onClick={triggerReleaseTrap} className="px-3 py-1 bg-purple-900/50 hover:bg-purple-900/80 text-purple-200 rounded text-xs border border-purple-700/50 whitespace-nowrap">Release Trap</button>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-4 items-center border-t border-gray-800 pt-2">                {/* Type Controls */}
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-gray-400 uppercase font-bold">Types:</span>
-                  <select
-                    value={debugType}
-                    onChange={(e) => setDebugType(e.target.value)}
-                    className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs outline-none focus:border-blue-500"
-                  >
-                    {POKEMON_TYPES.map(t => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={() => typeUnlocks.has(debugType) ? lockType(debugType) : unlockType(debugType)}
-                    className={`px-3 py-1 rounded text-xs border transition-colors ${typeUnlocks.has(debugType) ? 'bg-green-900/30 text-green-400 border-green-700/50 hover:bg-green-900/50' : 'bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-700'}`}
-                  >
-                    {typeUnlocks.has(debugType) ? 'Unlocked' : 'Locked'}
-                  </button>
-                  <div className="h-4 w-px bg-gray-800 mx-1"></div>
-                  <button onClick={() => POKEMON_TYPES.forEach(t => unlockType(t))} className="text-[10px] text-blue-400 hover:underline">All</button>
-                  <button onClick={clearAllTypes} className="text-[10px] text-red-400 hover:underline">Clear</button>
-                </div>
-              </div>
-            </div>
-          </div>
+          <DebugPanel isLogOpen={isLogOpen} isSidebarOpen={isSidebarOpen} />
         )}
       </div>
 
