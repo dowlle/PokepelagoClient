@@ -253,6 +253,21 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
         });
     };
 
+    // Listen for tour requests to open specific accordion sections
+    React.useEffect(() => {
+        const handler = (e: Event) => {
+            const section = (e as CustomEvent).detail as string;
+            setOpenSections(prev => {
+                if (prev[section]) return prev;
+                const next = { ...prev, [section]: true };
+                localStorage.setItem('pokepelago_settings_sections', JSON.stringify(next));
+                return next;
+            });
+        };
+        window.addEventListener('pokepelago_tour_open_section', handler);
+        return () => window.removeEventListener('pokepelago_tour_open_section', handler);
+    }, []);
+
     if (!isOpen && !isEmbedded) return null;
 
     const toggleGen = (index: number) => {
@@ -584,7 +599,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                             </label>
 
                             {/* Sprite Repo URL */}
-                            <div className="space-y-2">
+                            <div className="space-y-2" data-tour="sprite-url">
                                 <label className="flex items-center gap-2 text-xs font-bold text-gray-300">
                                     <Link2 size={14} className="text-blue-400" />
                                     Sprite Repo URL
@@ -683,7 +698,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                                 </div>
                                 <input type="checkbox" checked={uiSettings.masonry} onChange={(e) => updateUiSettings({ masonry: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-emerald-600 focus:ring-emerald-500" />
                             </label>
-                            <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
+                            <label data-tour="shadow-toggle" className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
                                 <div className="flex items-center gap-2">
                                     <div className="w-4 h-4 rounded-full bg-blue-950 border border-blue-800 opacity-40 group-hover:scale-110 transition-transform" />
                                     <div>
@@ -881,6 +896,20 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                 )}
             </section>
             )}
+
+            {/* Restart Tour */}
+            <div className="flex items-center justify-center pt-2">
+                <button
+                    onClick={() => {
+                        localStorage.removeItem('pokepelago_tour_completed');
+                        localStorage.removeItem('pokepelago_tour_seen_prompt');
+                        window.dispatchEvent(new Event('pokepelago_tour_restart'));
+                    }}
+                    className="text-[10px] text-gray-600 hover:text-gray-400 transition-colors"
+                >
+                    Restart guided tour
+                </button>
+            </div>
 
             {/* Support */}
             <div className="flex items-center justify-center py-4">

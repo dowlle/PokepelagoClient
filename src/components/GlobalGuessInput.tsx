@@ -181,11 +181,12 @@ export const GlobalGuessInput: React.FC = () => {
                         className="w-full px-3 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm outline-none focus:border-green-500 transition-colors"
                         autoComplete="off"
                         spellCheck={false}
+                        data-tour="guess-input"
                     />
                 </form>
 
                 {/* Language Selector */}
-                <div className="relative">
+                <div className="relative" data-tour="lang-selector">
                     <button
                         type="button"
                         onClick={() => setLangMenuOpen(prev => !prev)}
@@ -228,7 +229,7 @@ export const GlobalGuessInput: React.FC = () => {
                     const displayGoal = goalCount ?? activePokemonLimit;
                     const isGoalMet = guessedCount >= displayGoal;
                     return (
-                        <div className="hidden sm:flex items-center gap-1 text-sm whitespace-nowrap">
+                        <div className="hidden sm:flex items-center gap-1 text-sm whitespace-nowrap" data-tour="stats-counter">
                             <span className={`font-bold ${isGoalMet ? 'text-yellow-400' : 'text-green-400'}`}>
                                 {guessedCount}
                             </span>

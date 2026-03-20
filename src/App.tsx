@@ -14,6 +14,10 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { TwitchLeaderboard } from './components/TwitchLeaderboard';
 import { OverlayView } from './components/OverlayView';
 import { DebugPanel } from './components/DebugPanel';
+import { TourOverlay } from './components/TourOverlay';
+import { TourPrompt } from './components/TourPrompt';
+import { useTour } from './hooks/useTour';
+import type { TourMode } from './hooks/useTour';
 import { TwitchProvider } from './context/TwitchContext';
 
 const isOverlayMode = new URLSearchParams(window.location.search).has('overlay');
@@ -55,6 +59,24 @@ const GameContent: React.FC = () => {
   });
   const [mobilePanel, setMobilePanel] = React.useState<'log' | 'tracker' | 'settings' | 'twitch' | null>(null);
   const [isDebugVisible, setIsDebugVisible] = React.useState(false);
+  const tour = useTour();
+
+  // Listen for tour restart from settings
+  React.useEffect(() => {
+    const handler = () => tour.start((gameMode as TourMode) ?? 'archipelago');
+    window.addEventListener('pokepelago_tour_restart', handler);
+    return () => window.removeEventListener('pokepelago_tour_restart', handler);
+  }, [tour, gameMode]);
+
+  // Tour panel switching callback
+  const handleTourSwitchPanel = React.useCallback((panel: 'settings' | 'tracker' | null) => {
+    if (!panel) return;
+    // Desktop: switch sidebar tab and ensure sidebar is open
+    setSidebarTab(panel);
+    setIsSidebarOpen(true);
+    // Mobile: open bottom sheet
+    setMobilePanel(panel);
+  }, []);
 
   // Only count Pokémon guess locations (IDs 1-1025).
   // Excludes Oak's Lab, Milestone, Type Milestone, and released (ran away) Pokémon.
@@ -122,7 +144,15 @@ const GameContent: React.FC = () => {
 
   return (
     <div className="h-screen flex flex-col bg-gray-950 text-white font-sans overflow-hidden">
-      <GlobalGuessInput />
+      <div className="relative shrink-0">
+        <GlobalGuessInput />
+        <TourPrompt
+          visible={tour.shouldShowPrompt}
+          onStart={tour.start}
+          onDismiss={tour.dismissPrompt}
+          gameMode={(gameMode as TourMode) ?? 'archipelago'}
+        />
+      </div>
 
       {/* Toolbar - hidden on mobile (merged into DexGrid filter bar), visible on md+ */}
       <div className="z-20 bg-gray-900 border-b border-gray-800 shrink-0 hidden md:block">
@@ -134,6 +164,7 @@ const GameContent: React.FC = () => {
                 const next = !isLogOpen;
                 setIsLogOpen(next);
               }}
+              data-tour="log-toggle"
               className={`hidden md:block p-1.5 rounded transition-all ${isLogOpen ? 'bg-blue-600 text-white' : 'hover:bg-gray-800 text-gray-400'}`}
               title={isLogOpen ? "Hide Log" : "Show Log"}
             >
@@ -223,6 +254,7 @@ const GameContent: React.FC = () => {
           <div className="flex border-b border-gray-800 shrink-0">
             <button
               onClick={() => setSidebarTab('tracker')}
+              data-tour="tracker-tab"
               className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 ${sidebarTab === 'tracker' ? 'text-blue-400 bg-blue-900/20 border-b-2 border-blue-500' : 'text-gray-500 hover:text-gray-300'}`}
             >
               <LayoutGrid size={14} />
@@ -230,6 +262,7 @@ const GameContent: React.FC = () => {
             </button>
             <button
               onClick={() => setSidebarTab('settings')}
+              data-tour="settings-tab"
               className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 ${sidebarTab === 'settings' ? 'text-blue-400 bg-blue-900/20 border-b-2 border-blue-500' : 'text-gray-500 hover:text-gray-300'}`}
             >
               <Settings size={14} />
@@ -355,6 +388,8 @@ const GameContent: React.FC = () => {
       {isConnected && gameMode === 'archipelago' && startingLocationsEnabled && !gameStarted && !adventureOverlayDismissed && (
         <StartGameOverlay onDismiss={() => setAdventureOverlayDismissed(true)} />
       )}
+
+      <TourOverlay tour={tour} onSwitchPanel={handleTourSwitchPanel} />
     </div>
   );
 };

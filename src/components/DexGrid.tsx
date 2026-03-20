@@ -184,7 +184,7 @@ export const DexGrid: React.FC = () => {
                 )}
             </div>
             <div className={containerClass}>
-            {orderedGenerations.map(({ gen }) => {
+            {orderedGenerations.map(({ gen }, genIndex) => {
                 // Full list for header stats (unaffected by type filter)
                 const fullInGen: PokemonRef[] = [];
                 for (let id = gen.startId; id <= gen.endId; id++) {
@@ -270,6 +270,7 @@ export const DexGrid: React.FC = () => {
                         onDragOver={(e) => handleDragOver(e, gen.label)}
                         onDragLeave={handleDragLeave}
                         onDrop={() => handleDrop(gen.label)}
+                        {...(genIndex === 0 ? { 'data-tour': 'dex-region' } : {})}
                         className={`
                             bg-gray-900/70 border rounded-xl backdrop-blur-sm shadow-2xl flex flex-col h-fit
                             ${uiSettings.masonry ? 'break-inside-avoid mb-4' : ''}
