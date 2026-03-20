@@ -67,10 +67,6 @@ const GameContent: React.FC = () => {
     ).length,
     [checkedIds, STARTER_OFFSET, MILESTONE_OFFSET, releasedIds]);
 
-  // Set beta page title
-  React.useEffect(() => {
-    if (__IS_BETA__) document.title = 'Poképelago (beta)';
-  }, []);
 
   // Expose debug toggle to window for GlobalGuessInput to call (dev/beta only)
   React.useEffect(() => {
@@ -364,6 +360,11 @@ const GameContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
+  React.useEffect(() => {
+    if (isOverlayMode) document.title = 'Poképelago Tracker';
+    else if (__IS_BETA__) document.title = 'Poképelago (beta)';
+  }, []);
+
   return (
     <ErrorBoundary>
       <GameProvider>
