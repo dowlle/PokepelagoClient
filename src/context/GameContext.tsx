@@ -1155,10 +1155,15 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const storedShinies = validIds(data[shinyKey] ?? []);
             setShinyIds(new Set(storedShinies));
 
+            // Pass current server trap counts so traps don't re-fire on reconnect
+            const serverDerpCount = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.TRAP_ITEM_OFFSET + 3).length;
+            const serverReleaseCount = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.TRAP_ITEM_OFFSET + 4).length;
             initFromDataStorage(
                 Array.isArray(data[derpKey]) ? validIds(data[derpKey]) : null,
                 Array.isArray(data[relKey]) ? validIds(data[relKey]) : null,
                 Array.isArray(data[recaughtKey]) ? validIds(data[recaughtKey]) : null,
+                serverDerpCount,
+                serverReleaseCount,
             );
             if (caughtKey && Array.isArray(data[caughtKey]))
                 setCheckedIds(prev => new Set([...prev, ...validIds(data[caughtKey])]));

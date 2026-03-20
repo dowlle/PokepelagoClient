@@ -30,21 +30,28 @@ export function useTrapHandler({
     // storageReadyRef gates trap processing to prevent re-triggering on reconnect.
     // Set to true once DataStorage initial values have been loaded.
     const storageReadyRef = useRef(false);
-    // Tracks how many Release Trap items have been processed so new ones can be detected.
+    // Tracks how many Derp/Release Trap items have been processed so new ones can be detected.
+    const processedDerpTrapCountRef = useRef<number>(0);
     const processedReleaseTrapCountRef = useRef<number>(0);
 
-    // Called once from the DataStorage .then() after initial values are loaded
+    // Called once from the DataStorage .then() after initial values are loaded.
+    // serverDerpCount / serverReleaseCount are the current total trap items on the server,
+    // used to sync processed counts so traps don't re-fire on reconnect.
     const initFromDataStorage = useCallback((
         derpData: number[] | null,
         relData: number[] | null,
         recaughtData: number[] | null,
+        serverDerpCount: number,
+        serverReleaseCount: number,
     ) => {
         if (derpData) setDerpyfiedIds(new Set(derpData));
+        // Sync processed count to the server total so existing traps don't re-fire
+        processedDerpTrapCountRef.current = serverDerpCount;
         if (relData) {
             const recaught = recaughtData ? new Set(recaughtData) : new Set<number>();
             setReleasedIds(new Set(relData.filter(id => !recaught.has(id))));
-            processedReleaseTrapCountRef.current = relData.length;
         }
+        processedReleaseTrapCountRef.current = serverReleaseCount;
         storageReadyRef.current = true;
     }, []);
 
@@ -92,7 +99,7 @@ export function useTrapHandler({
         setDerpyfiedIds(derps => {
             if (!storageReadyRef.current) return derps;
             const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + TRAP_ITEM_OFFSET + 3).length;
-            if (totalServer <= derps.size) return derps;
+            if (totalServer <= processedDerpTrapCountRef.current) return derps;
 
             let newDerps = new Set(derps);
             const basePathPokes = allPokemon.filter(p => !newDerps.has(p.id) && derpemonIndex[p.id]);
@@ -105,7 +112,8 @@ export function useTrapHandler({
             // Priority 2: fallback to all with derpemon sprites
             if (availablePokes.length === 0) availablePokes = [...basePathPokes];
 
-            let toAdd = totalServer - derps.size;
+            let toAdd = totalServer - processedDerpTrapCountRef.current;
+            processedDerpTrapCountRef.current = totalServer;
             while (toAdd > 0 && availablePokes.length > 0) {
                 const randIdx = Math.floor(Math.random() * availablePokes.length);
                 const picked = availablePokes.splice(randIdx, 1)[0];
