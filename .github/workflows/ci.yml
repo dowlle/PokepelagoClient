@@ -5,6 +5,8 @@ on:
     branches: [main, beta]
   push:
     branches: [main, beta]
+    tags: ['v*']
+  workflow_call:
 
 jobs:
   check:
@@ -25,3 +27,6 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=high

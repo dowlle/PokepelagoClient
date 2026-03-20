@@ -8,8 +8,45 @@ permissions:
   contents: write
 
 jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  verify-versions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout client
+        uses: actions/checkout@v4
+
+      - name: Checkout APWorld repo
+        uses: actions/checkout@v4
+        with:
+          repository: dowlle/ArchipelagoPokepelago
+          path: apworld-repo
+
+      - name: Verify versions match tag
+        run: |
+          TAG_VERSION=${GITHUB_REF_NAME#v}
+          CLIENT_VERSION=$(node -p "require('./package.json').version")
+          APWORLD_VERSION=$(python3 -c "import json; print(json.load(open('apworld-repo/worlds/pokepelago/archipelago.json'))['world_version'])")
+
+          echo "Tag:     $TAG_VERSION"
+          echo "Client:  $CLIENT_VERSION"
+          echo "APWorld: $APWORLD_VERSION"
+
+          FAILED=0
+          if [ "$CLIENT_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::package.json version ($CLIENT_VERSION) doesn't match tag ($TAG_VERSION)"
+            FAILED=1
+          fi
+          if [ "$APWORLD_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::archipelago.json world_version ($APWORLD_VERSION) doesn't match tag ($TAG_VERSION)"
+            FAILED=1
+          fi
+          exit $FAILED
+
   build-apworld:
     runs-on: ubuntu-latest
+    needs: [ci, verify-versions]
     steps:
       - name: Checkout APWorld repo
         uses: actions/checkout@v4
