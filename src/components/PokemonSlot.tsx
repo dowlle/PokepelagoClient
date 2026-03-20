@@ -70,7 +70,13 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
             }
         };
         loadSprite();
-        return () => { active = false; };
+        return () => {
+            active = false;
+            setSpriteUrl(prev => {
+                if (prev && prev.startsWith('blob:')) URL.revokeObjectURL(prev);
+                return null;
+            });
+        };
     }, [pokemon.id, isShiny, getSpriteUrl, uiSettings.enableSprites, spriteRefreshCounter]);
 
     // Reset load state when url changes

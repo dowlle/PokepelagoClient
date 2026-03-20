@@ -234,7 +234,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [checkedIds, setCheckedIds] = useState<Set<number>>(() => {
         if (localStorage.getItem('pokepelago_gamemode') === 'standalone') {
             const saved = localStorage.getItem('pokepelago_standalone_caught');
-            return saved ? new Set<number>(JSON.parse(saved)) : new Set<number>();
+            if (saved) { try { return new Set<number>(JSON.parse(saved)); } catch { /* corrupted */ } }
         }
         return new Set<number>();
     });
@@ -290,15 +290,18 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [pokedexes, setPokedexes] = useState(0);
     const [usedMasterBalls, setUsedMasterBalls] = useState<Set<number>>(() => {
         const saved = localStorage.getItem('pokepelago_standalone_usedMasterBalls');
-        return saved ? new Set(JSON.parse(saved)) : new Set();
+        if (saved) { try { return new Set(JSON.parse(saved)); } catch { /* corrupted */ } }
+        return new Set();
     });
     const [usedPokegears, setUsedPokegears] = useState<Set<number>>(() => {
         const saved = localStorage.getItem('pokepelago_standalone_usedPokegears');
-        return saved ? new Set(JSON.parse(saved)) : new Set();
+        if (saved) { try { return new Set(JSON.parse(saved)); } catch { /* corrupted */ } }
+        return new Set();
     });
     const [usedPokedexes, setUsedPokedexes] = useState<Set<number>>(() => {
         const saved = localStorage.getItem('pokepelago_standalone_usedPokedexes');
-        return saved ? new Set(JSON.parse(saved)) : new Set();
+        if (saved) { try { return new Set(JSON.parse(saved)); } catch { /* corrupted */ } }
+        return new Set();
     });
 
     // ── UI & Connection ──────────────────────────────────────────────────────────
@@ -309,7 +312,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             enableShadows: false, spriteSet: 'normal', typeDot: true,
             showDexNumbers: true, persistentDot: true,
         };
-        return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
+        if (saved) { try { return { ...defaults, ...JSON.parse(saved) }; } catch { /* corrupted */ } }
+        return defaults;
     });
     const [isLoading, setIsLoading] = useState(true);
     const [pokemonLoadError, setPokemonLoadError] = useState<string | null>(null);
@@ -388,6 +392,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isPokemonGuessableRef,
         allPokemon,
         derpemonIndex,
+        startingStarter,
         showToast,
         addLog,
     });

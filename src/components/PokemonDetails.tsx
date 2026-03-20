@@ -113,8 +113,17 @@ export const PokemonDetails: React.FC = () => {
             }
         } else {
             setDetails(null);
-            setSpriteUrl(null);
+            setSpriteUrl(prev => {
+                if (prev && prev.startsWith('blob:')) URL.revokeObjectURL(prev);
+                return null;
+            });
         }
+        return () => {
+            setSpriteUrl(prev => {
+                if (prev && prev.startsWith('blob:')) URL.revokeObjectURL(prev);
+                return null;
+            });
+        };
     }, [selectedPokemonId, uiSettings.spriteSet, allPokemon, isChecked, isConnected, scoutLocation, shinyIds, getSpriteUrl, spriteRefreshCounter, locationOffset]);
 
     if (!selectedPokemonId || !pokemon) return null;

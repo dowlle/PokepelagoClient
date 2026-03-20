@@ -101,16 +101,16 @@ export const PARADOX_IDS = new Set<number>([
 // Key = stone name (lowercase), value = Set of Pokémon IDs.
 // Stone item names: "{key.charAt(0).toUpperCase() + key.slice(1)} Stone"
 export const STONE_EVO_IDS: Record<string, Set<number>> = {
-    fire:    new Set([38, 59, 136, 514]),           // Ninetales, Arcanine, Flareon, Simisear
-    water:   new Set([62, 91, 121, 134, 272, 516]), // Poliwrath, Cloyster, Starmie, Vaporeon, Ludicolo, Simipour
-    thunder: new Set([26, 135, 604]),               // Raichu, Jolteon, Eelektross
-    leaf:    new Set([45, 71, 103, 275, 512]),      // Vileplume, Victreebel, Exeggutor, Shiftry, Simisage
-    moon:    new Set([31, 34, 36, 40, 301, 518]),   // Nidoqueen, Nidoking, Clefable, Wigglytuff, Delcatty, Musharna
-    sun:     new Set([182, 192, 547, 549, 695]),    // Bellossom, Sunflora, Whimsicott, Lilligant, Heliolisk
-    shiny:   new Set([407, 468, 573, 671]),         // Roserade, Togekiss, Cinccino, Florges
-    dusk:    new Set([429, 430, 609, 681]),         // Mismagius, Honchkrow, Chandelure, Aegislash
-    dawn:    new Set([475, 478]),                   // Gallade, Froslass
-    ice:     new Set([471]),                        // Glaceon
+    fire:    new Set([38, 59, 136, 514, 952]),           // Ninetales, Arcanine, Flareon, Simisear, Scovillain
+    water:   new Set([62, 91, 121, 134, 272, 516]),     // Poliwrath, Cloyster, Starmie, Vaporeon, Ludicolo, Simipour
+    thunder: new Set([26, 135, 462, 476, 604, 738, 939]), // Raichu, Jolteon, Magnezone, Probopass, Eelektross, Vikavolt, Bellibolt
+    leaf:    new Set([45, 71, 103, 275, 470, 512]),     // Vileplume, Victreebel, Exeggutor, Shiftry, Leafeon, Simisage
+    moon:    new Set([31, 34, 36, 40, 301, 518]),       // Nidoqueen, Nidoking, Clefable, Wigglytuff, Delcatty, Musharna
+    sun:     new Set([182, 192, 547, 549, 695]),        // Bellossom, Sunflora, Whimsicott, Lilligant, Heliolisk
+    shiny:   new Set([407, 468, 573, 671]),             // Roserade, Togekiss, Cinccino, Florges
+    dusk:    new Set([429, 430, 609, 681]),             // Mismagius, Honchkrow, Chandelure, Aegislash
+    dawn:    new Set([475, 478]),                       // Gallade, Froslass
+    ice:     new Set([471, 740, 975]),                  // Glaceon, Crabominable, Cetitan
 };
 
 // Ordered stone names matching APWorld item ID offsets (6010 + index)

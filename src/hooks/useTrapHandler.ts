@@ -13,13 +13,14 @@ interface UseTrapHandlerParams {
     isPokemonGuessableRef: MutableRefObject<((id: number) => { canGuess: boolean }) | null>;
     allPokemon: PokemonRef[];
     derpemonIndex: DerpemonIndex;
+    startingStarter: string | null;
     showToast: (type: ToastMessage['type'], message: string) => void;
     addLog: (entry: Omit<LogEntry, 'id' | 'timestamp'>) => void;
 }
 
 export function useTrapHandler({
     offsetsRef, checkedIdsRef, isPokemonGuessableRef,
-    allPokemon, derpemonIndex, showToast, addLog,
+    allPokemon, derpemonIndex, startingStarter, showToast, addLog,
 }: UseTrapHandlerParams) {
     const [shuffleEndTime, setShuffleEndTime] = useState<number>(0);
     const [derpyfiedIds, setDerpyfiedIds] = useState<Set<number>>(new Set());
@@ -145,9 +146,12 @@ export function useTrapHandler({
             if (totalServer <= processedCount) return released;
 
             let newReleased = new Set(released);
-            // Exclude starter Pokémon (1, 4, 7) for safety and thematic reasons
+            // Exclude the player's starting starter from release
+            const starterId = startingStarter
+                ? allPokemon.find(p => p.name.toLowerCase() === startingStarter.toLowerCase())?.id
+                : undefined;
             const validCheckedIds = Array.from(checkedIdsRef.current).filter(
-                id => id !== 1 && id !== 4 && id !== 7 && !newReleased.has(id)
+                id => id !== starterId && !newReleased.has(id)
             );
             let toAdd = totalServer - processedCount;
             processedReleaseTrapCountRef.current = totalServer;
@@ -176,7 +180,7 @@ export function useTrapHandler({
             }
             return newReleased;
         });
-    }, [allPokemon, derpemonIndex, offsetsRef, showToast, addLog]);
+    }, [allPokemon, derpemonIndex, startingStarter, offsetsRef, showToast, addLog]);
 
     return {
         shuffleEndTime,
