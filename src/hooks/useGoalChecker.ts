@@ -51,6 +51,7 @@ export function useGoalChecker({
             if (id >= MILESTONE_OFFSET) return;
             if (id >= 1 && id <= 1025) {
                 totalCatches++;
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const data = (pokemonMetadata as any)[id];
                 if (!data) return;
                 data.types.forEach((t: string) => {

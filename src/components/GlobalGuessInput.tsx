@@ -60,8 +60,11 @@ export const GlobalGuessInput: React.FC = () => {
     useEffect(() => {
         if (!import.meta.env.DEV && !__IS_BETA__) return;
         if (guess.toLowerCase().trim() === 'myuncleworksatnintendo') {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             if ((window as any).toggleDebug) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 (window as any).toggleDebug();
+                // eslint-disable-next-line react-hooks/set-state-in-effect
                 setGuess('');
             }
         }
@@ -80,13 +83,17 @@ export const GlobalGuessInput: React.FC = () => {
     // Expose auto-complete for debug (dev/beta only)
     useEffect(() => {
         if (!import.meta.env.DEV && !__IS_BETA__) return;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (window as any).runAutoComplete = async () => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (window as any).isAutoCompleting = true;
             console.log("Starting Auto-Complete Simulation...");
 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             while ((window as any).isAutoCompleting) {
                 let guessedThisLoop = false;
                 for (const p of allPokemon) {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     if (!(window as any).isAutoCompleting) break;
 
                     const id = p.id;
@@ -106,10 +113,13 @@ export const GlobalGuessInput: React.FC = () => {
             }
 
             setGuess('');
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (window as any).isAutoCompleting = false;
         };
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (window as any).stopAutoComplete = () => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (window as any).isAutoCompleting = false;
         };
     }, [allPokemon]);
@@ -131,6 +141,7 @@ export const GlobalGuessInput: React.FC = () => {
                 addGuess(result.pokemonId, result.pokemonName, null, result.type);
             }
             showToast(result.type, result.message);
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setGuess('');
         }
     }, [guess, allPokemon, checkedIds, isPokemonGuessable, releasedIds, matchesPokemon, attemptGuess, showToast, addGuess]);
@@ -251,6 +262,7 @@ export const GlobalGuessInput: React.FC = () => {
                 )}
 
                 {/* Debug Hints (dev/beta only) */}
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                 {(import.meta.env.DEV || __IS_BETA__) && (window as any).isDebugVisible && guess.length >= 2 && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-gray-900 border border-gray-700 rounded shadow-xl max-h-48 overflow-y-auto z-50">
                         {allPokemon

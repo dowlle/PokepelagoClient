@@ -110,6 +110,7 @@ export function useTwitchChat({ enabled, channelName, selectedLanguage }: UseTwi
                 clientRef.current.disconnect().catch(() => {});
                 clientRef.current = null;
             }
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setIsConnected(false);
             setError(null);
             return;

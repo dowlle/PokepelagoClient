@@ -94,6 +94,7 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
 
     const isReadyToGuess = !isChecked && canGuess;
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rawTypes: string[] = (pokemonMetadata as any)[pokemon.id]?.types ?? [];
     const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
     const typeDotStyle: React.CSSProperties = (() => {

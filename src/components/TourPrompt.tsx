@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import type { TourMode } from '../hooks/useTour';
 
 interface TourPromptProps {
@@ -9,20 +9,14 @@ interface TourPromptProps {
 }
 
 export const TourPrompt: React.FC<TourPromptProps> = ({ visible, onStart, onDismiss, gameMode }) => {
-  const [show, setShow] = useState(visible);
-
   // Auto-hide after 10 seconds
   useEffect(() => {
     if (!visible) return;
-    setShow(true);
-    const timer = setTimeout(() => {
-      setShow(false);
-      onDismiss();
-    }, 10000);
+    const timer = setTimeout(onDismiss, 10000);
     return () => clearTimeout(timer);
   }, [visible, onDismiss]);
 
-  if (!show || !visible) return null;
+  if (!visible) return null;
 
   return (
     <div className="absolute left-0 right-0 z-30 flex justify-center px-4 tour-tooltip" style={{ top: '100%' }}>
@@ -30,13 +24,13 @@ export const TourPrompt: React.FC<TourPromptProps> = ({ visible, onStart, onDism
         <span className="text-xs text-gray-300">Welcome to Pokepelago! Want a quick tour?</span>
         <div className="flex items-center gap-2 shrink-0">
           <button
-            onClick={() => { setShow(false); onStart(gameMode); }}
+            onClick={() => { onStart(gameMode); }}
             className="px-3 py-1 text-[10px] font-bold text-white bg-green-600 hover:bg-green-500 rounded-lg transition-colors"
           >
             Take the Tour
           </button>
           <button
-            onClick={() => { setShow(false); onDismiss(); }}
+            onClick={() => { onDismiss(); }}
             className="px-3 py-1 text-[10px] font-bold text-gray-400 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
           >
             No thanks

@@ -22,6 +22,7 @@ export const ArchipelagoLog: React.FC = () => {
         setChatInput('');
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const getPartColor = (part: any) => {
         if (part.color === 'red') return 'text-red-400 font-bold';
         if (part.color === 'blue' || part.type === 'player') return 'text-blue-400 font-bold';

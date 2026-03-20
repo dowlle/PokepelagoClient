@@ -23,9 +23,9 @@ export const PokemonDetails: React.FC = () => {
         masterBalls,
         pokegears,
         pokedexes,
-        useMasterBall,
-        usePokegear,
-        usePokedex,
+        consumeMasterBall,
+        consumePokegear,
+        consumePokedex,
         usedPokegears,
         usedPokedexes,
         isPokemonGuessable,
@@ -41,6 +41,7 @@ export const PokemonDetails: React.FC = () => {
     } = useGame();
     const { getCredit } = useTwitch();
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [details, setDetails] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [gifLoaded, setGifLoaded] = useState(false);
@@ -64,6 +65,7 @@ export const PokemonDetails: React.FC = () => {
 
     useEffect(() => {
         if (selectedPokemonId) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setLoading(true);
             setGifLoaded(false);
             setPendingHint(null);
@@ -145,9 +147,9 @@ export const PokemonDetails: React.FC = () => {
     };
 
     const handleUseItem = (item: 'master' | 'gear' | 'dex') => {
-        if (item === 'master') useMasterBall(selectedPokemonId);
-        if (item === 'gear') usePokegear(selectedPokemonId);
-        if (item === 'dex') usePokedex(selectedPokemonId);
+        if (item === 'master') consumeMasterBall(selectedPokemonId);
+        if (item === 'gear') consumePokegear(selectedPokemonId);
+        if (item === 'dex') consumePokedex(selectedPokemonId);
 
         setItemCooldown(item);
         setTimeout(() => setItemCooldown(null), 2000);
@@ -258,6 +260,7 @@ export const PokemonDetails: React.FC = () => {
                         </div>
 
                         <div className="flex gap-2">
+                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                             {details?.types && showInfo && details.types.map((t: any) => {
                                 const typeName = t.type.name.charAt(0).toUpperCase() + t.type.name.slice(1);
                                 const color = TYPE_COLORS[typeName];
@@ -294,6 +297,7 @@ export const PokemonDetails: React.FC = () => {
                             <div className="bg-gray-800/40 rounded-xl p-3 border border-gray-800">
                                 <span className="text-[10px] text-gray-500 uppercase font-black block mb-1">Abilities</span>
                                 <div className="space-y-0.5">
+                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                     {details.abilities.map((a: any) => (
                                         <div key={a.ability.name} className="flex justify-between text-xs">
                                             <span className="text-gray-400 capitalize">{a.ability.name.replace('-', ' ')}</span>

@@ -71,6 +71,7 @@ export function useTrapHandler({
 
     // Called from the itemsReceived handler inside useAPConnection.
     // Processes any trap/useful-item IDs in the received batch.
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization
     const processTrapItems = useCallback((items: Item[], client: Client) => {
         const { ITEM_OFFSET, TRAP_ITEM_OFFSET, USEFUL_ITEM_OFFSET } = offsetsRef.current;
 
@@ -101,7 +102,7 @@ export function useTrapHandler({
             const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + TRAP_ITEM_OFFSET + 3).length;
             if (totalServer <= processedDerpTrapCountRef.current) return derps;
 
-            let newDerps = new Set(derps);
+            const newDerps = new Set(derps);
             const basePathPokes = allPokemon.filter(p => !newDerps.has(p.id) && derpemonIndex[p.id]);
 
             // Priority 1: already guessed or currently guessable
@@ -153,7 +154,7 @@ export function useTrapHandler({
             const processedCount = processedReleaseTrapCountRef.current;
             if (totalServer <= processedCount) return released;
 
-            let newReleased = new Set(released);
+            const newReleased = new Set(released);
             // Exclude the player's starting starter from release
             const starterId = startingStarter
                 ? allPokemon.find(p => p.name.toLowerCase() === startingStarter.toLowerCase())?.id

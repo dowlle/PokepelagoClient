@@ -40,6 +40,14 @@ const GameContent: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
   const [isLogOpen, setIsLogOpen] = React.useState(false);
   const [twitchIntegration, setTwitchIntegration] = React.useState(() => localStorage.getItem('pokepelago_twitch_integration') === 'true');
+  const [sidebarTab, setSidebarTab] = React.useState<'tracker' | 'settings' | 'twitch'>(() => {
+    const defaultTab = localStorage.getItem('pokepelago_defaultTab') as 'tracker' | 'settings' | 'twitch';
+    if (defaultTab && (defaultTab === 'tracker' || defaultTab === 'settings' || defaultTab === 'twitch')) {
+      localStorage.removeItem('pokepelago_defaultTab');
+      return defaultTab;
+    }
+    return 'tracker';
+  });
   React.useEffect(() => {
     const handler = () => {
       const enabled = localStorage.getItem('pokepelago_twitch_integration') === 'true';
@@ -49,14 +57,6 @@ const GameContent: React.FC = () => {
     window.addEventListener('pokepelago_twitch_integration_changed', handler);
     return () => window.removeEventListener('pokepelago_twitch_integration_changed', handler);
   }, []);
-  const [sidebarTab, setSidebarTab] = React.useState<'tracker' | 'settings' | 'twitch'>(() => {
-    const defaultTab = localStorage.getItem('pokepelago_defaultTab') as 'tracker' | 'settings' | 'twitch';
-    if (defaultTab && (defaultTab === 'tracker' || defaultTab === 'settings' || defaultTab === 'twitch')) {
-      localStorage.removeItem('pokepelago_defaultTab');
-      return defaultTab;
-    }
-    return 'tracker';
-  });
   const [mobilePanel, setMobilePanel] = React.useState<'log' | 'tracker' | 'settings' | 'twitch' | null>(null);
   const [isDebugVisible, setIsDebugVisible] = React.useState(false);
   const tour = useTour();
@@ -93,11 +93,14 @@ const GameContent: React.FC = () => {
   // Expose debug toggle to window for GlobalGuessInput to call (dev/beta only)
   React.useEffect(() => {
     if (!import.meta.env.DEV && !__IS_BETA__) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).toggleDebug = () => setIsDebugVisible(prev => {
       const next = !prev;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window as any).isDebugVisible = next;
       return next;
     });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).isDebugVisible = isDebugVisible;
   }, [isDebugVisible]);
 

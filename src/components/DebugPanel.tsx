@@ -104,6 +104,7 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({ isLogOpen, isSidebarOpen
             if (id >= STARTER_OFFSET && id < STARTER_OFFSET + 20) return;
             if (id >= MILESTONE_OFFSET) return;
             if (id >= 1 && id <= 1025) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const data = (pokemonMetadata as any)[id];
                 if (!data) return;
                 data.types.forEach((t: string) => {
@@ -177,7 +178,9 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({ isLogOpen, isSidebarOpen
                 <div className="flex flex-wrap items-center gap-3">
                     <span className="text-xs text-gray-500 uppercase tracking-wider font-bold shrink-0">Debug Controls</span>
                     <div className="flex flex-wrap gap-2">
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                         <button onClick={() => (window as any).runAutoComplete?.()} className="px-3 py-1 bg-green-900/50 hover:bg-green-900/80 text-green-200 rounded text-xs border border-green-700/50 whitespace-nowrap">Auto-Complete Start</button>
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                         <button onClick={() => (window as any).stopAutoComplete?.()} className="px-3 py-1 bg-red-900/50 hover:bg-red-900/80 text-red-200 rounded text-xs border border-red-700/50 whitespace-nowrap">Auto-Complete Stop</button>
                         <button onClick={unlockRandom} className="px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded text-xs border border-gray-700 whitespace-nowrap">Unlock 1</button>
                         <button onClick={unlockBatch} className="px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded text-xs border border-gray-700 whitespace-nowrap">Unlock 10</button>

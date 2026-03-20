@@ -15,6 +15,7 @@ const getDB = () => {
     return dbPromise;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let dbPromise: Promise<IDBPDatabase<any>> | null = null;
 
 export const saveSprite = async (key: string, blob: Blob) => {
@@ -54,6 +55,7 @@ export const importFromFiles = async (files: FileList | File[], onProgress?: (co
     for (const file of Array.from(files)) {
         const name = file.name;
         // e.g. "sprites-master/sprites/pokemon/1.png"
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const path = ((file as any).webkitRelativePath || name).replace(/\\/g, '/');
 
         // Ignore back sprites

@@ -112,8 +112,10 @@ const AutoScroll: React.FC<{
     const innerRef = React.useRef<HTMLDivElement>(null);
     const onOverflowRef = React.useRef(onOverflowDetected);
     const onCompleteRef = React.useRef(onScrollComplete);
-    onOverflowRef.current = onOverflowDetected;
-    onCompleteRef.current = onScrollComplete;
+    React.useEffect(() => {
+        onOverflowRef.current = onOverflowDetected;
+        onCompleteRef.current = onScrollComplete;
+    });
 
     React.useEffect(() => {
         if (!active) return;

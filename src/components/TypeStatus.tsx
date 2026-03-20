@@ -31,6 +31,7 @@ export const TypeStatus: React.FC = () => {
 
         for (let id = 1; id <= 1025; id++) {
             if (!isActive(id)) continue;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const data = (pokemonMetadata as any)[id];
             if (!data) continue;
             data.types.forEach((t: string) => {

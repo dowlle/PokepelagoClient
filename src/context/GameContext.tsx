@@ -148,9 +148,9 @@ interface GameContextType extends GameState {
         missingPokemon?: boolean;
         legendaryGatingCount?: number;
     };
-    useMasterBall: (pokemonId: number) => void;
-    usePokegear: (pokemonId: number) => void;
-    usePokedex: (pokemonId: number) => void;
+    consumeMasterBall: (pokemonId: number) => void;
+    consumePokegear: (pokemonId: number) => void;
+    consumePokedex: (pokemonId: number) => void;
     usedMasterBalls: Set<number>;
     usedPokegears: Set<number>;
     usedPokedexes: Set<number>;
@@ -342,6 +342,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
     const [gameMode, setGameModeState] = useState<'archipelago' | 'standalone' | null>(() => {
         if (urlParams.has('splash')) return null;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return localStorage.getItem('pokepelago_gamemode') as any || null;
     });
 
@@ -351,6 +352,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // ── Refs used by event handlers ──────────────────────────────────────────────
     const checkedIdsRef = useRef<Set<number>>(checkedIds);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const isPokemonGuessableRef = useRef<any>(null);
     const connectionInfoRef = useRef(connectionInfo);
     const gameModeRef = useRef(gameMode);
@@ -585,7 +587,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             try {
                 await connect(savedInfo);
                 if (clientRef.current?.authenticated) {
-                    try { clientRef.current.check(pendingLocationId); } catch (_) { }
+                    try { clientRef.current.check(pendingLocationId); } catch { /* ignore */ }
                 }
             } catch (e) { console.warn('[checkPokemon] reconnect failed:', e); }
         };
@@ -638,6 +640,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (id >= MILESTONE_OFFSET) return;
             if (id >= 1 && id <= 1025) {
                 totalCatches++;
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const data = (pokemonMetadata as any)[id];
                 if (!data) return;
                 data.types.forEach((t: string) => {
@@ -700,6 +703,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [checkedIds, slotMilestones, slotTypeMilestones]);
 
     const isPokemonGuessable = useCallback((id: number) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const data = (pokemonMetadata as any)[id];
         if (!data) return { canGuess: true };
 
@@ -830,7 +834,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
     };
 
-    const useMasterBall = useCallback((pokemonId: number) => {
+    const consumeMasterBall = useCallback((pokemonId: number) => {
         if (masterBalls > 0) {
             setMasterBalls(prev => prev - 1);
             setUsedMasterBalls(prev => new Set(prev).add(pokemonId));
@@ -844,7 +848,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, [masterBalls, checkPokemon, addLog]);
 
-    const usePokegear = useCallback((pokemonId: number) => {
+    const consumePokegear = useCallback((pokemonId: number) => {
         if (pokegears > 0) {
             setPokegears(prev => prev - 1);
             setUsedPokegears(prev => new Set(prev).add(pokemonId));
@@ -857,7 +861,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, [pokegears, addLog]);
 
-    const usePokedex = useCallback((pokemonId: number) => {
+    const consumePokedex = useCallback((pokemonId: number) => {
         if (pokedexes > 0) {
             setPokedexes(prev => prev - 1);
             setUsedPokedexes(prev => new Set(prev).add(pokemonId));
@@ -950,6 +954,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setRegionPasses(newRegionPasses);
 
         // Parse slot data
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const slotData = packet.slot_data as any || {};
         setShadowsEnabled(!!slotData.shadows);
         setTypeLocksEnabled(!!slotData.type_locks);
@@ -1297,8 +1302,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, [unlockPokemon, processTrapItems]);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const onPrintJSON = useCallback((packet: any, client: Client) => {
         if (packet.type === 'Hint') {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const item = packet.item as any;
             if (item && item.receiving_player === client.players.self.slot) {
                 const o = offsetsRef.current;
@@ -1309,6 +1316,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
         }
         if (packet.data) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const parts = packet.data.map((p: any) => {
                 let text = p.text || '';
                 let type = p.type || 'color';
@@ -1328,16 +1336,20 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
             const isHintOrItem = packet.type === 'Hint' || packet.type === 'ItemSend' || packet.type === 'ItemCheat';
             const isMe = !isHintOrItem || !client.players.self ? true :
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 packet.data.some((p: any) => p.type === 'player_id' && parseInt(p.text) === client.players.self.slot);
             addLog({
                 type: packet.type === 'Hint' ? 'hint' : packet.type === 'ItemSend' ? 'item' : packet.type === 'Chat' ? 'chat' : 'system',
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 text: parts.map((p: any) => p.text).join(''), parts, isMe,
             });
         }
     }, [addLog]);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const onLocationInfo = useCallback((packet: any, client: Client) => {
         const o = offsetsRef.current;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         packet.locations.forEach((item: any) => {
             if (item.player === client.players.self.slot && (item.item as number) > o.ITEM_OFFSET && (item.item as number) <= o.ITEM_OFFSET + 1025) {
                 const dexId = (item.item as number) - o.ITEM_OFFSET;
@@ -1346,6 +1358,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
     }, []);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const onRoomUpdate = useCallback((packet: any) => {
         const o = offsetsRef.current;
         const newChecked: number[] | undefined = packet.checked_locations;
@@ -1432,7 +1445,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             typeLocksEnabled, dexsanityEnabled, legendaryGating,
             regionPasses, typeUnlocks,
             masterBalls, pokegears, pokedexes,
-            useMasterBall, usePokegear, usePokedex,
+            consumeMasterBall, consumePokegear, consumePokedex,
             usedMasterBalls, usedPokegears, usedPokedexes,
             spriteCount, refreshSpriteCount, getSpriteUrl,
             derpemonIndex, derpemonSpriteCount: Object.keys(derpemonIndex).length,
@@ -1501,6 +1514,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useGame = () => {
     const context = useContext(GameContext);
     if (!context) throw new Error('useGame must be used within a GameProvider');

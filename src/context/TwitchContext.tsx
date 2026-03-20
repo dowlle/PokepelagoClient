@@ -58,9 +58,11 @@ export const TwitchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const leaderboardRef = useRef(leaderboard);
     const creditsRef = useRef(credits);
     const guessFeedRef = useRef(guessFeed);
-    leaderboardRef.current = leaderboard;
-    creditsRef.current = credits;
-    guessFeedRef.current = guessFeed;
+    useEffect(() => {
+        leaderboardRef.current = leaderboard;
+        creditsRef.current = credits;
+        guessFeedRef.current = guessFeed;
+    });
 
     const channelRef = useRef<BroadcastChannel | null>(null);
     // Guard to prevent overlay's addGuess from broadcasting back
@@ -69,6 +71,7 @@ export const TwitchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // Load persisted data when slot changes
     useEffect(() => {
         if (!connectedTeamSlot) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setLeaderboard(new Map());
             setCredits(new Map());
             setGuessFeed([]);
@@ -203,7 +206,7 @@ export const TwitchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         };
 
         return channel;
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    }, []);
 
     // Overlay: create channel immediately on mount (doesn't need AP connection)
     useEffect(() => {
@@ -231,6 +234,7 @@ export const TwitchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useTwitch(): TwitchContextType {
     const ctx = useContext(TwitchContext);
     if (!ctx) throw new Error('useTwitch must be used within TwitchProvider');

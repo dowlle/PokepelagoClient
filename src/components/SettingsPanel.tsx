@@ -185,6 +185,31 @@ const ObsOverlayBuilder: React.FC<{
     );
 };
 
+const AccordionHeader: React.FC<{
+    sectionKey: string;
+    icon: React.ReactNode;
+    label: string;
+    badge?: React.ReactNode;
+    isEmbedded?: boolean;
+    openSections: Record<string, boolean>;
+    toggleSection: (key: string) => void;
+}> = ({ sectionKey, icon, label, badge, isEmbedded, openSections, toggleSection }) => (
+    <button
+        onClick={() => toggleSection(sectionKey)}
+        className="w-full flex items-center justify-between px-4 py-3 bg-gray-900/60 hover:bg-gray-800/60 transition-colors"
+    >
+        <h3 className={`font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2 ${isEmbedded ? 'text-[10px]' : 'text-xs'}`}>
+            {icon}
+            {label}
+            {badge}
+        </h3>
+        <ChevronDown
+            size={14}
+            className={`text-gray-600 transition-transform duration-200 ${openSections[sectionKey] ? 'rotate-180' : ''}`}
+        />
+    </button>
+);
+
 interface SettingsPanelProps {
     isOpen: boolean;
     onClose: () => void;
@@ -367,30 +392,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
         }
     };
 
-    const AccordionHeader = ({
-        sectionKey, icon, label, badge
-    }: {
-        sectionKey: string;
-        icon: React.ReactNode;
-        label: string;
-        badge?: React.ReactNode;
-    }) => (
-        <button
-            onClick={() => toggleSection(sectionKey)}
-            className="w-full flex items-center justify-between px-4 py-3 bg-gray-900/60 hover:bg-gray-800/60 transition-colors"
-        >
-            <h3 className={`font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2 ${isEmbedded ? 'text-[10px]' : 'text-xs'}`}>
-                {icon}
-                {label}
-                {badge}
-            </h3>
-            <ChevronDown
-                size={14}
-                className={`text-gray-600 transition-transform duration-200 ${openSections[sectionKey] ? 'rotate-180' : ''}`}
-            />
-        </button>
-    );
-
     const settingsContent = (
         <div className={`space-y-2 ${isEmbedded ? 'p-4 pb-4' : 'p-6'}`}>
 
@@ -401,6 +402,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                     icon={<Server size={13} className="text-blue-400" />}
                     label="Connection"
                     badge={isConnected ? <span className="text-[9px] text-green-400 bg-green-900/20 px-1.5 py-0.5 rounded border border-green-700/30 normal-case font-normal tracking-normal">● Active</span> : undefined}
+                    isEmbedded={isEmbedded}
+                    openSections={openSections}
+                    toggleSection={toggleSection}
                 />
                 {openSections['connection'] && (
                     <div className="px-4 py-4 space-y-4 border-t border-gray-800">
@@ -513,6 +517,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                     icon={<Filter size={13} className="text-emerald-400" />}
                     label="Generations"
                     badge={isConnected ? <span className="text-[9px] text-blue-400 bg-blue-900/10 px-1.5 py-0.5 rounded border border-blue-900/30 normal-case font-normal tracking-normal">Synced</span> : undefined}
+                    isEmbedded={isEmbedded}
+                    openSections={openSections}
+                    toggleSection={toggleSection}
                 />
                 {openSections['generations'] && (
                     <div className="px-4 py-4 space-y-3 border-t border-gray-800">
@@ -548,6 +555,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                     icon={<Image size={13} className="text-yellow-400" />}
                     label="Sprite Management"
                     badge={spriteCount > 0 ? <span className="text-[9px] text-yellow-400 bg-yellow-900/20 px-1.5 py-0.5 rounded border border-yellow-700/30 normal-case font-normal tracking-normal">{spriteCount} local</span> : undefined}
+                    isEmbedded={isEmbedded}
+                    openSections={openSections}
+                    toggleSection={toggleSection}
                 />
                 {openSections['sprites'] && (
                     <div className="px-4 py-4 border-t border-gray-800">
@@ -657,6 +667,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                                             {importProgress !== null ? 'Please wait' : "Select the 'sprites' directory"}
                                         </p>
                                     </div>
+                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                     <input type="file" className="hidden" multiple {...{ webkitdirectory: '', directory: '' } as any} onChange={handleImport} />
                                 </label>
                                 <p className="text-[9px] text-gray-500 italic text-center">
@@ -674,6 +685,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                     sectionKey="interface"
                     icon={<Monitor size={13} className="text-purple-400" />}
                     label="Interface"
+                    isEmbedded={isEmbedded}
+                    openSections={openSections}
+                    toggleSection={toggleSection}
                 />
                 {openSections['interface'] && (
                     <div className="px-4 py-4 space-y-4 border-t border-gray-800">
@@ -784,6 +798,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                     icon={<Tv size={13} className="text-purple-400" />}
                     label="Twitch Chat Guessing"
                     badge={twitchEnabled && twitchChannel ? <span className="text-[9px] text-purple-400 bg-purple-900/20 px-1.5 py-0.5 rounded border border-purple-700/30 normal-case font-normal tracking-normal">● Active</span> : undefined}
+                    isEmbedded={isEmbedded}
+                    openSections={openSections}
+                    toggleSection={toggleSection}
                 />
                 {openSections['twitch'] && (
                     <div className="px-4 py-4 space-y-4 border-t border-gray-800">

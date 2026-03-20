@@ -12,7 +12,7 @@ const REGION_LAYOUT_KEY = 'pokepelago_region_layout';
 export const DexGrid: React.FC = () => {
     const { allPokemon, unlockedIds, checkedIds, hintedIds, shinyIds, generationFilter, uiSettings, gameMode, isPokemonGuessable, shuffleEndTime, releasedIds, activeRegions, regionPasses, regionLocksEnabled, startingRegion, typeFilter, dexFilter, setDexFilter, categoryFilter } = useGame();
 
-    const [now, setNow] = useState(Date.now());
+    const [now, setNow] = useState(() => Date.now());
 
     useEffect(() => {
         if (shuffleEndTime > now) {
@@ -28,7 +28,7 @@ export const DexGrid: React.FC = () => {
         try {
             const saved = localStorage.getItem(REGION_LAYOUT_KEY);
             if (saved) return JSON.parse(saved).order ?? GENERATIONS.map(g => g.label);
-        } catch {}
+        } catch { /* ignore */ }
         return GENERATIONS.map(g => g.label);
     });
 
@@ -36,7 +36,7 @@ export const DexGrid: React.FC = () => {
         try {
             const saved = localStorage.getItem(REGION_LAYOUT_KEY);
             if (saved) return JSON.parse(saved).open ?? {};
-        } catch {}
+        } catch { /* ignore */ }
         return {};
     });
 
@@ -141,7 +141,7 @@ export const DexGrid: React.FC = () => {
     const toggleDexFilter = (key: 'guessable' | 'guessed') => {
         setDexFilter(prev => {
             const next = new Set(prev);
-            next.has(key) ? next.delete(key) : next.add(key);
+            if (next.has(key)) { next.delete(key); } else { next.add(key); }
             return next;
         });
     };
@@ -196,6 +196,7 @@ export const DexGrid: React.FC = () => {
                 // Type-filtered list for body rendering
                 let pokemonInGen = typeFilter.length > 0
                     ? fullInGen.filter(p => {
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         const types: string[] = (pokemonMetadata as any)[p.id]?.types ?? [];
                         return types.some(t => typeFilter.includes(t.charAt(0).toUpperCase() + t.slice(1)));
                     })
@@ -329,6 +330,7 @@ export const DexGrid: React.FC = () => {
                                     <PokemonSlot
                                         key={p.id}
                                         pokemon={p}
+                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                         status={getStatus(p.id) as any}
                                         isShiny={shinyIds.has(p.id)}
                                         order={shuffleOrder.get(p.id)}
