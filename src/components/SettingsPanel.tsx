@@ -159,9 +159,15 @@ const ObsOverlayBuilder: React.FC<{
             </div>
 
             {/* URL preview */}
-            <div className="bg-gray-950/60 rounded border border-gray-800/50 p-2 break-all text-[8px] text-gray-500 font-mono max-h-16 overflow-y-auto select-all">
+            <div className="bg-gray-950/60 rounded border border-gray-800/50 p-2 break-all text-[10px] text-gray-500 font-mono max-h-16 overflow-y-auto select-all">
                 {buildUrl()}
             </div>
+
+            {connectionInfo.password && (
+                <div className="flex items-start gap-1.5 text-[10px] text-yellow-600 bg-yellow-900/10 border border-yellow-800/30 rounded px-2 py-1.5">
+                    This URL contains your AP password in plaintext. Do not share it or show it on stream.
+                </div>
+            )}
 
             {/* Copy button */}
             <button

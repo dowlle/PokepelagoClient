@@ -96,7 +96,7 @@ export const TypeStatus: React.FC = () => {
                             `}
                         >
                             <span>{type}</span>
-                            <span className="text-[8px] opacity-70 font-normal normal-case tracking-normal">
+                            <span className="text-[10px] opacity-70 font-normal normal-case tracking-normal">
                                 ({typeStats[type]?.guessed ?? 0}/{typeStats[type]?.total ?? 0})
                             </span>
                         </button>

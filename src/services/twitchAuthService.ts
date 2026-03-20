@@ -1,7 +1,10 @@
 // Public client ID — safe to embed (no client_secret, implicit grant only)
 const TWITCH_CLIENT_ID = import.meta.env.VITE_TWITCH_CLIENT_ID ?? 'bbsnyiujc5kp5r2tw29wv4skzevnar';
 const STORAGE_KEY_TOKEN = 'pokepelago_twitch_oauth_token';
+const STORAGE_KEY_TOKEN_TS = 'pokepelago_twitch_oauth_token_ts';
 const STORAGE_KEY_USERNAME = 'pokepelago_twitch_oauth_username';
+// Twitch implicit grant tokens expire after ~4 hours
+const TOKEN_MAX_AGE_MS = 4 * 60 * 60 * 1000;
 
 export function getTwitchClientId(): string {
     return TWITCH_CLIENT_ID;
@@ -36,10 +39,19 @@ export function clearHashFromUrl(): void {
 
 export function storeTwitchToken(token: string): void {
     localStorage.setItem(STORAGE_KEY_TOKEN, token);
+    localStorage.setItem(STORAGE_KEY_TOKEN_TS, String(Date.now()));
 }
 
 export function getTwitchToken(): string | null {
-    return localStorage.getItem(STORAGE_KEY_TOKEN);
+    const token = localStorage.getItem(STORAGE_KEY_TOKEN);
+    if (!token) return null;
+    const ts = localStorage.getItem(STORAGE_KEY_TOKEN_TS);
+    if (ts && Date.now() - Number(ts) > TOKEN_MAX_AGE_MS) {
+        // Token has expired — clear it so the user re-authenticates
+        clearTwitchAuth();
+        return null;
+    }
+    return token;
 }
 
 export function storeTwitchUsername(username: string): void {
@@ -52,6 +64,7 @@ export function getTwitchUsername(): string | null {
 
 export function clearTwitchAuth(): void {
     localStorage.removeItem(STORAGE_KEY_TOKEN);
+    localStorage.removeItem(STORAGE_KEY_TOKEN_TS);
     localStorage.removeItem(STORAGE_KEY_USERNAME);
     window.dispatchEvent(new Event('pokepelago_twitch_auth_changed'));
 }

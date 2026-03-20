@@ -21,6 +21,12 @@ import { useSpriteManager } from '../hooks/useSpriteManager';
 import { useGoalChecker } from '../hooks/useGoalChecker';
 import { useTrapHandler } from '../hooks/useTrapHandler';
 
+/** localStorage.setItem wrapped in try/catch to handle QuotaExceededError gracefully. */
+function safeSetItem(key: string, value: string): void {
+    try { localStorage.setItem(key, value); }
+    catch { console.warn(`[localStorage] Failed to write key "${key}" (quota exceeded?)`); }
+}
+
 export interface LogEntry {
     id: string;
     timestamp: number;
@@ -421,15 +427,15 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // ── Persistence Effects ──────────────────────────────────────────────────────
     useEffect(() => {
         if (gameMode === 'standalone')
-            localStorage.setItem('pokepelago_standalone_usedMasterBalls', JSON.stringify(Array.from(usedMasterBalls)));
+            safeSetItem('pokepelago_standalone_usedMasterBalls', JSON.stringify(Array.from(usedMasterBalls)));
     }, [usedMasterBalls, gameMode]);
     useEffect(() => {
         if (gameMode === 'standalone')
-            localStorage.setItem('pokepelago_standalone_usedPokegears', JSON.stringify(Array.from(usedPokegears)));
+            safeSetItem('pokepelago_standalone_usedPokegears', JSON.stringify(Array.from(usedPokegears)));
     }, [usedPokegears, gameMode]);
     useEffect(() => {
         if (gameMode === 'standalone')
-            localStorage.setItem('pokepelago_standalone_usedPokedexes', JSON.stringify(Array.from(usedPokedexes)));
+            safeSetItem('pokepelago_standalone_usedPokedexes', JSON.stringify(Array.from(usedPokedexes)));
     }, [usedPokedexes, gameMode]);
 
     // Reload standalone caught data when switching into standalone mode mid-session
@@ -442,14 +448,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         if (gameMode !== 'standalone') return;
         if (checkedIds.size === 0) return;
-        localStorage.setItem('pokepelago_standalone_caught', JSON.stringify(Array.from(checkedIds)));
+        safeSetItem('pokepelago_standalone_caught', JSON.stringify(Array.from(checkedIds)));
     }, [checkedIds, gameMode]);
 
     // Save caught Pokémon locally for dexsanity=OFF AP games
     useEffect(() => {
         if (gameMode !== 'archipelago' || dexsanityEnabled || !connectedTeamSlot) return;
         const { team, slot } = connectedTeamSlot;
-        localStorage.setItem(
+        safeSetItem(
             `pokepelago_team_${team}_slot_${slot}_caught_local`,
             JSON.stringify(Array.from(checkedIds))
         );
@@ -464,11 +470,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [connectedTeamSlot, dexsanityEnabled]);
 
     useEffect(() => {
-        localStorage.setItem('pokepelago_ui', JSON.stringify(uiSettings));
+        safeSetItem('pokepelago_ui', JSON.stringify(uiSettings));
     }, [uiSettings]);
 
     useEffect(() => {
-        localStorage.setItem('pokepelago_connection', JSON.stringify(connectionInfo));
+        safeSetItem('pokepelago_connection', JSON.stringify(connectionInfo));
     }, [connectionInfo]);
 
     // Load initial data and auto-connect

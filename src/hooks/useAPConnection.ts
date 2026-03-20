@@ -208,10 +208,12 @@ export function useAPConnection() {
                 // Start 5-second ping loop for latency tracking
                 if (pingTimeoutRef.current) clearInterval(pingTimeoutRef.current as any);
                 pingTimeoutRef.current = setInterval(() => {
-                    if (clientRef.current?.authenticated) {
-                        lastPingTimeRef.current = Date.now();
-                        (clientRef.current as any).socket.send({ cmd: 'Bounce', tags: ['ping'] });
-                    }
+                    try {
+                        if (clientRef.current?.authenticated) {
+                            lastPingTimeRef.current = Date.now();
+                            (clientRef.current as any).socket.send({ cmd: 'Bounce', tags: ['ping'] });
+                        }
+                    } catch { /* socket may have closed between check and send */ }
                 }, 5000);
 
                 // Now that the new client is authenticated, safely drop the old one.

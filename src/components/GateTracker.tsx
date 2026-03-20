@@ -127,7 +127,7 @@ export const GateTracker: React.FC = () => {
                         })}
                         <span className="text-[9px] text-gray-500 ml-1">{gymBadges}/8</span>
                     </div>
-                    <div className="flex gap-3 mt-1 text-[8px] text-gray-600">
+                    <div className="flex gap-3 mt-1 text-[10px] text-gray-600">
                         <span style={{ color: '#60A5FA' }}>6 = Sub-Leg.</span>
                         <span style={{ color: '#A78BFA' }}>7 = Box</span>
                         <span style={{ color: '#F59E0B' }}>8 = Mythic</span>
@@ -263,7 +263,7 @@ export const GateTracker: React.FC = () => {
                             return (
                                 <div
                                     key={region}
-                                    className={`px-1.5 py-0.5 rounded text-[8px] font-bold border transition-all cursor-pointer hover:brightness-125 ${isActiveFilter ? 'ring-1 ring-white/50' : ''} ${isPending ? 'animate-pulse' : ''}`}
+                                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold border transition-all cursor-pointer hover:brightness-125 ${isActiveFilter ? 'ring-1 ring-white/50' : ''} ${isPending ? 'animate-pulse' : ''}`}
                                     style={{
                                         borderColor: have ? '#F59E0B66' : (isPending ? '#EAB30866' : '#37415144'),
                                         backgroundColor: have ? '#F59E0B1A' : '#1f293744',
@@ -283,10 +283,10 @@ export const GateTracker: React.FC = () => {
                 </div>
             )}
             {pendingHint && (
-                <p className="text-[8px] text-yellow-400/70 italic">Click again to hint {pendingHint}.</p>
+                <p className="text-[10px] text-yellow-400/70 italic">Click again to hint {pendingHint}.</p>
             )}
             {categoryFilter && (
-                <p className="text-[8px] text-blue-400/70 italic">
+                <p className="text-[10px] text-blue-400/70 italic">
                     Filtering by: {categoryFilter.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
                     {' — '}
                     <span className="underline cursor-pointer" onClick={() => setCategoryFilter(null)}>clear</span>

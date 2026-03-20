@@ -77,7 +77,7 @@ export const ArchipelagoLog: React.FC = () => {
                                     <span className="text-[9px] text-gray-500 opacity-50">
                                         {new Date(log.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                                     </span>
-                                    <span className={`text-[8px] uppercase px-1 rounded-sm border ${log.type === 'item' ? 'border-yellow-900/50 text-yellow-600' :
+                                    <span className={`text-[10px] uppercase px-1 rounded-sm border ${log.type === 'item' ? 'border-yellow-900/50 text-yellow-600' :
                                         log.type === 'chat' ? 'border-blue-900/50 text-blue-400' :
                                             log.type === 'hint' ? 'border-purple-900/50 text-purple-400' :
                                                 'border-gray-800 text-gray-500'

@@ -178,7 +178,7 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
                         #{pokemon.id}
                     </span>
                 ) : (
-                    <span className="absolute bottom-0.5 left-0.5 text-[8px] text-gray-500/60 font-mono z-10 pointer-events-none">
+                    <span className="absolute bottom-0.5 left-0.5 text-[10px] text-gray-500/60 font-mono z-10 pointer-events-none">
                         #{pokemon.id}
                     </span>
                 );
@@ -203,7 +203,7 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
             )}
 
             {status === 'locked' && (
-                <span className="text-gray-700 text-[8px]">●</span>
+                <span className="text-gray-700 text-[10px]">●</span>
             )}
 
             {/* Tooltip */}
