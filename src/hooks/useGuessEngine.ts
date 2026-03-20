@@ -86,13 +86,13 @@ export function useGuessEngine(selectedLanguage: LanguageCode) {
         if (!langDef || langDef.langCode === null) return false;
         const locName = langNames[langDef.langCode];
         return locName ? strMatches(locName) : false;
-    }, [selectedLanguage, allPokemon]);
+    }, [selectedLanguage]);
 
     const displayName = useCallback((p: typeof allPokemon[0]): string => {
         const names = pokemonNames[p.id.toString()];
         const local = selectedLanguage !== 'global' && names?.[selectedLanguage];
         return local || getCleanName(p.name);
-    }, [selectedLanguage, allPokemon]);
+    }, [selectedLanguage]);
 
     const attemptGuess = useCallback((name: string): GuessResult => {
         const normalised = name.toLowerCase().trim();

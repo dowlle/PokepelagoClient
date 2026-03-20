@@ -347,8 +347,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const checkedIdsRef = useRef<Set<number>>(checkedIds);
     const isPokemonGuessableRef = useRef<any>(null);
     const connectionInfoRef = useRef(connectionInfo);
+    const gameModeRef = useRef(gameMode);
     useEffect(() => { checkedIdsRef.current = checkedIds; }, [checkedIds]);
     useEffect(() => { connectionInfoRef.current = connectionInfo; }, [connectionInfo]);
+    useEffect(() => { gameModeRef.current = gameMode; }, [gameMode]);
 
     // ── Toast ────────────────────────────────────────────────────────────────────
     const showToast = useCallback((type: ToastMessage['type'], message: string) => {
@@ -573,7 +575,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const pendingLocationId = locationId;
         const savedInfo = connectionInfoRef.current;
         const doReconnect = async () => {
-            if (gameMode !== 'archipelago' || isConnectingRef.current) return;
+            if (gameModeRef.current !== 'archipelago' || isConnectingRef.current) return;
             try {
                 await connect(savedInfo);
                 if (clientRef.current?.authenticated) {
@@ -596,10 +598,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const startGame = useCallback(() => {
         if (!clientRef.current || !isConnected || gameMode !== 'archipelago') return;
         const { STARTER_OFFSET, STARTER_COUNT, LOCATION_OFFSET } = offsetsRef.current;
+        const currentChecked = checkedIdsRef.current;
         const newChecked = new Set<number>();
         for (let i = 0; i < STARTER_COUNT; i++) {
             const localId = STARTER_OFFSET + i;
-            if (!checkedIds.has(localId)) {
+            if (!currentChecked.has(localId)) {
                 clientRef.current.check(LOCATION_OFFSET + localId);
                 newChecked.add(localId);
             }
@@ -607,7 +610,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (newChecked.size > 0) {
             setCheckedIds(prev => { const next = new Set(prev); newChecked.forEach(id => next.add(id)); return next; });
         }
-    }, [isConnected, checkedIds, gameMode]);
+    }, [isConnected, gameMode]);
 
     // Force re-send all reached milestone checks to the AP server.
     // This fixes stuck logic when milestones were previously missed due to wrong fallback lists.
