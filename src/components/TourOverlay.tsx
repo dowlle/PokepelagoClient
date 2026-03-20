@@ -62,7 +62,9 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({ tour, onSwitchPanel })
       if (cancelled) return;
       const el = document.querySelector(`[data-tour="${step.selector}"]`);
       if (el) {
-        measureTarget();
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        // Re-measure after scroll settles
+        schedule(measureTarget, 300);
       } else if (attempts < 20) {
         attempts++;
         schedule(tryMeasure, 80);
