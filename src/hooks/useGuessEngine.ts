@@ -67,18 +67,20 @@ export function useGuessEngine(selectedLanguage: LanguageCode) {
                 (sn !== '' && (strip(sl) === sn || strip(sc) === sn));
         };
 
+        // Always check PokeAPI slug — works regardless of selected language
         const raw = p.name.toLowerCase();
         const clean = getCleanName(p.name).toLowerCase();
-        const englishMatch = raw === normalised || clean === normalised ||
+        const slugMatch = raw === normalised || clean === normalised ||
             (sn !== '' && (strip(raw) === sn || strip(clean) === sn));
+        if (slugMatch) return true;
 
         const langNames: Record<string, string> = pokemonNames[p.id.toString()] ?? {};
         const enSpeciesMatch = langNames['en'] ? strMatches(langNames['en']) : false;
 
-        if (selectedLanguage === 'en') return englishMatch || enSpeciesMatch;
+        if (selectedLanguage === 'en') return enSpeciesMatch;
 
         if (selectedLanguage === 'global') {
-            if (englishMatch || enSpeciesMatch) return true;
+            if (enSpeciesMatch) return true;
             return Object.values(langNames).some(name => strMatches(name));
         }
 
@@ -96,11 +98,16 @@ export function useGuessEngine(selectedLanguage: LanguageCode) {
 
     const attemptGuess = useCallback((name: string): GuessResult => {
         const normalised = name.toLowerCase().trim();
-        const match = allPokemon.find(p => matchesPokemon(p, normalised));
+        const matches = allPokemon.filter(p => matchesPokemon(p, normalised));
 
-        if (!match) {
+        if (matches.length === 0) {
             return { type: 'error', message: `✗ ${normalised}` };
         }
+
+        // Prefer unchecked+guessable, then released (recatchable), then fall back to first match
+        const unchecked = matches.find(p => !checkedIds.has(p.id) && !releasedIds.has(p.id) && isPokemonGuessable(p.id).canGuess);
+        const released = matches.find(p => releasedIds.has(p.id));
+        const match = unchecked ?? released ?? matches[0];
 
         if (releasedIds.has(match.id)) {
             recatchPokemon(match.id);
