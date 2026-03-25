@@ -99,6 +99,7 @@ interface GameState {
     ultraBeastLocksEnabled: boolean;
     paradoxLocksEnabled: boolean;
     stoneLocksEnabled: boolean;
+    masterBallBypassGates: boolean;
     startingStarter: string | null;
 }
 
@@ -288,6 +289,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [ultraBeastLocksEnabled, setUltraBeastLocksEnabled] = useState(false);
     const [paradoxLocksEnabled, setParadoxLocksEnabled] = useState(false);
     const [stoneLocksEnabled, setStoneLocksEnabled] = useState(false);
+    const [masterBallBypassGates, setMasterBallBypassGates] = useState(true);
     const [startingStarter, setStartingStarter] = useState<string | null>(null);
 
     // ── Item Counts ──────────────────────────────────────────────────────────────
@@ -835,18 +837,21 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const consumeMasterBall = useCallback((pokemonId: number) => {
-        if (masterBalls > 0) {
-            setMasterBalls(prev => prev - 1);
-            setUsedMasterBalls(prev => new Set(prev).add(pokemonId));
-            if (clientRef.current?.authenticated) {
-                const team = clientRef.current.players.self.team;
-                const slot = clientRef.current.players.self.slot;
-                clientRef.current.storage.prepare(`pokepelago_team_${team}_slot_${slot}_used_masterballs`, []).add([pokemonId]).commit();
-            }
-            checkPokemon(pokemonId);
-            addLog({ type: 'system', text: `Used a Master Ball on Pokemon #${pokemonId}!`, isMe: true });
+        if (masterBalls <= 0) return;
+        if (!masterBallBypassGates) {
+            const { canGuess } = isPokemonGuessable(pokemonId);
+            if (!canGuess) return;
         }
-    }, [masterBalls, checkPokemon, addLog]);
+        setMasterBalls(prev => prev - 1);
+        setUsedMasterBalls(prev => new Set(prev).add(pokemonId));
+        if (clientRef.current?.authenticated) {
+            const team = clientRef.current.players.self.team;
+            const slot = clientRef.current.players.self.slot;
+            clientRef.current.storage.prepare(`pokepelago_team_${team}_slot_${slot}_used_masterballs`, []).add([pokemonId]).commit();
+        }
+        checkPokemon(pokemonId);
+        addLog({ type: 'system', text: `Used a Master Ball on Pokemon #${pokemonId}!`, isMe: true });
+    }, [masterBalls, masterBallBypassGates, isPokemonGuessable, checkPokemon, addLog]);
 
     const consumePokegear = useCallback((pokemonId: number) => {
         if (pokegears > 0) {
@@ -969,6 +974,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUltraBeastLocksEnabled(!!slotData.ultra_beast_locks);
         setParadoxLocksEnabled(!!slotData.paradox_locks);
         setStoneLocksEnabled(!!slotData.stone_locks);
+        setMasterBallBypassGates(slotData.master_ball_bypass_gates !== false);
         setStartingStarter(slotData.starting_starter ?? null);
 
         if (slotData.active_regions !== undefined) {
@@ -1216,6 +1222,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUltraBeastLocksEnabled(false);
         setParadoxLocksEnabled(false);
         setStoneLocksEnabled(false);
+        setMasterBallBypassGates(true);
         setStartingStarter(null);
         localStorage.setItem('pokepelago_connected', 'false');
     }, []);
@@ -1472,7 +1479,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             pokemonLoadError, retryPokemonLoad,
             gymBadges, hasLinkCable, daycareCount, hasFossilRestorer, hasUltraWormhole, hasTimeRift,
             unlockedStones, legendaryLocksEnabled, tradeLocksEnabled, babyLocksEnabled, daycareRequired,
-            fossilLocksEnabled, ultraBeastLocksEnabled, paradoxLocksEnabled, stoneLocksEnabled, startingStarter,
+            fossilLocksEnabled, ultraBeastLocksEnabled, paradoxLocksEnabled, stoneLocksEnabled, masterBallBypassGates, startingStarter,
             connectedTeamSlot,
             slotMilestones,
             slotTypeMilestones,

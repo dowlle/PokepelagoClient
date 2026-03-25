@@ -29,6 +29,7 @@ export const PokemonDetails: React.FC = () => {
         usedPokegears,
         usedPokedexes,
         isPokemonGuessable,
+        masterBallBypassGates,
         getSpriteUrl,
         uiSettings,
         derpemonIndex,
@@ -473,7 +474,7 @@ export const PokemonDetails: React.FC = () => {
                                     {/* Master Ball */}
                                     <button
                                         onClick={() => handleUseItem('master')}
-                                        disabled={masterBalls === 0 || !!itemCooldown}
+                                        disabled={masterBalls === 0 || !!itemCooldown || (!masterBallBypassGates && !canGuess)}
                                         className="group relative flex flex-col items-center justify-center p-3 rounded-2xl border bg-gray-800/40 border-gray-700/50 hover:bg-red-900/20 hover:border-red-500/40 active:scale-95 disabled:opacity-30 disabled:grayscale disabled:hover:bg-gray-800/40 transition-all"
                                     >
                                         <div className="w-10 h-10 flex items-center justify-center mb-1">
