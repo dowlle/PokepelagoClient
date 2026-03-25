@@ -21,6 +21,12 @@ import { useSpriteManager } from '../hooks/useSpriteManager';
 import { useGoalChecker } from '../hooks/useGoalChecker';
 import { useTrapHandler } from '../hooks/useTrapHandler';
 
+/** localStorage.setItem wrapped in try/catch to handle QuotaExceededError gracefully. */
+function safeSetItem(key: string, value: string): void {
+    try { localStorage.setItem(key, value); }
+    catch { console.warn(`[localStorage] Failed to write key "${key}" (quota exceeded?)`); }
+}
+
 export interface LogEntry {
     id: string;
     timestamp: number;
@@ -93,6 +99,7 @@ interface GameState {
     ultraBeastLocksEnabled: boolean;
     paradoxLocksEnabled: boolean;
     stoneLocksEnabled: boolean;
+    masterBallBypassGates: boolean;
     startingStarter: string | null;
 }
 
@@ -142,9 +149,9 @@ interface GameContextType extends GameState {
         missingPokemon?: boolean;
         legendaryGatingCount?: number;
     };
-    useMasterBall: (pokemonId: number) => void;
-    usePokegear: (pokemonId: number) => void;
-    usePokedex: (pokemonId: number) => void;
+    consumeMasterBall: (pokemonId: number) => void;
+    consumePokegear: (pokemonId: number) => void;
+    consumePokedex: (pokemonId: number) => void;
     usedMasterBalls: Set<number>;
     usedPokegears: Set<number>;
     usedPokedexes: Set<number>;
@@ -216,6 +223,12 @@ interface GameContextType extends GameState {
     paradoxLocksEnabled: boolean;
     stoneLocksEnabled: boolean;
     startingStarter: string | null;
+    connectedTeamSlot: { team: number; slot: number } | null;
+    slotMilestones: number[] | undefined;
+    slotTypeMilestones: Record<string, number[]> | undefined;
+    TYPE_MILESTONE_OFFSET: number;
+    TYPE_MILESTONE_MULTIPLIER: number;
+    recheckMilestones: () => { globalSent: number; typeSent: number };
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -228,7 +241,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [checkedIds, setCheckedIds] = useState<Set<number>>(() => {
         if (localStorage.getItem('pokepelago_gamemode') === 'standalone') {
             const saved = localStorage.getItem('pokepelago_standalone_caught');
-            return saved ? new Set<number>(JSON.parse(saved)) : new Set<number>();
+            if (saved) { try { return new Set<number>(JSON.parse(saved)); } catch { /* corrupted */ } }
         }
         return new Set<number>();
     });
@@ -249,6 +262,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [regionLocksEnabled, setRegionLocksEnabled] = useState<boolean>(false);
     const [goalCount, setGoalCount] = useState<number | undefined>(undefined);
     const [slotMilestones, setSlotMilestones] = useState<number[] | undefined>(undefined);
+    const [slotTypeMilestones, setSlotTypeMilestones] = useState<Record<string, number[]> | undefined>(undefined);
     const [startingLocationsEnabled, setStartingLocationsEnabled] = useState(true);
     const [connectedTeamSlot, setConnectedTeamSlot] = useState<{ team: number; slot: number } | null>(null);
     const [dexsanityLocalWarning, setDexsanityLocalWarning] = useState(false);
@@ -275,6 +289,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [ultraBeastLocksEnabled, setUltraBeastLocksEnabled] = useState(false);
     const [paradoxLocksEnabled, setParadoxLocksEnabled] = useState(false);
     const [stoneLocksEnabled, setStoneLocksEnabled] = useState(false);
+    const [masterBallBypassGates, setMasterBallBypassGates] = useState(true);
     const [startingStarter, setStartingStarter] = useState<string | null>(null);
 
     // ── Item Counts ──────────────────────────────────────────────────────────────
@@ -283,15 +298,18 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [pokedexes, setPokedexes] = useState(0);
     const [usedMasterBalls, setUsedMasterBalls] = useState<Set<number>>(() => {
         const saved = localStorage.getItem('pokepelago_standalone_usedMasterBalls');
-        return saved ? new Set(JSON.parse(saved)) : new Set();
+        if (saved) { try { return new Set(JSON.parse(saved)); } catch { /* corrupted */ } }
+        return new Set();
     });
     const [usedPokegears, setUsedPokegears] = useState<Set<number>>(() => {
         const saved = localStorage.getItem('pokepelago_standalone_usedPokegears');
-        return saved ? new Set(JSON.parse(saved)) : new Set();
+        if (saved) { try { return new Set(JSON.parse(saved)); } catch { /* corrupted */ } }
+        return new Set();
     });
     const [usedPokedexes, setUsedPokedexes] = useState<Set<number>>(() => {
         const saved = localStorage.getItem('pokepelago_standalone_usedPokedexes');
-        return saved ? new Set(JSON.parse(saved)) : new Set();
+        if (saved) { try { return new Set(JSON.parse(saved)); } catch { /* corrupted */ } }
+        return new Set();
     });
 
     // ── UI & Connection ──────────────────────────────────────────────────────────
@@ -302,7 +320,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             enableShadows: false, spriteSet: 'normal', typeDot: true,
             showDexNumbers: true, persistentDot: true,
         };
-        return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
+        if (saved) { try { return { ...defaults, ...JSON.parse(saved) }; } catch { /* corrupted */ } }
+        return defaults;
     });
     const [isLoading, setIsLoading] = useState(true);
     const [pokemonLoadError, setPokemonLoadError] = useState<string | null>(null);
@@ -325,6 +344,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
     const [gameMode, setGameModeState] = useState<'archipelago' | 'standalone' | null>(() => {
         if (urlParams.has('splash')) return null;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return localStorage.getItem('pokepelago_gamemode') as any || null;
     });
 
@@ -334,10 +354,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // ── Refs used by event handlers ──────────────────────────────────────────────
     const checkedIdsRef = useRef<Set<number>>(checkedIds);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const isPokemonGuessableRef = useRef<any>(null);
     const connectionInfoRef = useRef(connectionInfo);
+    const gameModeRef = useRef(gameMode);
     useEffect(() => { checkedIdsRef.current = checkedIds; }, [checkedIds]);
     useEffect(() => { connectionInfoRef.current = connectionInfo; }, [connectionInfo]);
+    useEffect(() => { gameModeRef.current = gameMode; }, [gameMode]);
 
     // ── Toast ────────────────────────────────────────────────────────────────────
     const showToast = useCallback((type: ToastMessage['type'], message: string) => {
@@ -381,6 +404,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isPokemonGuessableRef,
         allPokemon,
         derpemonIndex,
+        startingStarter,
         showToast,
         addLog,
     });
@@ -401,20 +425,21 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isConnected, goalCount, gameMode,
         currentProfileId, typeLocksEnabled, typeUnlocks, unlockedIds,
         slotMilestones,
+        slotTypeMilestones,
     });
 
     // ── Persistence Effects ──────────────────────────────────────────────────────
     useEffect(() => {
         if (gameMode === 'standalone')
-            localStorage.setItem('pokepelago_standalone_usedMasterBalls', JSON.stringify(Array.from(usedMasterBalls)));
+            safeSetItem('pokepelago_standalone_usedMasterBalls', JSON.stringify(Array.from(usedMasterBalls)));
     }, [usedMasterBalls, gameMode]);
     useEffect(() => {
         if (gameMode === 'standalone')
-            localStorage.setItem('pokepelago_standalone_usedPokegears', JSON.stringify(Array.from(usedPokegears)));
+            safeSetItem('pokepelago_standalone_usedPokegears', JSON.stringify(Array.from(usedPokegears)));
     }, [usedPokegears, gameMode]);
     useEffect(() => {
         if (gameMode === 'standalone')
-            localStorage.setItem('pokepelago_standalone_usedPokedexes', JSON.stringify(Array.from(usedPokedexes)));
+            safeSetItem('pokepelago_standalone_usedPokedexes', JSON.stringify(Array.from(usedPokedexes)));
     }, [usedPokedexes, gameMode]);
 
     // Reload standalone caught data when switching into standalone mode mid-session
@@ -427,14 +452,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         if (gameMode !== 'standalone') return;
         if (checkedIds.size === 0) return;
-        localStorage.setItem('pokepelago_standalone_caught', JSON.stringify(Array.from(checkedIds)));
+        safeSetItem('pokepelago_standalone_caught', JSON.stringify(Array.from(checkedIds)));
     }, [checkedIds, gameMode]);
 
     // Save caught Pokémon locally for dexsanity=OFF AP games
     useEffect(() => {
         if (gameMode !== 'archipelago' || dexsanityEnabled || !connectedTeamSlot) return;
         const { team, slot } = connectedTeamSlot;
-        localStorage.setItem(
+        safeSetItem(
             `pokepelago_team_${team}_slot_${slot}_caught_local`,
             JSON.stringify(Array.from(checkedIds))
         );
@@ -449,11 +474,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [connectedTeamSlot, dexsanityEnabled]);
 
     useEffect(() => {
-        localStorage.setItem('pokepelago_ui', JSON.stringify(uiSettings));
+        safeSetItem('pokepelago_ui', JSON.stringify(uiSettings));
     }, [uiSettings]);
 
     useEffect(() => {
-        localStorage.setItem('pokepelago_connection', JSON.stringify(connectionInfo));
+        safeSetItem('pokepelago_connection', JSON.stringify(connectionInfo));
     }, [connectionInfo]);
 
     // Load initial data and auto-connect
@@ -486,13 +511,24 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (hasUrlConnection) {
                 setGameModeState('archipelago');
                 try { await connect(connectionInfoRef.current); } catch (e) { console.error('URL auto-connect failed', e); }
-                // Clean the URL so refreshing doesn't re-trigger
-                window.history.replaceState({}, '', window.location.pathname);
+                // Clean connection params from URL, but preserve other params (e.g. overlay=1)
+                // Skip for overlay mode — keeping params lets refresh reconnect automatically
+                if (!qp.has('overlay')) {
+                    const cleanUrl = new URL(window.location.href);
+                    cleanUrl.searchParams.delete('host');
+                    cleanUrl.searchParams.delete('port');
+                    cleanUrl.searchParams.delete('name');
+                    cleanUrl.searchParams.delete('password');
+                    const remaining = cleanUrl.search;
+                    window.history.replaceState({}, '', window.location.pathname + remaining);
+                }
             } else {
                 const wasConnected = localStorage.getItem('pokepelago_connected') === 'true';
                 const savedConnection = localStorage.getItem('pokepelago_connection');
                 const savedMode = localStorage.getItem('pokepelago_gamemode');
                 if (savedMode === 'archipelago' && wasConnected && savedConnection) {
+                    // Ensure gameMode is set (important for overlay tabs where it may not be persisted)
+                    setGameModeState('archipelago');
                     // Await auto-connect so the loading spinner stays up until it resolves.
                     // This prevents a race where the user opens the Connection Manager and
                     // clicks "Connect" while isConnectingRef is still true (which would
@@ -549,11 +585,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const pendingLocationId = locationId;
         const savedInfo = connectionInfoRef.current;
         const doReconnect = async () => {
-            if (gameMode !== 'archipelago' || isConnectingRef.current) return;
+            if (gameModeRef.current !== 'archipelago' || isConnectingRef.current) return;
             try {
                 await connect(savedInfo);
                 if (clientRef.current?.authenticated) {
-                    try { clientRef.current.check(pendingLocationId); } catch (_) { }
+                    try { clientRef.current.check(pendingLocationId); } catch { /* ignore */ }
                 }
             } catch (e) { console.warn('[checkPokemon] reconnect failed:', e); }
         };
@@ -572,10 +608,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const startGame = useCallback(() => {
         if (!clientRef.current || !isConnected || gameMode !== 'archipelago') return;
         const { STARTER_OFFSET, STARTER_COUNT, LOCATION_OFFSET } = offsetsRef.current;
+        const currentChecked = checkedIdsRef.current;
         const newChecked = new Set<number>();
         for (let i = 0; i < STARTER_COUNT; i++) {
             const localId = STARTER_OFFSET + i;
-            if (!checkedIds.has(localId)) {
+            if (!currentChecked.has(localId)) {
                 clientRef.current.check(LOCATION_OFFSET + localId);
                 newChecked.add(localId);
             }
@@ -583,9 +620,92 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (newChecked.size > 0) {
             setCheckedIds(prev => { const next = new Set(prev); newChecked.forEach(id => next.add(id)); return next; });
         }
-    }, [isConnected, checkedIds, gameMode]);
+    }, [isConnected, gameMode]);
+
+    // Force re-send all reached milestone checks to the AP server.
+    // This fixes stuck logic when milestones were previously missed due to wrong fallback lists.
+    const recheckMilestones = useCallback(() => {
+        const result = { globalSent: 0, typeSent: 0 };
+        if (!clientRef.current?.authenticated) return result;
+
+        const {
+            LOCATION_OFFSET, MILESTONE_OFFSET, TYPE_MILESTONE_OFFSET,
+            TYPE_MILESTONE_MULTIPLIER, STARTER_OFFSET,
+        } = offsetsRef.current;
+        const typesMap = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
+
+        // Count catches and type counts
+        const typeCounts: Record<string, number> = {};
+        let totalCatches = 0;
+        checkedIds.forEach(id => {
+            if (id >= STARTER_OFFSET && id < STARTER_OFFSET + 20) return;
+            if (id >= MILESTONE_OFFSET) return;
+            if (id >= 1 && id <= 1025) {
+                totalCatches++;
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const data = (pokemonMetadata as any)[id];
+                if (!data) return;
+                data.types.forEach((t: string) => {
+                    const cType = t.charAt(0).toUpperCase() + t.slice(1);
+                    typeCounts[cType] = (typeCounts[cType] || 0) + 1;
+                });
+            }
+        });
+
+        const newChecked = new Set<number>();
+
+        // Global milestones
+        if (slotMilestones) {
+            slotMilestones.forEach(count => {
+                if (totalCatches >= count) {
+                    const apLocationId = LOCATION_OFFSET + MILESTONE_OFFSET + count;
+                    const localId = MILESTONE_OFFSET + count;
+                    console.log(`[recheckMilestones] Sending global milestone: ${count} (apId=${apLocationId})`);
+                    clientRef.current!.check(apLocationId);
+                    newChecked.add(localId);
+                    result.globalSent++;
+                }
+            });
+        }
+
+        // Type milestones
+        if (slotTypeMilestones) {
+            const starterTypeOffsets: Record<string, number> = isNewApWorldRef.current ? {} : {
+                Grass: 1, Poison: 1, Fire: 1, Water: 1,
+            };
+            typesMap.forEach((typeName, index) => {
+                const typeSteps = slotTypeMilestones[typeName];
+                if (!typeSteps) return;
+                const rawCount = typeCounts[typeName] || 0;
+                const offset = starterTypeOffsets[typeName] || 0;
+                typeSteps.forEach(step => {
+                    if (rawCount + offset >= step) {
+                        const apLocationId = LOCATION_OFFSET + TYPE_MILESTONE_OFFSET + (index * TYPE_MILESTONE_MULTIPLIER) + step;
+                        const localId = TYPE_MILESTONE_OFFSET + (index * TYPE_MILESTONE_MULTIPLIER) + step;
+                        console.log(`[recheckMilestones] Sending type milestone: ${step} ${typeName} (apId=${apLocationId})`);
+                        clientRef.current!.check(apLocationId);
+                        newChecked.add(localId);
+                        result.typeSent++;
+                    }
+                });
+            });
+        }
+
+        // Update local checkedIds to include all sent milestones
+        if (newChecked.size > 0) {
+            setCheckedIds(prev => {
+                const next = new Set(prev);
+                newChecked.forEach(id => next.add(id));
+                return next;
+            });
+        }
+
+        console.log(`[recheckMilestones] Done: ${result.globalSent} global + ${result.typeSent} type milestones sent`);
+        return result;
+    }, [checkedIds, slotMilestones, slotTypeMilestones]);
 
     const isPokemonGuessable = useCallback((id: number) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const data = (pokemonMetadata as any)[id];
         if (!data) return { canGuess: true };
 
@@ -716,21 +836,24 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
     };
 
-    const useMasterBall = useCallback((pokemonId: number) => {
-        if (masterBalls > 0) {
-            setMasterBalls(prev => prev - 1);
-            setUsedMasterBalls(prev => new Set(prev).add(pokemonId));
-            if (clientRef.current?.authenticated) {
-                const team = clientRef.current.players.self.team;
-                const slot = clientRef.current.players.self.slot;
-                clientRef.current.storage.prepare(`pokepelago_team_${team}_slot_${slot}_used_masterballs`, []).add([pokemonId]).commit();
-            }
-            checkPokemon(pokemonId);
-            addLog({ type: 'system', text: `Used a Master Ball on Pokemon #${pokemonId}!`, isMe: true });
+    const consumeMasterBall = useCallback((pokemonId: number) => {
+        if (masterBalls <= 0) return;
+        if (!masterBallBypassGates) {
+            const { canGuess } = isPokemonGuessable(pokemonId);
+            if (!canGuess) return;
         }
-    }, [masterBalls, checkPokemon, addLog]);
+        setMasterBalls(prev => prev - 1);
+        setUsedMasterBalls(prev => new Set(prev).add(pokemonId));
+        if (clientRef.current?.authenticated) {
+            const team = clientRef.current.players.self.team;
+            const slot = clientRef.current.players.self.slot;
+            clientRef.current.storage.prepare(`pokepelago_team_${team}_slot_${slot}_used_masterballs`, []).add([pokemonId]).commit();
+        }
+        checkPokemon(pokemonId);
+        addLog({ type: 'system', text: `Used a Master Ball on Pokemon #${pokemonId}!`, isMe: true });
+    }, [masterBalls, masterBallBypassGates, isPokemonGuessable, checkPokemon, addLog]);
 
-    const usePokegear = useCallback((pokemonId: number) => {
+    const consumePokegear = useCallback((pokemonId: number) => {
         if (pokegears > 0) {
             setPokegears(prev => prev - 1);
             setUsedPokegears(prev => new Set(prev).add(pokemonId));
@@ -743,7 +866,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, [pokegears, addLog]);
 
-    const usePokedex = useCallback((pokemonId: number) => {
+    const consumePokedex = useCallback((pokemonId: number) => {
         if (pokedexes > 0) {
             setPokedexes(prev => prev - 1);
             setUsedPokedexes(prev => new Set(prev).add(pokemonId));
@@ -803,9 +926,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         setUnlockedIds(newUnlocked);
 
-        // Reconstruct shinyIds
-        const shinyCount = receivedItems.filter(i => i.id === o.ITEM_OFFSET + 6020).length;
-        setShinyIds(shinyCount > 0 ? new Set(Array.from(newUnlocked).slice(0, shinyCount)) : new Set());
+        // Shiny IDs are now loaded from DataStorage (see .then() below), not reconstructed here.
 
         // Reconstruct gate items
         setGymBadges(receivedItems.filter(i => i.id === o.ITEM_OFFSET + 6000).length);
@@ -838,6 +959,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setRegionPasses(newRegionPasses);
 
         // Parse slot data
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const slotData = packet.slot_data as any || {};
         setShadowsEnabled(!!slotData.shadows);
         setTypeLocksEnabled(!!slotData.type_locks);
@@ -852,6 +974,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUltraBeastLocksEnabled(!!slotData.ultra_beast_locks);
         setParadoxLocksEnabled(!!slotData.paradox_locks);
         setStoneLocksEnabled(!!slotData.stone_locks);
+        setMasterBallBypassGates(slotData.master_ball_bypass_gates !== false);
         setStartingStarter(slotData.starting_starter ?? null);
 
         if (slotData.active_regions !== undefined) {
@@ -885,6 +1008,65 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const rawMilestones = slotData.milestones;
         if (Array.isArray(rawMilestones) && rawMilestones.every((n: unknown) => typeof n === 'number')) {
             setSlotMilestones(rawMilestones as number[]);
+        }
+        const rawTypeMilestones = slotData.type_milestones;
+        if (rawTypeMilestones && typeof rawTypeMilestones === 'object' && !Array.isArray(rawTypeMilestones)) {
+            setSlotTypeMilestones(rawTypeMilestones as Record<string, number[]>);
+        }
+
+        // Derive milestones from the server's location list when slot_data doesn't
+        // provide them (legacy APWorlds). checked + missing = all locations for this slot.
+        if (!rawMilestones || !rawTypeMilestones) {
+            const allLocs = [
+                ...(packet.checked_locations || []),
+                ...(packet.missing_locations || []),
+            ];
+            const typesMap = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
+
+            if (!rawMilestones) {
+                const milestoneMin = o.LOCATION_OFFSET + o.MILESTONE_OFFSET;
+                const milestoneMax = o.LOCATION_OFFSET + o.TYPE_MILESTONE_OFFSET;
+                const derived = allLocs
+                    .filter(id => id >= milestoneMin && id < milestoneMax)
+                    .map(id => id - milestoneMin)
+                    .sort((a, b) => a - b);
+                if (derived.length > 0) {
+                    console.log(`[onConnected] Derived ${derived.length} global milestones from location list:`, derived);
+                    setSlotMilestones(derived);
+                }
+            }
+
+            if (!rawTypeMilestones) {
+                const typeBase = o.LOCATION_OFFSET + o.TYPE_MILESTONE_OFFSET;
+                const mult = o.TYPE_MILESTONE_MULTIPLIER;
+                const derivedType: Record<string, number[]> = {};
+                allLocs.forEach(id => {
+                    const offset = id - typeBase;
+                    if (offset < 0) return;
+                    let typeIndex = Math.floor(offset / mult);
+                    let step = offset % mult;
+                    // Legacy APWorld (mult=50): step 50 collides with the next type's
+                    // base (e.g. Normal step 50 = Fire step 0). Treat step 0 as step=mult
+                    // belonging to the previous type.
+                    if (step === 0 && typeIndex > 0) {
+                        typeIndex -= 1;
+                        step = mult;
+                    }
+                    if (typeIndex < 0 || typeIndex >= typesMap.length) return;
+                    if (step <= 0) return;
+                    const typeName = typesMap[typeIndex];
+                    if (!derivedType[typeName]) derivedType[typeName] = [];
+                    derivedType[typeName].push(step);
+                });
+                // Sort each type's steps
+                for (const key of Object.keys(derivedType)) {
+                    derivedType[key].sort((a, b) => a - b);
+                }
+                if (Object.keys(derivedType).length > 0) {
+                    console.log(`[onConnected] Derived type milestones from location list:`, derivedType);
+                    setSlotTypeMilestones(derivedType);
+                }
+            }
         }
         if (typeof slotData.starter_count === 'number') {
             offsetsRef.current = { ...offsetsRef.current, STARTER_COUNT: slotData.starter_count };
@@ -938,9 +1120,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const derpKey = `pokepelago_team_${team}_slot_${slot}_derpyfied`;
         const relKey = `pokepelago_team_${team}_slot_${slot}_released`;
         const recaughtKey = `pokepelago_team_${team}_slot_${slot}_recaught`;
+        const shinyKey = `pokepelago_team_${team}_slot_${slot}_shiny_pokemon`;
         const caughtKey = !slotData.dexsanity ? `pokepelago_team_${team}_slot_${slot}_caught` : null;
 
-        const keysToWatch = [mbKey, pgKey, pdKey, derpKey, relKey, recaughtKey, ...(caughtKey ? [caughtKey] : [])];
+        const keysToWatch = [mbKey, pgKey, pdKey, derpKey, relKey, recaughtKey, shinyKey, ...(caughtKey ? [caughtKey] : [])];
         // Validate that DataStorage values are finite integers in the valid Pokémon ID range.
         const validIds = (raw: unknown): number[] =>
             Array.isArray(raw) ? (raw as unknown[]).filter((v): v is number => Number.isFinite(v) && (v as number) >= 1 && (v as number) <= 1025) : [];
@@ -963,14 +1146,41 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 onDataStorageReleaseUpdate(validIds(value));
             } else if (key === recaughtKey) {
                 onDataStorageRecaughtUpdate(new Set(validIds(value)));
+            } else if (key === shinyKey) {
+                setShinyIds(new Set(validIds(value)));
             } else if (caughtKey && key === caughtKey) {
                 setCheckedIds(prev => new Set([...prev, ...usedIds]));
             }
         }).then((data) => {
+            // Reconstruct useful item counts from received items + DataStorage used sets
+            const mbUsed = new Set(validIds(data[mbKey] ?? []));
+            const pgUsed = new Set(validIds(data[pgKey] ?? []));
+            const pdUsed = new Set(validIds(data[pdKey] ?? []));
+
+            const mbTotal = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 1).length;
+            const pgTotal = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 2).length;
+            const pdTotal = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 3).length;
+
+            setMasterBalls(Math.max(0, mbTotal - mbUsed.size));
+            setUsedMasterBalls(mbUsed);
+            setPokegears(Math.max(0, pgTotal - pgUsed.size));
+            setUsedPokegears(pgUsed);
+            setPokedexes(Math.max(0, pdTotal - pdUsed.size));
+            setUsedPokedexes(pdUsed);
+
+            // Reconstruct shiny IDs from DataStorage
+            const storedShinies = validIds(data[shinyKey] ?? []);
+            setShinyIds(new Set(storedShinies));
+
+            // Pass current server trap counts so traps don't re-fire on reconnect
+            const serverDerpCount = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.TRAP_ITEM_OFFSET + 3).length;
+            const serverReleaseCount = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.TRAP_ITEM_OFFSET + 4).length;
             initFromDataStorage(
                 Array.isArray(data[derpKey]) ? validIds(data[derpKey]) : null,
                 Array.isArray(data[relKey]) ? validIds(data[relKey]) : null,
                 Array.isArray(data[recaughtKey]) ? validIds(data[recaughtKey]) : null,
+                serverDerpCount,
+                serverReleaseCount,
             );
             if (caughtKey && Array.isArray(data[caughtKey]))
                 setCheckedIds(prev => new Set([...prev, ...validIds(data[caughtKey])]));
@@ -995,6 +1205,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setShuffleEndTime(0);
         setConnectedTeamSlot(null);
         setSlotMilestones(undefined);
+        setSlotTypeMilestones(undefined);
         // Reset gate items
         setGymBadges(0);
         setHasLinkCable(false);
@@ -1011,6 +1222,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUltraBeastLocksEnabled(false);
         setParadoxLocksEnabled(false);
         setStoneLocksEnabled(false);
+        setMasterBallBypassGates(true);
         setStartingStarter(null);
         localStorage.setItem('pokepelago_connected', 'false');
     }, []);
@@ -1023,15 +1235,26 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (item.id > o.ITEM_OFFSET && item.id <= o.ITEM_OFFSET + 1025) {
                 unlockPokemon(item.id - o.ITEM_OFFSET);
             } else if (item.id === o.ITEM_OFFSET + 6020) {
-                setUnlockedIds(unlocked => {
-                    const pokemonIds = Array.from(unlocked);
+                // Shiny Charm: randomly assign shiny to a caught Pokemon
+                setCheckedIds(checked => {
+                    const caughtPokemon = Array.from(checked).filter(id => id >= 1 && id <= 1025);
                     setShinyIds(prev => {
+                        const candidates = caughtPokemon.filter(id => !prev.has(id));
+                        if (candidates.length === 0) return prev;
+                        const pick = candidates[Math.floor(Math.random() * candidates.length)];
                         const next = new Set(prev);
-                        const targetIdx = prev.size;
-                        if (targetIdx < pokemonIds.length) next.add(pokemonIds[targetIdx]);
+                        next.add(pick);
+                        // Persist to DataStorage
+                        if (clientRef.current?.authenticated) {
+                            const t = clientRef.current.players.self.team;
+                            const s = clientRef.current.players.self.slot;
+                            clientRef.current.storage.prepare(
+                                `pokepelago_team_${t}_slot_${s}_shiny_pokemon`, []
+                            ).add([pick]).commit();
+                        }
                         return next;
                     });
-                    return unlocked;
+                    return checked;
                 });
             } else if (item.id === o.ITEM_OFFSET + 6000) {
                 setGymBadges(prev => prev + 1);
@@ -1086,8 +1309,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, [unlockPokemon, processTrapItems]);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const onPrintJSON = useCallback((packet: any, client: Client) => {
         if (packet.type === 'Hint') {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const item = packet.item as any;
             if (item && item.receiving_player === client.players.self.slot) {
                 const o = offsetsRef.current;
@@ -1098,6 +1323,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
         }
         if (packet.data) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const parts = packet.data.map((p: any) => {
                 let text = p.text || '';
                 let type = p.type || 'color';
@@ -1117,16 +1343,20 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
             const isHintOrItem = packet.type === 'Hint' || packet.type === 'ItemSend' || packet.type === 'ItemCheat';
             const isMe = !isHintOrItem || !client.players.self ? true :
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 packet.data.some((p: any) => p.type === 'player_id' && parseInt(p.text) === client.players.self.slot);
             addLog({
                 type: packet.type === 'Hint' ? 'hint' : packet.type === 'ItemSend' ? 'item' : packet.type === 'Chat' ? 'chat' : 'system',
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 text: parts.map((p: any) => p.text).join(''), parts, isMe,
             });
         }
     }, [addLog]);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const onLocationInfo = useCallback((packet: any, client: Client) => {
         const o = offsetsRef.current;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         packet.locations.forEach((item: any) => {
             if (item.player === client.players.self.slot && (item.item as number) > o.ITEM_OFFSET && (item.item as number) <= o.ITEM_OFFSET + 1025) {
                 const dexId = (item.item as number) - o.ITEM_OFFSET;
@@ -1135,6 +1365,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
     }, []);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const onRoomUpdate = useCallback((packet: any) => {
         const o = offsetsRef.current;
         const newChecked: number[] | undefined = packet.checked_locations;
@@ -1159,15 +1390,47 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const connect = useCallback(async (info: ConnectionInfo, profileId?: string) => {
         if (profileId) setCurrentProfileId(profileId);
         storageReadyRef.current = false;
+        const isOverlay = urlParams.has('overlay');
         await apConnection.connect(info, profileId, {
             onConnected, onDisconnected, onItemsReceived, onPrintJSON, onLocationInfo, onRoomUpdate,
-        });
-    }, [apConnection, onConnected, onDisconnected, onItemsReceived, onPrintJSON, onLocationInfo, onRoomUpdate]);
+        }, isOverlay ? ['Tracker'] : undefined);
+    }, [apConnection, onConnected, onDisconnected, onItemsReceived, onPrintJSON, onLocationInfo, onRoomUpdate, urlParams]);
 
     const disconnect = useCallback(() => {
         apConnection.disconnect();
         onDisconnected();
     }, [apConnection, onDisconnected]);
+
+    // ── Overlay auto-reconnect ────────────────────────────────────────────────────
+    // When the overlay loses connection, retry with exponential backoff (3s → 6s → 12s, max 30s)
+    const overlayReconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const overlayBackoffRef = useRef(3000);
+    useEffect(() => {
+        const isOverlay = urlParams.has('overlay');
+        if (!isOverlay || gameMode !== 'archipelago') return;
+
+        if (isConnected) {
+            // Connected — reset backoff
+            overlayBackoffRef.current = 3000;
+            if (overlayReconnectRef.current) { clearTimeout(overlayReconnectRef.current); overlayReconnectRef.current = null; }
+            return;
+        }
+
+        // Disconnected in overlay mode — schedule reconnect
+        if (isConnectingRef.current) return; // already connecting
+        overlayReconnectRef.current = setTimeout(async () => {
+            overlayReconnectRef.current = null;
+            if (isConnectingRef.current) return;
+            try {
+                await connect(connectionInfoRef.current);
+            } catch {
+                // Will trigger re-render with isConnected still false → effect retries with higher backoff
+            }
+            overlayBackoffRef.current = Math.min(overlayBackoffRef.current * 2, 30000);
+        }, overlayBackoffRef.current);
+
+        return () => { if (overlayReconnectRef.current) { clearTimeout(overlayReconnectRef.current); overlayReconnectRef.current = null; } };
+    }, [isConnected, gameMode, connect, urlParams, isConnectingRef]);
 
     // ── Derived ──────────────────────────────────────────────────────────────────
     const { STARTER_OFFSET, STARTER_COUNT } = offsetsRef.current;
@@ -1189,7 +1452,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             typeLocksEnabled, dexsanityEnabled, legendaryGating,
             regionPasses, typeUnlocks,
             masterBalls, pokegears, pokedexes,
-            useMasterBall, usePokegear, usePokedex,
+            consumeMasterBall, consumePokegear, consumePokedex,
             usedMasterBalls, usedPokegears, usedPokedexes,
             spriteCount, refreshSpriteCount, getSpriteUrl,
             derpemonIndex, derpemonSpriteCount: Object.keys(derpemonIndex).length,
@@ -1216,7 +1479,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             pokemonLoadError, retryPokemonLoad,
             gymBadges, hasLinkCable, daycareCount, hasFossilRestorer, hasUltraWormhole, hasTimeRift,
             unlockedStones, legendaryLocksEnabled, tradeLocksEnabled, babyLocksEnabled, daycareRequired,
-            fossilLocksEnabled, ultraBeastLocksEnabled, paradoxLocksEnabled, stoneLocksEnabled, startingStarter,
+            fossilLocksEnabled, ultraBeastLocksEnabled, paradoxLocksEnabled, stoneLocksEnabled, masterBallBypassGates, startingStarter,
+            connectedTeamSlot,
+            slotMilestones,
+            slotTypeMilestones,
+            TYPE_MILESTONE_OFFSET: offsetsRef.current.TYPE_MILESTONE_OFFSET,
+            TYPE_MILESTONE_MULTIPLIER: offsetsRef.current.TYPE_MILESTONE_MULTIPLIER,
+            recheckMilestones,
         }}>
             {children}
             {dexsanityLocalWarning && (
@@ -1252,6 +1521,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useGame = () => {
     const context = useContext(GameContext);
     if (!context) throw new Error('useGame must be used within a GameProvider');

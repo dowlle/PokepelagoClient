@@ -138,6 +138,7 @@ export const ConnectionManager: React.FC<ConnectionManagerProps> = ({ isOpen, on
 
     const formatRelative = (ts?: number) => {
         if (!ts) return null;
+        // eslint-disable-next-line react-hooks/purity
         const diff = Date.now() - ts;
         const mins = Math.floor(diff / 60000);
         if (mins < 1) return 'just now';
@@ -150,6 +151,7 @@ export const ConnectionManager: React.FC<ConnectionManagerProps> = ({ isOpen, on
     const autoRemoveIn = (profile: GameProfile) => {
         if (!profile.isGoaled || !profile.goaledAt) return null;
         const cutoff = profile.goaledAt + autoRemoveDays * 24 * 60 * 60 * 1000;
+        // eslint-disable-next-line react-hooks/purity
         const remaining = cutoff - Date.now();
         if (remaining <= 0) return 'soon';
         const hrs = Math.floor(remaining / 3600000);

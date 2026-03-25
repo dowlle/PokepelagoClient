@@ -65,7 +65,17 @@ export const SplashScreen: React.FC = () => {
                                 <div>
                                     <h3 className="text-sm font-bold text-gray-200">Paste a Sprite URL (Easy)</h3>
                                     <p className="text-xs text-gray-500 leading-relaxed">
-                                        Go to Settings → Sprite Management and paste a GitHub sprites tree URL. Try <span className="text-blue-400">github.com/PokeAPI/sprites/tree/master/sprites</span> to get started.
+                                        Go to Settings and paste a GitHub sprites tree URL, or{' '}
+                                        <button
+                                            className="text-blue-400 hover:text-blue-300 underline underline-offset-2"
+                                            onClick={() => {
+                                                localStorage.setItem('pokepelago_spriteRepoUrl', 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon');
+                                                localStorage.setItem('pokepelago_defaultTab', 'settings');
+                                                setGameMode('archipelago');
+                                            }}
+                                        >
+                                            click here to use PokeAPI sprites and start playing
+                                        </button>.
                                     </p>
                                 </div>
                             </div>

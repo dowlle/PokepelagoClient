@@ -70,7 +70,13 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
             }
         };
         loadSprite();
-        return () => { active = false; };
+        return () => {
+            active = false;
+            setSpriteUrl(prev => {
+                if (prev && prev.startsWith('blob:')) URL.revokeObjectURL(prev);
+                return null;
+            });
+        };
     }, [pokemon.id, isShiny, getSpriteUrl, uiSettings.enableSprites, spriteRefreshCounter]);
 
     // Reset load state when url changes
@@ -88,6 +94,7 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
 
     const isReadyToGuess = !isChecked && canGuess;
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rawTypes: string[] = (pokemonMetadata as any)[pokemon.id]?.types ?? [];
     const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
     const typeDotStyle: React.CSSProperties = (() => {
@@ -172,7 +179,7 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
                         #{pokemon.id}
                     </span>
                 ) : (
-                    <span className="absolute bottom-0.5 left-0.5 text-[8px] text-gray-500/60 font-mono z-10 pointer-events-none">
+                    <span className="absolute bottom-0.5 left-0.5 text-[10px] text-gray-500/60 font-mono z-10 pointer-events-none">
                         #{pokemon.id}
                     </span>
                 );
@@ -197,7 +204,7 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
             )}
 
             {status === 'locked' && (
-                <span className="text-gray-700 text-[8px]">●</span>
+                <span className="text-gray-700 text-[10px]">●</span>
             )}
 
             {/* Tooltip */}

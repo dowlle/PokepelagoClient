@@ -23,6 +23,7 @@ interface CacheEntry {
 }
 
 /** Parse a GitHub Contents API response into a dexId → creator map. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function parseIndex(files: any[]): DerpemonIndex {
     const index: DerpemonIndex = {};
     for (const file of files) {
@@ -68,6 +69,7 @@ export async function loadDerpemonIndex(): Promise<DerpemonIndex> {
             headers: { Accept: 'application/vnd.github+json' },
         });
         if (!res.ok) throw new Error(`GitHub API returned ${res.status}`);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const files: any[] = await res.json();
         const index = parseIndex(files);
 

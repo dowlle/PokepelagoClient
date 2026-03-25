@@ -12,7 +12,7 @@ const REGION_LAYOUT_KEY = 'pokepelago_region_layout';
 export const DexGrid: React.FC = () => {
     const { allPokemon, unlockedIds, checkedIds, hintedIds, shinyIds, generationFilter, uiSettings, gameMode, isPokemonGuessable, shuffleEndTime, releasedIds, activeRegions, regionPasses, regionLocksEnabled, startingRegion, typeFilter, dexFilter, setDexFilter, categoryFilter } = useGame();
 
-    const [now, setNow] = useState(Date.now());
+    const [now, setNow] = useState(() => Date.now());
 
     useEffect(() => {
         if (shuffleEndTime > now) {
@@ -28,7 +28,7 @@ export const DexGrid: React.FC = () => {
         try {
             const saved = localStorage.getItem(REGION_LAYOUT_KEY);
             if (saved) return JSON.parse(saved).order ?? GENERATIONS.map(g => g.label);
-        } catch {}
+        } catch { /* ignore */ }
         return GENERATIONS.map(g => g.label);
     });
 
@@ -36,7 +36,7 @@ export const DexGrid: React.FC = () => {
         try {
             const saved = localStorage.getItem(REGION_LAYOUT_KEY);
             if (saved) return JSON.parse(saved).open ?? {};
-        } catch {}
+        } catch { /* ignore */ }
         return {};
     });
 
@@ -135,21 +135,24 @@ export const DexGrid: React.FC = () => {
     const activeCount = generationFilter.length;
 
     const containerClass = uiSettings.masonry
-        ? `columns-1 ${activeCount > 1 ? 'sm:columns-2' : ''} ${activeCount > 2 ? 'lg:columns-3' : ''} ${activeCount > 3 ? 'xl:columns-4' : ''} ${activeCount > 4 ? '2xl:columns-5' : ''} gap-4 px-4 pb-32 space-y-4`
-        : `grid grid-cols-1 ${activeCount > 1 ? 'sm:grid-cols-2' : ''} ${activeCount > 2 ? 'lg:grid-cols-3' : ''} ${activeCount > 3 ? 'xl:grid-cols-4' : ''} ${activeCount > 4 ? '2xl:grid-cols-5' : ''} gap-4 px-4 pb-32 items-start`;
+        ? `columns-1 ${activeCount > 1 ? 'sm:columns-2' : ''} ${activeCount > 2 ? 'lg:columns-3' : ''} ${activeCount > 3 ? 'xl:columns-4' : ''} ${activeCount > 4 ? '2xl:columns-5' : ''} gap-3 sm:gap-4 px-1 sm:px-4 pb-32 space-y-3 sm:space-y-4`
+        : `grid grid-cols-1 ${activeCount > 1 ? 'sm:grid-cols-2' : ''} ${activeCount > 2 ? 'lg:grid-cols-3' : ''} ${activeCount > 3 ? 'xl:grid-cols-4' : ''} ${activeCount > 4 ? '2xl:grid-cols-5' : ''} gap-3 sm:gap-4 px-1 sm:px-4 pb-32 items-start`;
 
     const toggleDexFilter = (key: 'guessable' | 'guessed') => {
         setDexFilter(prev => {
             const next = new Set(prev);
-            next.has(key) ? next.delete(key) : next.add(key);
+            if (next.has(key)) { next.delete(key); } else { next.add(key); }
             return next;
         });
     };
 
+    const guessableCount = allPokemon.filter(p => !checkedIds.has(p.id) && isPokemonGuessable(p.id).canGuess).length;
+    const guessedCount = allPokemon.filter(p => checkedIds.has(p.id) && !releasedIds.has(p.id)).length;
+
     return (
         <div className="flex flex-col">
             {/* Dex filter bar */}
-            <div className="flex items-center gap-2 px-4 pt-3 pb-1">
+            <div className="flex items-center gap-2 px-2 pt-1 pb-2 sm:px-4 sm:pb-3">
                 <span className="text-[10px] font-black uppercase text-gray-600 tracking-widest">Show:</span>
                 <button
                     onClick={() => toggleDexFilter('guessable')}
@@ -159,7 +162,7 @@ export const DexGrid: React.FC = () => {
                             : 'border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-400'
                     }`}
                 >
-                    Guessable
+                    Guessable <span className="text-orange-400">{guessableCount}</span>
                 </button>
                 <button
                     onClick={() => toggleDexFilter('guessed')}
@@ -169,7 +172,7 @@ export const DexGrid: React.FC = () => {
                             : 'border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-400'
                     }`}
                 >
-                    Guessed
+                    Guessed <span className="text-green-400">{guessedCount}</span>
                 </button>
                 {dexFilter.size > 0 && (
                     <button
@@ -181,7 +184,7 @@ export const DexGrid: React.FC = () => {
                 )}
             </div>
             <div className={containerClass}>
-            {orderedGenerations.map(({ gen }) => {
+            {orderedGenerations.map(({ gen }, genIndex) => {
                 // Full list for header stats (unaffected by type filter)
                 const fullInGen: PokemonRef[] = [];
                 for (let id = gen.startId; id <= gen.endId; id++) {
@@ -193,6 +196,7 @@ export const DexGrid: React.FC = () => {
                 // Type-filtered list for body rendering
                 let pokemonInGen = typeFilter.length > 0
                     ? fullInGen.filter(p => {
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         const types: string[] = (pokemonMetadata as any)[p.id]?.types ?? [];
                         return types.some(t => typeFilter.includes(t.charAt(0).toUpperCase() + t.slice(1)));
                     })
@@ -267,6 +271,7 @@ export const DexGrid: React.FC = () => {
                         onDragOver={(e) => handleDragOver(e, gen.label)}
                         onDragLeave={handleDragLeave}
                         onDrop={() => handleDrop(gen.label)}
+                        {...(genIndex === 0 ? { 'data-tour': 'dex-region' } : {})}
                         className={`
                             bg-gray-900/70 border rounded-xl backdrop-blur-sm shadow-2xl flex flex-col h-fit
                             ${uiSettings.masonry ? 'break-inside-avoid mb-4' : ''}
@@ -278,7 +283,7 @@ export const DexGrid: React.FC = () => {
                     >
                         {/* Header: drag handle + toggle */}
                         <div
-                            className="flex items-center gap-2 p-4 cursor-pointer select-none"
+                            className="flex items-center gap-2 p-3 sm:p-4 cursor-pointer select-none"
                             onClick={() => toggleRegion(gen.label)}
                         >
                             <div
@@ -319,12 +324,13 @@ export const DexGrid: React.FC = () => {
                         </div>
 
                         {/* Body — always mounted so sprites stay loaded; hidden via CSS only */}
-                        <div className={`px-4 pb-4 ${isRegionOpen ? '' : 'hidden'}`}>
-                            <div className="flex flex-wrap gap-1.5 justify-start">
+                        <div className={`px-2 pb-3 sm:px-4 sm:pb-4 ${isRegionOpen ? '' : 'hidden'}`}>
+                            <div className="flex flex-wrap gap-1 sm:gap-1.5 justify-start">
                                 {pokemonInGen.map(p => (
                                     <PokemonSlot
                                         key={p.id}
                                         pokemon={p}
+                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                         status={getStatus(p.id) as any}
                                         isShiny={shinyIds.has(p.id)}
                                         order={shuffleOrder.get(p.id)}

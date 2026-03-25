@@ -13,13 +13,14 @@ interface UseTrapHandlerParams {
     isPokemonGuessableRef: MutableRefObject<((id: number) => { canGuess: boolean }) | null>;
     allPokemon: PokemonRef[];
     derpemonIndex: DerpemonIndex;
+    startingStarter: string | null;
     showToast: (type: ToastMessage['type'], message: string) => void;
     addLog: (entry: Omit<LogEntry, 'id' | 'timestamp'>) => void;
 }
 
 export function useTrapHandler({
     offsetsRef, checkedIdsRef, isPokemonGuessableRef,
-    allPokemon, derpemonIndex, showToast, addLog,
+    allPokemon, derpemonIndex, startingStarter, showToast, addLog,
 }: UseTrapHandlerParams) {
     const [shuffleEndTime, setShuffleEndTime] = useState<number>(0);
     const [derpyfiedIds, setDerpyfiedIds] = useState<Set<number>>(new Set());
@@ -29,21 +30,28 @@ export function useTrapHandler({
     // storageReadyRef gates trap processing to prevent re-triggering on reconnect.
     // Set to true once DataStorage initial values have been loaded.
     const storageReadyRef = useRef(false);
-    // Tracks how many Release Trap items have been processed so new ones can be detected.
+    // Tracks how many Derp/Release Trap items have been processed so new ones can be detected.
+    const processedDerpTrapCountRef = useRef<number>(0);
     const processedReleaseTrapCountRef = useRef<number>(0);
 
-    // Called once from the DataStorage .then() after initial values are loaded
+    // Called once from the DataStorage .then() after initial values are loaded.
+    // serverDerpCount / serverReleaseCount are the current total trap items on the server,
+    // used to sync processed counts so traps don't re-fire on reconnect.
     const initFromDataStorage = useCallback((
         derpData: number[] | null,
         relData: number[] | null,
         recaughtData: number[] | null,
+        serverDerpCount: number,
+        serverReleaseCount: number,
     ) => {
         if (derpData) setDerpyfiedIds(new Set(derpData));
+        // Sync processed count to the server total so existing traps don't re-fire
+        processedDerpTrapCountRef.current = serverDerpCount;
         if (relData) {
             const recaught = recaughtData ? new Set(recaughtData) : new Set<number>();
             setReleasedIds(new Set(relData.filter(id => !recaught.has(id))));
-            processedReleaseTrapCountRef.current = relData.length;
         }
+        processedReleaseTrapCountRef.current = serverReleaseCount;
         storageReadyRef.current = true;
     }, []);
 
@@ -63,6 +71,7 @@ export function useTrapHandler({
 
     // Called from the itemsReceived handler inside useAPConnection.
     // Processes any trap/useful-item IDs in the received batch.
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization
     const processTrapItems = useCallback((items: Item[], client: Client) => {
         const { ITEM_OFFSET, TRAP_ITEM_OFFSET, USEFUL_ITEM_OFFSET } = offsetsRef.current;
 
@@ -91,9 +100,9 @@ export function useTrapHandler({
         setDerpyfiedIds(derps => {
             if (!storageReadyRef.current) return derps;
             const totalServer = client.items.received.filter(i => i.id === ITEM_OFFSET + TRAP_ITEM_OFFSET + 3).length;
-            if (totalServer <= derps.size) return derps;
+            if (totalServer <= processedDerpTrapCountRef.current) return derps;
 
-            let newDerps = new Set(derps);
+            const newDerps = new Set(derps);
             const basePathPokes = allPokemon.filter(p => !newDerps.has(p.id) && derpemonIndex[p.id]);
 
             // Priority 1: already guessed or currently guessable
@@ -104,7 +113,8 @@ export function useTrapHandler({
             // Priority 2: fallback to all with derpemon sprites
             if (availablePokes.length === 0) availablePokes = [...basePathPokes];
 
-            let toAdd = totalServer - derps.size;
+            let toAdd = totalServer - processedDerpTrapCountRef.current;
+            processedDerpTrapCountRef.current = totalServer;
             while (toAdd > 0 && availablePokes.length > 0) {
                 const randIdx = Math.floor(Math.random() * availablePokes.length);
                 const picked = availablePokes.splice(randIdx, 1)[0];
@@ -144,10 +154,13 @@ export function useTrapHandler({
             const processedCount = processedReleaseTrapCountRef.current;
             if (totalServer <= processedCount) return released;
 
-            let newReleased = new Set(released);
-            // Exclude starter Pokémon (1, 4, 7) for safety and thematic reasons
+            const newReleased = new Set(released);
+            // Exclude the player's starting starter from release
+            const starterId = startingStarter
+                ? allPokemon.find(p => p.name.toLowerCase() === startingStarter.toLowerCase())?.id
+                : undefined;
             const validCheckedIds = Array.from(checkedIdsRef.current).filter(
-                id => id !== 1 && id !== 4 && id !== 7 && !newReleased.has(id)
+                id => id !== starterId && !newReleased.has(id)
             );
             let toAdd = totalServer - processedCount;
             processedReleaseTrapCountRef.current = totalServer;
@@ -176,7 +189,7 @@ export function useTrapHandler({
             }
             return newReleased;
         });
-    }, [allPokemon, derpemonIndex, offsetsRef, showToast, addLog]);
+    }, [allPokemon, derpemonIndex, startingStarter, offsetsRef, showToast, addLog]);
 
     return {
         shuffleEndTime,

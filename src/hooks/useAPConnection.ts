@@ -21,10 +21,13 @@ export interface ConnectionHandlers {
     /** Called for each batch of received items. */
     onItemsReceived: (items: Item[], client: Client) => void;
     /** Called for chat/hint/item log packets. */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onPrintJSON: (packet: any, client: Client) => void;
     /** Called for location scout responses. */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onLocationInfo: (packet: any, client: Client) => void;
     /** Called when the server broadcasts a room update (e.g. co-op partner checked locations). */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onRoomUpdate?: (packet: any) => void;
 }
 
@@ -46,7 +49,7 @@ export function useAPConnection() {
     // handlersRef always holds the latest callbacks without re-registering socket listeners.
     const handlersRef = useRef<ConnectionHandlers | null>(null);
 
-    const connect = async (info: ConnectionInfo, _profileId?: string, handlers?: ConnectionHandlers) => {
+    const connect = async (info: ConnectionInfo, _profileId?: string, handlers?: ConnectionHandlers, tags?: string[]) => {
         if (handlers) handlersRef.current = handlers;
 
         if (isConnectingRef.current) {
@@ -65,6 +68,7 @@ export function useAPConnection() {
         // The orphan guard on the 'disconnected' handler prevents the old client
         // from clobbering state.
         if (pingTimeoutRef.current) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             clearInterval(pingTimeoutRef.current as any);
             pingTimeoutRef.current = null;
         }
@@ -74,6 +78,7 @@ export function useAPConnection() {
         const protocolsToTry = info.hostname.includes('://')
             ? ['']
             : (isSecurePage && !isLocalhost) ? ['wss://'] : ['wss://', 'ws://'];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let lastError: any = null;
         const oldClient = clientRef.current;
 
@@ -104,6 +109,7 @@ export function useAPConnection() {
                     if (pingTimeoutRef.current) clearInterval(pingTimeoutRef.current);
                 });
 
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 client.socket.on('bounced', (packet: any) => {
                     if (packet.tags && packet.tags.includes('ping')) {
                         setPingLatency(Date.now() - lastPingTimeRef.current);
@@ -120,6 +126,7 @@ export function useAPConnection() {
                     setConnectionQuality('dead');
                     setPingLatency(null);
                     if (pingTimeoutRef.current) {
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         clearInterval(pingTimeoutRef.current as any);
                         pingTimeoutRef.current = null;
                     }
@@ -167,6 +174,7 @@ export function useAPConnection() {
                     handlersRef.current?.onLocationInfo(packet, client);
                 });
 
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 client.socket.on('roomUpdate', (packet: any) => {
                     if (clientRef.current !== client) return;
                     handlersRef.current?.onRoomUpdate?.(packet);
@@ -187,6 +195,7 @@ export function useAPConnection() {
                 await client.login(url, info.slotName, 'Pokepelago', {
                     password: info.password,
                     items: itemsHandlingFlags.all,
+                    ...(tags && tags.length > 0 ? { tags } : {}),
                 });
 
                 // Save DataPackage back to cache after successful login
@@ -205,12 +214,16 @@ export function useAPConnection() {
                 isConnectingRef.current = false;
 
                 // Start 5-second ping loop for latency tracking
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 if (pingTimeoutRef.current) clearInterval(pingTimeoutRef.current as any);
                 pingTimeoutRef.current = setInterval(() => {
-                    if (clientRef.current?.authenticated) {
-                        lastPingTimeRef.current = Date.now();
-                        (clientRef.current as any).socket.send({ cmd: 'Bounce', tags: ['ping'] });
-                    }
+                    try {
+                        if (clientRef.current?.authenticated) {
+                            lastPingTimeRef.current = Date.now();
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            (clientRef.current as any).socket.send({ cmd: 'Bounce', tags: ['ping'] });
+                        }
+                    } catch { /* socket may have closed between check and send */ }
                 }, 5000);
 
                 // Now that the new client is authenticated, safely drop the old one.
@@ -222,6 +235,7 @@ export function useAPConnection() {
 
                 return; // Successfully connected — exit loop
 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } catch (err: any) {
                 console.warn(`Connection to ${protocol}${info.hostname}:${info.port} failed:`, err);
                 lastError = err;
@@ -270,6 +284,7 @@ export function useAPConnection() {
 
     const disconnect = () => {
         if (pingTimeoutRef.current) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             clearInterval(pingTimeoutRef.current as any);
             pingTimeoutRef.current = null;
         }

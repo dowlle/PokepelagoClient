@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useGame } from '../context/GameContext';
-import { X, ExternalLink, HelpCircle, MapPin, Sparkles, CheckCircle2, Lock, Palette } from 'lucide-react';
+import { useTwitch } from '../context/TwitchContext';
+import { X, ExternalLink, HelpCircle, MapPin, Sparkles, CheckCircle2, Lock, Palette, User } from 'lucide-react';
 import { getCleanName } from '../utils/pokemon';
 import { getDerpemonCredit } from '../services/derpemonService';
 import pokemonNamesJson from '../data/pokemon_names.json';
@@ -22,12 +23,13 @@ export const PokemonDetails: React.FC = () => {
         masterBalls,
         pokegears,
         pokedexes,
-        useMasterBall,
-        usePokegear,
-        usePokedex,
+        consumeMasterBall,
+        consumePokegear,
+        consumePokedex,
         usedPokegears,
         usedPokedexes,
         isPokemonGuessable,
+        masterBallBypassGates,
         getSpriteUrl,
         uiSettings,
         derpemonIndex,
@@ -38,7 +40,9 @@ export const PokemonDetails: React.FC = () => {
         locationOffset,
         pmdSpriteUrl
     } = useGame();
+    const { getCredit } = useTwitch();
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [details, setDetails] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [gifLoaded, setGifLoaded] = useState(false);
@@ -62,6 +66,7 @@ export const PokemonDetails: React.FC = () => {
 
     useEffect(() => {
         if (selectedPokemonId) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setLoading(true);
             setGifLoaded(false);
             setPendingHint(null);
@@ -111,8 +116,17 @@ export const PokemonDetails: React.FC = () => {
             }
         } else {
             setDetails(null);
-            setSpriteUrl(null);
+            setSpriteUrl(prev => {
+                if (prev && prev.startsWith('blob:')) URL.revokeObjectURL(prev);
+                return null;
+            });
         }
+        return () => {
+            setSpriteUrl(prev => {
+                if (prev && prev.startsWith('blob:')) URL.revokeObjectURL(prev);
+                return null;
+            });
+        };
     }, [selectedPokemonId, uiSettings.spriteSet, allPokemon, isChecked, isConnected, scoutLocation, shinyIds, getSpriteUrl, spriteRefreshCounter, locationOffset]);
 
     if (!selectedPokemonId || !pokemon) return null;
@@ -134,9 +148,9 @@ export const PokemonDetails: React.FC = () => {
     };
 
     const handleUseItem = (item: 'master' | 'gear' | 'dex') => {
-        if (item === 'master') useMasterBall(selectedPokemonId);
-        if (item === 'gear') usePokegear(selectedPokemonId);
-        if (item === 'dex') usePokedex(selectedPokemonId);
+        if (item === 'master') consumeMasterBall(selectedPokemonId);
+        if (item === 'gear') consumePokegear(selectedPokemonId);
+        if (item === 'dex') consumePokedex(selectedPokemonId);
 
         setItemCooldown(item);
         setTimeout(() => setItemCooldown(null), 2000);
@@ -247,6 +261,7 @@ export const PokemonDetails: React.FC = () => {
                         </div>
 
                         <div className="flex gap-2">
+                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                             {details?.types && showInfo && details.types.map((t: any) => {
                                 const typeName = t.type.name.charAt(0).toUpperCase() + t.type.name.slice(1);
                                 const color = TYPE_COLORS[typeName];
@@ -283,6 +298,7 @@ export const PokemonDetails: React.FC = () => {
                             <div className="bg-gray-800/40 rounded-xl p-3 border border-gray-800">
                                 <span className="text-[10px] text-gray-500 uppercase font-black block mb-1">Abilities</span>
                                 <div className="space-y-0.5">
+                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                     {details.abilities.map((a: any) => (
                                         <div key={a.ability.name} className="flex justify-between text-xs">
                                             <span className="text-gray-400 capitalize">{a.ability.name.replace('-', ' ')}</span>
@@ -449,7 +465,7 @@ export const PokemonDetails: React.FC = () => {
                                         <div className="w-10 h-10 flex items-center justify-center mb-1">
                                             <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/ss-ticket.png" style={{ imageRendering: 'pixelated' }} className={`w-8 h-8 object-contain transition-opacity duration-200 ${pokedexSpriteLoaded ? 'opacity-100' : 'opacity-0'}`} alt="SS Ticket" onLoad={() => setPokedexSpriteLoaded(true)} />
                                         </div>
-                                        <span className="text-[10px] font-black uppercase tracking-tighter text-gray-300">Hints</span>
+                                        <span className="text-[10px] font-black uppercase tracking-tighter text-gray-300">Dex</span>
                                         <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-600 rounded-full border-2 border-gray-900 flex items-center justify-center text-[10px] font-black text-white shadow-lg">
                                             {pokedexes}
                                         </div>
@@ -458,7 +474,7 @@ export const PokemonDetails: React.FC = () => {
                                     {/* Master Ball */}
                                     <button
                                         onClick={() => handleUseItem('master')}
-                                        disabled={masterBalls === 0 || !!itemCooldown}
+                                        disabled={masterBalls === 0 || !!itemCooldown || (!masterBallBypassGates && !canGuess)}
                                         className="group relative flex flex-col items-center justify-center p-3 rounded-2xl border bg-gray-800/40 border-gray-700/50 hover:bg-red-900/20 hover:border-red-500/40 active:scale-95 disabled:opacity-30 disabled:grayscale disabled:hover:bg-gray-800/40 transition-all"
                                     >
                                         <div className="w-10 h-10 flex items-center justify-center mb-1">
@@ -473,6 +489,19 @@ export const PokemonDetails: React.FC = () => {
                             </div>
                         )}
                     </div>
+
+                    {/* Guess Credit */}
+                    {isChecked && selectedPokemonId && getCredit(selectedPokemonId) && (
+                        <div className="flex items-center justify-center gap-1.5 text-[10px] text-purple-400/70 animate-in fade-in duration-500">
+                            <User size={10} />
+                            <span>
+                                Guessed by{' '}
+                                <span className="font-bold text-purple-400">
+                                    {getCredit(selectedPokemonId) === 'You' ? 'You' : `@${getCredit(selectedPokemonId)}`}
+                                </span>
+                            </span>
+                        </div>
+                    )}
 
                     {/* Derpemon Creator Credit */}
                     {derpemonCreator && (isUnlocked || isChecked) && (
