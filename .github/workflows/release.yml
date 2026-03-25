@@ -61,6 +61,7 @@ jobs:
           path: apworld-repo/worlds/pokepelago
           ap-version: '0.6.6'
           python-version: '3.12'
+          checkout: false
 
       - name: Generate template YAML
         id: template
@@ -69,6 +70,7 @@ jobs:
           apworld-path: apworld-repo/worlds/pokepelago
           ap-version: '0.6.6'
           python-version: '3.12'
+          checkout: false
 
       - uses: actions/upload-artifact@v4
         with:
