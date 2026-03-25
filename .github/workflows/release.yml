@@ -54,6 +54,9 @@ jobs:
           repository: dowlle/ArchipelagoPokepelago
           path: apworld-repo
 
+      - name: Remove files excluded by .apignore
+        run: rm -rf apworld-repo/worlds/pokepelago/test apworld-repo/worlds/pokepelago/__pycache__ apworld-repo/worlds/pokepelago/_dev
+
       - name: Build .apworld
         id: apworld
         uses: Eijebong/ap-actions/package-apworld@main
