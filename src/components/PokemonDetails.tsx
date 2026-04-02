@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useGame } from '../context/GameContext';
 import { useTwitch } from '../context/TwitchContext';
-import { X, ExternalLink, HelpCircle, MapPin, Sparkles, CheckCircle2, Lock, Palette, User } from 'lucide-react';
+import { X, ExternalLink, HelpCircle, MapPin, Sparkles, CheckCircle2, Lock, Palette, User, Link, Shield } from 'lucide-react';
 import { getCleanName } from '../utils/pokemon';
 import { getDerpemonCredit } from '../services/derpemonService';
 import pokemonNamesJson from '../data/pokemon_names.json';
@@ -38,7 +38,8 @@ export const PokemonDetails: React.FC = () => {
         derpyfiedIds,
         spriteRefreshCounter,
         locationOffset,
-        pmdSpriteUrl
+        pmdSpriteUrl,
+        gymBadges
     } = useGame();
     const { getCredit } = useTwitch();
 
@@ -158,7 +159,7 @@ export const PokemonDetails: React.FC = () => {
 
     const isPokegeared = usedPokegears.has(selectedPokemonId);
     const isPokedexed = usedPokedexes.has(selectedPokemonId);
-    const { canGuess, reason, reasons, missingRegion, missingTypes, missingPokemon } = isPokemonGuessable(selectedPokemonId);
+    const { canGuess, reason, reasons, missingRegion, missingTypes, missingPokemon, missingRouteKeys, missingLineUnlock, badgeLevelRequired } = isPokemonGuessable(selectedPokemonId);
 
     const lang = localStorage.getItem('pokepelago_language') ?? 'en';
     const langNames = (pokemonNamesJson as Record<string, Record<string, string>>)[selectedPokemonId.toString()];
@@ -316,7 +317,7 @@ export const PokemonDetails: React.FC = () => {
                     )}
 
                     {/* Requirements Section */}
-                    {!isChecked && !canGuess && (missingRegion || missingTypes || missingPokemon || reason) && (
+                    {!isChecked && !canGuess && (missingRegion || missingTypes || missingPokemon || missingRouteKeys || missingLineUnlock || badgeLevelRequired || reason) && (
                         <div className="bg-red-900/10 border border-red-500/30 rounded-xl p-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-500">
                             <div className="flex items-center gap-2 text-red-400 font-bold text-xs uppercase tracking-wider">
                                 <Lock size={14} />
@@ -363,12 +364,42 @@ export const PokemonDetails: React.FC = () => {
                                         </span>
                                     );
                                 })}
-                                {!missingRegion && !missingTypes && !missingPokemon && !reasons && reason && (
+                                {!missingRegion && !missingTypes && !missingPokemon && !missingRouteKeys && !missingLineUnlock && !badgeLevelRequired && !reasons && reason && (
                                     <span className="px-3 py-1 bg-red-950/60 border border-red-500/30 rounded-lg text-[10px] text-red-200 uppercase font-black tracking-widest shadow-lg">
                                         {reason}
                                     </span>
                                 )}
                             </div>
+                            {/* Route Lock */}
+                            {missingRouteKeys && missingRouteKeys.length > 0 && (
+                                <div className="flex items-center gap-2 text-xs">
+                                    <MapPin size={14} className="text-orange-400 shrink-0" />
+                                    <span className="text-orange-300/90">
+                                        Route: Need one of:{' '}
+                                        {missingRouteKeys.length <= 3
+                                            ? missingRouteKeys.join(', ')
+                                            : `${missingRouteKeys.slice(0, 2).join(', ')} +${missingRouteKeys.length - 2} more`}
+                                    </span>
+                                </div>
+                            )}
+                            {/* Line Lock */}
+                            {missingLineUnlock && (
+                                <div className="flex items-center gap-2 text-xs">
+                                    <Link size={14} className="text-orange-400 shrink-0" />
+                                    <span className="text-orange-300/90">
+                                        Family: Need {missingLineUnlock}
+                                    </span>
+                                </div>
+                            )}
+                            {/* Badge Level */}
+                            {badgeLevelRequired && (
+                                <div className="flex items-center gap-2 text-xs">
+                                    <Shield size={14} className="text-orange-400 shrink-0" />
+                                    <span className="text-orange-300/90">
+                                        Badges: {gymBadges}/{badgeLevelRequired}
+                                    </span>
+                                </div>
+                            )}
                             {pendingHint && (
                                 <p className="text-[9px] text-yellow-400/70 italic">Click the highlighted badge again to send the hint request.</p>
                             )}

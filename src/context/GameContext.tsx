@@ -14,6 +14,7 @@ import {
     BABY_IDS, TRADE_EVO_IDS, FOSSIL_IDS, ULTRA_BEAST_IDS, PARADOX_IDS,
     STONE_EVO_IDS, STONE_NAMES_ORDERED,
 } from '../data/pokemon_gates';
+import { getRouteKeysForPokemon, getLineUnlockForPokemon, getBadgeRequirement, ROUTE_KEY_ITEMS, LINE_UNLOCK_ITEMS, ROUTE_INFO, ROUTE_POKEMON } from '../data/routeData';
 import type { OffsetTable } from '../hooks/useOffsets';
 import type { MutableRefObject } from 'react';
 import { useAPConnection } from '../hooks/useAPConnection';
@@ -148,6 +149,9 @@ interface GameContextType extends GameState {
         missingTypes?: string[];
         missingPokemon?: boolean;
         legendaryGatingCount?: number;
+        missingRouteKeys?: string[];
+        missingLineUnlock?: string;
+        badgeLevelRequired?: number;
     };
     consumeMasterBall: (pokemonId: number) => void;
     consumePokegear: (pokemonId: number) => void;
@@ -223,6 +227,12 @@ interface GameContextType extends GameState {
     paradoxLocksEnabled: boolean;
     stoneLocksEnabled: boolean;
     startingStarter: string | null;
+    // Route/Line/Badge lock state (v2 progression)
+    routeLocksEnabled: boolean;
+    lineLocksEnabled: boolean;
+    badgeLevelGatingEnabled: boolean;
+    routeKeys: Set<string>;
+    lineUnlocks: Set<string>;
     connectedTeamSlot: { team: number; slot: number } | null;
     slotMilestones: number[] | undefined;
     slotTypeMilestones: Record<string, number[]> | undefined;
@@ -291,6 +301,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [stoneLocksEnabled, setStoneLocksEnabled] = useState(false);
     const [masterBallBypassGates, setMasterBallBypassGates] = useState(true);
     const [startingStarter, setStartingStarter] = useState<string | null>(null);
+
+    // ── Route/Line/Badge lock state (v2 progression) ────────────────────────────
+    const [routeLocksEnabled, setRouteLocksEnabled] = useState(false);
+    const [lineLocksEnabled, setLineLocksEnabled] = useState(false);
+    const [badgeLevelGatingEnabled, setBadgeLevelGatingEnabled] = useState(false);
+    const [routeKeys, setRouteKeys] = useState<Set<string>>(new Set());
+    const [lineUnlocks, setLineUnlocks] = useState<Set<string>>(new Set());
 
     // ── Item Counts ──────────────────────────────────────────────────────────────
     const [masterBalls, setMasterBalls] = useState(0);
@@ -426,6 +443,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentProfileId, typeLocksEnabled, typeUnlocks, unlockedIds,
         slotMilestones,
         slotTypeMilestones,
+        routeLocksEnabled, routeKeys, activeRegions,
     });
 
     // ── Persistence Effects ──────────────────────────────────────────────────────
@@ -691,6 +709,38 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
         }
 
+        // Route completion milestones ("Cleared {Route}")
+        // Check when we have the route key AND all Pokemon on the route are guessed
+        let routeSent = 0;
+        if (routeLocksEnabled && Object.keys(activeRegions).length > 0) {
+            const { ROUTE_MILESTONE_OFFSET } = offsetsRef.current;
+            const activeIdSet = new Set<number>();
+            for (const [, [lo, hi]] of Object.entries(activeRegions)) {
+                for (let i = lo; i <= hi; i++) activeIdSet.add(i);
+            }
+            const sortedRouteKeys = Object.keys(ROUTE_INFO).sort();
+            sortedRouteKeys.forEach((rk, i) => {
+                const info = ROUTE_INFO[rk];
+                if (!info) return;
+                const itemName = ROUTE_KEY_ITEMS[rk];
+                if (!itemName || !routeKeys.has(itemName)) return;
+                // Only check routes in active regions
+                if (!Object.keys(activeRegions).includes(info.region)) return;
+                // Check if ALL active Pokemon on this route are guessed
+                const routePokemonIds: number[] = (ROUTE_POKEMON[rk] || [])
+                    .filter(pid => activeIdSet.has(pid));
+                if (routePokemonIds.length === 0) return;
+                const guessedCount = routePokemonIds.filter(pid => checkedIds.has(pid)).length;
+                const allGuessed = guessedCount === routePokemonIds.length;
+                if (allGuessed) {
+                    const apLocationId = LOCATION_OFFSET + ROUTE_MILESTONE_OFFSET + i;
+                    console.log(`[RouteMilestone] Clearing ${rk}: ${guessedCount}/${routePokemonIds.length} Pokemon guessed (apId=${apLocationId})`);
+                    clientRef.current!.check(apLocationId);
+                    routeSent++;
+                }
+            });
+        }
+
         // Update local checkedIds to include all sent milestones
         if (newChecked.size > 0) {
             setCheckedIds(prev => {
@@ -700,9 +750,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
         }
 
-        console.log(`[recheckMilestones] Done: ${result.globalSent} global + ${result.typeSent} type milestones sent`);
+        console.log(`[recheckMilestones] Done: ${result.globalSent} global + ${result.typeSent} type + ${routeSent} route milestones sent`);
         return result;
-    }, [checkedIds, slotMilestones, slotTypeMilestones]);
+    }, [checkedIds, slotMilestones, slotTypeMilestones, routeLocksEnabled, routeKeys, activeRegions]);
 
     const isPokemonGuessable = useCallback((id: number) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -752,11 +802,44 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             : [];
 
         const gateReasons: string[] = [];
-        if (legendaryLocksEnabled) {
-            const needed = MYTHIC_IDS.has(id) ? 8 : BOX_LEGENDARY_IDS.has(id) ? 7 : SUB_LEGENDARY_IDS.has(id) ? 6 : 0;
-            if (needed > 0 && gymBadges < needed)
-                gateReasons.push(`Badges: ${gymBadges}/${needed}`);
+        let missingRouteKeys: string[] | undefined;
+        let missingLineUnlock: string | undefined;
+        let badgeLevelRequired: number | undefined;
+
+        // Route locks: need ANY route key for a route this Pokemon appears on
+        if (routeLocksEnabled) {
+            const neededKeys = getRouteKeysForPokemon(id, activeRegions);
+            if (neededKeys.length > 0 && !neededKeys.some(k => routeKeys.has(k))) {
+                missingRouteKeys = neededKeys;
+                gateReasons.push('Route Key');
+            }
         }
+
+        // Line locks: need the family's Line Unlock
+        if (lineLocksEnabled) {
+            const lineItem = getLineUnlockForPokemon(id);
+            if (lineItem && !lineUnlocks.has(lineItem)) {
+                missingLineUnlock = lineItem;
+                gateReasons.push('Line Unlock');
+            }
+        }
+
+        // Badge gating: max(level requirement, legendary tier)
+        {
+            let badgeReq = 0;
+            if (badgeLevelGatingEnabled) {
+                badgeReq = getBadgeRequirement(id);
+            }
+            if (legendaryLocksEnabled) {
+                const legendaryReq = MYTHIC_IDS.has(id) ? 8 : BOX_LEGENDARY_IDS.has(id) ? 7 : SUB_LEGENDARY_IDS.has(id) ? 6 : 0;
+                badgeReq = Math.max(badgeReq, legendaryReq);
+            }
+            if (badgeReq > 0 && gymBadges < badgeReq) {
+                badgeLevelRequired = badgeReq;
+                gateReasons.push(`Badges: ${gymBadges}/${badgeReq}`);
+            }
+        }
+
         if (tradeLocksEnabled && TRADE_EVO_IDS.has(id) && !hasLinkCable)
             gateReasons.push('Link Cable');
         if (babyLocksEnabled && BABY_IDS.has(id) && daycareCount < daycareRequired)
@@ -783,13 +866,17 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 reason: firstReason,
                 reasons: gateReasons,
                 missingTypes: missingTypesList.length > 0 ? missingTypesList : undefined,
+                missingRouteKeys,
+                missingLineUnlock,
+                badgeLevelRequired,
             };
         }
 
         return { canGuess: true };
     }, [gameMode, isConnected, generationFilter, activePokemonLimit, activeRegions, startingRegion,
         regionLocksEnabled, regionPasses, typeLocksEnabled, typeUnlocks, detectedApWorldVersion, unlockedIds,
-        legendaryLocksEnabled, gymBadges, tradeLocksEnabled, hasLinkCable,
+        routeLocksEnabled, routeKeys, lineLocksEnabled, lineUnlocks,
+        badgeLevelGatingEnabled, legendaryLocksEnabled, gymBadges, tradeLocksEnabled, hasLinkCable,
         babyLocksEnabled, daycareCount, daycareRequired, fossilLocksEnabled, hasFossilRestorer,
         ultraBeastLocksEnabled, hasUltraWormhole, paradoxLocksEnabled, hasTimeRift,
         stoneLocksEnabled, unlockedStones]);
@@ -958,6 +1045,48 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         setRegionPasses(newRegionPasses);
 
+        // Reconstruct Route Keys (v2 progression)
+        // Route Key IDs: ITEM_OFFSET + ROUTE_KEY_OFFSET + sequential index
+        // We store the item NAME (resolved from routeData) since that's what gate checks use
+        {
+            const routeKeyIdToName = new Map<number, string>();
+            const sortedKeys = Object.keys(ROUTE_KEY_ITEMS).sort();
+            sortedKeys.forEach((rk, i) => {
+                routeKeyIdToName.set(o.ITEM_OFFSET + o.ROUTE_KEY_OFFSET + i, ROUTE_KEY_ITEMS[rk]);
+            });
+            const newRouteKeys = new Set<string>();
+            receivedItems.forEach(item => {
+                const name = routeKeyIdToName.get(item.id);
+                if (name) newRouteKeys.add(name);
+            });
+            setRouteKeys(newRouteKeys);
+
+            // Reconstruct Line Unlocks
+            // Line Unlock IDs: ITEM_OFFSET + LINE_UNLOCK_OFFSET + base_pokemon_id
+            const newLineUnlocks = new Set<string>();
+            receivedItems.forEach(item => {
+                const baseId = item.id - (o.ITEM_OFFSET + o.LINE_UNLOCK_OFFSET);
+                if (baseId > 0 && baseId <= 1025) {
+                    const name = LINE_UNLOCK_ITEMS[String(baseId)];
+                    if (name) newLineUnlocks.add(name);
+                }
+            });
+            setLineUnlocks(newLineUnlocks);
+
+            // DEBUG: log reconstruction results
+            console.log('[DEBUG] Route/Line reconstruction:', {
+                totalReceivedItems: receivedItems.length,
+                routeKeysFound: newRouteKeys.size,
+                lineUnlocksFound: newLineUnlocks.size,
+                routeKeys: [...newRouteKeys],
+                lineUnlocks: [...newLineUnlocks],
+                routeKeyMapSize: routeKeyIdToName.size,
+                sampleRouteKeyIds: [...routeKeyIdToName.entries()].slice(0, 3),
+                itemOffsets: { ITEM_OFFSET: o.ITEM_OFFSET, ROUTE_KEY_OFFSET: o.ROUTE_KEY_OFFSET, LINE_UNLOCK_OFFSET: o.LINE_UNLOCK_OFFSET },
+                allItemIds: receivedItems.map((i: any) => i.id).sort((a: number, b: number) => a - b),
+            });
+        }
+
         // Parse slot data
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const slotData = packet.slot_data as any || {};
@@ -974,6 +1103,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUltraBeastLocksEnabled(!!slotData.ultra_beast_locks);
         setParadoxLocksEnabled(!!slotData.paradox_locks);
         setStoneLocksEnabled(!!slotData.stone_locks);
+        setRouteLocksEnabled(!!slotData.route_locks);
+        setLineLocksEnabled(!!slotData.line_locks);
+        setBadgeLevelGatingEnabled(!!slotData.badge_level_gating);
         setMasterBallBypassGates(slotData.master_ball_bypass_gates !== false);
         setStartingStarter(slotData.starting_starter ?? null);
 
@@ -1222,6 +1354,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUltraBeastLocksEnabled(false);
         setParadoxLocksEnabled(false);
         setStoneLocksEnabled(false);
+        setRouteLocksEnabled(false);
+        setLineLocksEnabled(false);
+        setBadgeLevelGatingEnabled(false);
+        setRouteKeys(new Set());
+        setLineUnlocks(new Set());
         setMasterBallBypassGates(true);
         setStartingStarter(null);
         localStorage.setItem('pokepelago_connected', 'false');
@@ -1280,6 +1417,32 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     text: `Received Type Unlock: ${typeName}`,
                     parts: [{ text: `Received Type Unlock: ${typeName}`, type: 'color', color: '#10B981' }],
                 }, ...prev.slice(0, 99)]);
+            } else if (item.id >= o.ITEM_OFFSET + o.ROUTE_KEY_OFFSET && item.id < o.ITEM_OFFSET + o.ROUTE_KEY_OFFSET + 1000) {
+                // Route Key received — resolve name from sorted route keys
+                const sortedKeys = Object.keys(ROUTE_KEY_ITEMS).sort();
+                const idx = item.id - (o.ITEM_OFFSET + o.ROUTE_KEY_OFFSET);
+                const rk = sortedKeys[idx];
+                if (rk) {
+                    const keyName = ROUTE_KEY_ITEMS[rk];
+                    setRouteKeys(prev => new Set(prev).add(keyName));
+                    setLogs(prev => [{
+                        id: crypto.randomUUID(), timestamp: Date.now(), type: 'system',
+                        text: `Received ${keyName}`,
+                        parts: [{ text: `Received ${keyName}`, type: 'color', color: '#F97316' }],
+                    }, ...prev.slice(0, 99)]);
+                }
+            } else if (item.id >= o.ITEM_OFFSET + o.LINE_UNLOCK_OFFSET && item.id < o.ITEM_OFFSET + o.LINE_UNLOCK_OFFSET + 1026) {
+                // Line Unlock received
+                const baseId = item.id - (o.ITEM_OFFSET + o.LINE_UNLOCK_OFFSET);
+                const lineName = LINE_UNLOCK_ITEMS[String(baseId)];
+                if (lineName) {
+                    setLineUnlocks(prev => new Set(prev).add(lineName));
+                    setLogs(prev => [{
+                        id: crypto.randomUUID(), timestamp: Date.now(), type: 'system',
+                        text: `Received ${lineName}`,
+                        parts: [{ text: `Received ${lineName}`, type: 'color', color: '#A855F7' }],
+                    }, ...prev.slice(0, 99)]);
+                }
             } else if (item.id >= o.ITEM_OFFSET + o.REGION_PASS_OFFSET && item.id < o.ITEM_OFFSET + o.REGION_PASS_OFFSET + GAME_REGIONS_ORDER.length) {
                 const regionName = GAME_REGIONS_ORDER[item.id - (o.ITEM_OFFSET + o.REGION_PASS_OFFSET)];
                 setRegionPasses(prev => new Set(prev).add(regionName));
@@ -1480,6 +1643,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             gymBadges, hasLinkCable, daycareCount, hasFossilRestorer, hasUltraWormhole, hasTimeRift,
             unlockedStones, legendaryLocksEnabled, tradeLocksEnabled, babyLocksEnabled, daycareRequired,
             fossilLocksEnabled, ultraBeastLocksEnabled, paradoxLocksEnabled, stoneLocksEnabled, masterBallBypassGates, startingStarter,
+            routeLocksEnabled, lineLocksEnabled, badgeLevelGatingEnabled, routeKeys, lineUnlocks,
             connectedTeamSlot,
             slotMilestones,
             slotTypeMilestones,

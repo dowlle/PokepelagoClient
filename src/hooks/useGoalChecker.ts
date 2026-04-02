@@ -6,6 +6,7 @@ import type { PokemonRef } from '../types/pokemon';
 import type { OffsetTable } from './useOffsets';
 import pokemonMetadata from '../data/pokemon_metadata.json';
 import { updateProfile } from '../services/connectionManagerService';
+import { ROUTE_INFO, ROUTE_KEY_ITEMS, ROUTE_POKEMON } from '../data/routeData';
 
 interface UseGoalCheckerParams {
     clientRef: MutableRefObject<Client | null>;
@@ -24,6 +25,9 @@ interface UseGoalCheckerParams {
     unlockedIds: Set<number>;
     slotMilestones?: number[];
     slotTypeMilestones?: Record<string, number[]>;
+    routeLocksEnabled: boolean;
+    routeKeys: Set<string>;
+    activeRegions: Record<string, [number, number]>;
 }
 
 export function useGoalChecker({
@@ -31,6 +35,7 @@ export function useGoalChecker({
     releasedIds, isConnected, goalCount, gameMode,
     currentProfileId, typeLocksEnabled, typeUnlocks, unlockedIds,
     slotMilestones, slotTypeMilestones,
+    routeLocksEnabled, routeKeys, activeRegions,
 }: UseGoalCheckerParams) {
     const celebrationTriggered = useRef(false);
 
@@ -120,7 +125,37 @@ export function useGoalChecker({
                 });
             });
         }
-    }, [checkedIds, isConnected, gameMode, typeLocksEnabled, typeUnlocks, unlockedIds, slotMilestones, slotTypeMilestones]);
+
+        // 3. Route Completion Milestones ("Cleared {Route}")
+        // Check when we have the route key AND all active Pokemon on the route are guessed
+        if (routeLocksEnabled && Object.keys(activeRegions).length > 0) {
+            const { ROUTE_MILESTONE_OFFSET } = offsetsRef.current;
+            const activeIdSet = new Set<number>();
+            for (const [, [lo, hi]] of Object.entries(activeRegions)) {
+                for (let i = lo; i <= hi; i++) activeIdSet.add(i);
+            }
+            const sortedRouteKeys = Object.keys(ROUTE_INFO).sort();
+            sortedRouteKeys.forEach((rk, i) => {
+                const info = ROUTE_INFO[rk];
+                if (!info) return;
+                const itemName = ROUTE_KEY_ITEMS[rk];
+                if (!itemName || !routeKeys.has(itemName)) return;
+                if (!Object.keys(activeRegions).includes(info.region)) return;
+                const routePokemonIds = (ROUTE_POKEMON[rk] || []).filter(pid => activeIdSet.has(pid));
+                if (routePokemonIds.length === 0) return;
+                const allGuessed = routePokemonIds.every(pid => checkedIds.has(pid));
+                if (allGuessed) {
+                    const apLocationId = LOCATION_OFFSET + ROUTE_MILESTONE_OFFSET + i;
+                    const localId = apLocationId - LOCATION_OFFSET;
+                    if (!checkedIds.has(localId)) {
+                        console.log(`[RouteMilestone] Clearing ${rk}: all ${routePokemonIds.length} Pokemon guessed (apId=${apLocationId})`);
+                        clientRef.current?.check(apLocationId);
+                        setCheckedIds(prev => new Set(prev).add(localId));
+                    }
+                }
+            });
+        }
+    }, [checkedIds, isConnected, gameMode, typeLocksEnabled, typeUnlocks, unlockedIds, slotMilestones, slotTypeMilestones, routeLocksEnabled, routeKeys, activeRegions]);
 
 
     // Victory: send CLIENT_GOAL when guessedCount >= goalCount

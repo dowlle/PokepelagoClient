@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { STONE_NAMES_ORDERED } from '../data/pokemon_gates';
+import { getRouteKeysForRegion, getLineUnlocksForRegions, BADGE_LEVEL_THRESHOLDS } from '../data/routeData';
 
 const STONE_COLORS: Record<string, string> = {
     fire:    '#EF4444',
@@ -49,6 +50,9 @@ export const GateTracker: React.FC = () => {
         paradoxLocksEnabled, hasTimeRift,
         stoneLocksEnabled, unlockedStones,
         regionLocksEnabled, regionPasses, activeRegions, startingRegion,
+        routeLocksEnabled, routeKeys,
+        lineLocksEnabled, lineUnlocks,
+        badgeLevelGatingEnabled,
         say, categoryFilter, setCategoryFilter,
     } = useGame();
 
@@ -74,7 +78,9 @@ export const GateTracker: React.FC = () => {
         legendaryLocksEnabled ||
         (tradeLocksEnabled || babyLocksEnabled || fossilLocksEnabled || ultraBeastLocksEnabled || paradoxLocksEnabled) ||
         stoneLocksEnabled ||
-        (regionLocksEnabled && Object.keys(activeRegions).length > 1);
+        (regionLocksEnabled && Object.keys(activeRegions).length > 1) ||
+        routeLocksEnabled ||
+        lineLocksEnabled;
 
     if (!hasAnyGate) return null;
 
@@ -113,10 +119,14 @@ export const GateTracker: React.FC = () => {
                                         borderColor: filled ? tierColor : (!filled && pendingHint === 'Gym Badge') ? '#EAB308' : '#374151',
                                         backgroundColor: filled ? `${tierColor}33` : 'transparent',
                                     }}
-                                    title={filled
-                                        ? `Click to filter ${tier === 'mythic' ? 'Mythics' : tier === 'box' ? 'Box Legendaries' : 'Sub-Legendaries'}`
-                                        : pendingHint === 'Gym Badge' ? 'Click again to hint Gym Badge' : 'Click to hint Gym Badge'
-                                    }
+                                    title={(() => {
+                                        const badgeLabel = badgeLevelGatingEnabled && BADGE_LEVEL_THRESHOLDS[i] !== undefined
+                                            ? `Badge ${i + 1}: Up to Lv ${BADGE_LEVEL_THRESHOLDS[i]}\n`
+                                            : '';
+                                        return filled
+                                            ? `${badgeLabel}Click to filter ${tier === 'mythic' ? 'Mythics' : tier === 'box' ? 'Box Legendaries' : 'Sub-Legendaries'}`
+                                            : pendingHint === 'Gym Badge' ? 'Click again to hint Gym Badge' : `${badgeLabel}Click to hint Gym Badge`;
+                                    })()}
                                     onClick={() => filled ? handleFilterClick(filterName) : handleHintClick('Gym Badge')}
                                 >
                                     {filled && (
@@ -247,6 +257,84 @@ export const GateTracker: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            {/* Route Keys */}
+            {routeLocksEnabled && Object.keys(activeRegions).length > 0 && (
+                <div>
+                    <div className="text-[9px] font-bold uppercase text-gray-500 mb-1.5 tracking-wider">Route Keys</div>
+                    <div className="flex flex-col gap-1">
+                        {Object.keys(activeRegions).map(region => {
+                            const allKeys = getRouteKeysForRegion(region);
+                            if (allKeys.length === 0) return null;
+                            const haveCount = allKeys.filter(k => routeKeys.has(k)).length;
+                            const total = allKeys.length;
+                            const pct = Math.round((haveCount / total) * 100);
+                            const filterName = `route-${region}`;
+                            const isActiveFilter = categoryFilter === filterName;
+                            const complete = haveCount === total;
+                            return (
+                                <div
+                                    key={region}
+                                    className={`relative flex items-center justify-between px-2 py-1 rounded border text-[9px] font-bold transition-all cursor-pointer hover:brightness-125 overflow-hidden ${isActiveFilter ? 'ring-1 ring-white/50' : ''}`}
+                                    style={{
+                                        borderColor: complete ? '#22C55E66' : '#37415144',
+                                        backgroundColor: '#1f293744',
+                                        color: complete ? '#4ADE80' : '#6B7280',
+                                    }}
+                                    title={isActiveFilter ? 'Click to clear filter' : `Click to filter ${region} routes`}
+                                    onClick={() => handleFilterClick(filterName)}
+                                >
+                                    <div
+                                        className="absolute inset-0 transition-all"
+                                        style={{
+                                            width: `${pct}%`,
+                                            backgroundColor: complete ? '#22C55E1A' : '#3B82F61A',
+                                        }}
+                                    />
+                                    <span className="relative z-10">Routes: {region}</span>
+                                    <span className="relative z-10 font-normal">{haveCount}/{total}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* Line Unlocks */}
+            {lineLocksEnabled && Object.keys(activeRegions).length > 0 && (() => {
+                const allLineItems = getLineUnlocksForRegions(activeRegions);
+                const haveCount = allLineItems.filter(item => lineUnlocks.has(item)).length;
+                const total = allLineItems.length;
+                const pct = total > 0 ? Math.round((haveCount / total) * 100) : 0;
+                const complete = haveCount === total;
+                const filterName = 'line-unlocks';
+                const isActiveFilter = categoryFilter === filterName;
+                return (
+                    <div>
+                        <div className="text-[9px] font-bold uppercase text-gray-500 mb-1.5 tracking-wider">Line Unlocks</div>
+                        <div
+                            className={`relative flex items-center justify-between px-2 py-1 rounded border text-[9px] font-bold transition-all cursor-pointer hover:brightness-125 overflow-hidden ${isActiveFilter ? 'ring-1 ring-white/50' : ''}`}
+                            style={{
+                                borderColor: complete ? '#22C55E66' : '#37415144',
+                                backgroundColor: '#1f293744',
+                                color: complete ? '#4ADE80' : '#6B7280',
+                            }}
+                            title={isActiveFilter ? 'Click to clear filter' : 'Click to filter locked families'}
+                            onClick={() => handleFilterClick(filterName)}
+                        >
+                            <div
+                                className="absolute inset-0 transition-all"
+                                style={{
+                                    width: `${pct}%`,
+                                    backgroundColor: complete ? '#22C55E1A' : '#A78BFA1A',
+                                }}
+                            />
+                            <span className="relative z-10">Families</span>
+                            <span className="relative z-10 font-normal">{haveCount}/{total}</span>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* Region Passes */}
             {regionLocksEnabled && Object.keys(activeRegions).length > 1 && (
