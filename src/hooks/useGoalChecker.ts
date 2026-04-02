@@ -143,7 +143,10 @@ export function useGoalChecker({
                 if (!Object.keys(activeRegions).includes(info.region)) return;
                 const routePokemonIds = (ROUTE_POKEMON[rk] || []).filter(pid => activeIdSet.has(pid));
                 if (routePokemonIds.length === 0) return;
-                const allGuessed = routePokemonIds.every(pid => checkedIds.has(pid));
+                // Threshold: catch 5 Pokemon on the route (or all if fewer than 5)
+                const threshold = Math.min(5, routePokemonIds.length);
+                const guessedOnRoute = routePokemonIds.filter(pid => checkedIds.has(pid)).length;
+                const allGuessed = guessedOnRoute >= threshold;
                 if (allGuessed) {
                     const apLocationId = LOCATION_OFFSET + ROUTE_MILESTONE_OFFSET + i;
                     const localId = apLocationId - LOCATION_OFFSET;
