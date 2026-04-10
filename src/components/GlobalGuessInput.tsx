@@ -124,26 +124,30 @@ export const GlobalGuessInput: React.FC = () => {
         };
     }, [allPokemon]);
 
-    // Auto-submit logic
+    // Auto-submit logic (debounced to prevent premature matches, e.g. "Hypno" while typing "Hypnomade")
     useEffect(() => {
         const normalised = guess.toLowerCase().trim();
         if (normalised.length < 3) return;
 
-        const match = allPokemon.find(p => {
-            if (!matchesPokemon(p, normalised)) return false;
-            if (checkedIds.has(p.id) && !releasedIds.has(p.id)) return false;
-            return isPokemonGuessable(p.id).canGuess || releasedIds.has(p.id);
-        });
+        const timer = setTimeout(() => {
+            const match = allPokemon.find(p => {
+                if (!matchesPokemon(p, normalised)) return false;
+                if (checkedIds.has(p.id) && !releasedIds.has(p.id)) return false;
+                return isPokemonGuessable(p.id).canGuess || releasedIds.has(p.id);
+            });
 
-        if (match) {
-            const result = attemptGuess(guess);
-            if ((result.type === 'success' || result.type === 'recaught') && result.pokemonId != null && result.pokemonName) {
-                addGuess(result.pokemonId, result.pokemonName, null, result.type);
+            if (match) {
+                const result = attemptGuess(guess);
+                if ((result.type === 'success' || result.type === 'recaught') && result.pokemonId != null && result.pokemonName) {
+                    addGuess(result.pokemonId, result.pokemonName, null, result.type);
+                }
+                showToast(result.type, result.message);
+                // eslint-disable-next-line react-hooks/set-state-in-effect
+                setGuess('');
             }
-            showToast(result.type, result.message);
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            setGuess('');
-        }
+        }, 250);
+
+        return () => clearTimeout(timer);
     }, [guess, allPokemon, checkedIds, isPokemonGuessable, releasedIds, matchesPokemon, attemptGuess, showToast, addGuess]);
 
     const handleManualGuess = (name: string) => {
