@@ -10,7 +10,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@airbreather/archipelago.js": "^2.0.5-airbreather.6",
     "@types/canvas-confetti": "^1.9.0",
     "archipelago.js": "^2.0.4",
     "canvas-confetti": "^1.9.4",

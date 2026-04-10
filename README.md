@@ -37,6 +37,14 @@ Make sure you have [Node.js](https://nodejs.org/) installed on your machine.
    npm run build
    ```
 
+## How to Connect
+
+> **Important:** This client runs in your web browser -- you do **not** launch it from the Archipelago Launcher.
+
+1. Open the [Pokepelago Client](https://dowlle.github.io/PokepelagoClient/) in your browser (Chrome or Firefox recommended).
+2. Enter your AP server address (hostname and port), your slot name, and password (if any).
+3. The client connects to the server via WebSocket. If your server uses HTTPS, the client will use a secure connection automatically.
+
 ## How to Play
 
 1. Start your Archipelago Server with the Pokepelago `.apworld` generated seed.
