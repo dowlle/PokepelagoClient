@@ -917,6 +917,60 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [connectedTeamSlot]);
 
     const setGameMode = useCallback((mode: 'archipelago' | 'standalone' | null) => {
+        // Reset all game state when switching modes
+        setUnlockedIds(new Set());
+        setCheckedIds(new Set());
+        setHintedIds(new Set());
+        setShinyIds(new Set());
+        setLogs([]);
+        setDerpyfiedIds(new Set());
+        setReleasedIds(new Set());
+        setSpriteRefreshCounter(0);
+        setTypeFilter([]);
+        setDexFilter(new Set());
+        setCategoryFilter(null);
+        setSelectedPokemonId(null);
+        setMasterBalls(0); setPokegears(0); setPokedexes(0);
+        setUsedMasterBalls(new Set()); setUsedPokegears(new Set()); setUsedPokedexes(new Set());
+        setShuffleEndTime(0);
+        setConnectedTeamSlot(null);
+        setSlotMilestones(undefined);
+        setSlotTypeMilestones(undefined);
+        setGymBadges(0);
+        setHasLinkCable(false);
+        setDaycareCount(0);
+        setHasFossilRestorer(false);
+        setHasUltraWormhole(false);
+        setHasTimeRift(false);
+        setUnlockedStones(new Set());
+        setLegendaryLocksEnabled(false);
+        setTradeLocksEnabled(false);
+        setBabyLocksEnabled(false);
+        setDaycareRequired(1);
+        setFossilLocksEnabled(false);
+        setUltraBeastLocksEnabled(false);
+        setParadoxLocksEnabled(false);
+        setStoneLocksEnabled(false);
+        setRouteLocksEnabled(false);
+        setLineLocksEnabled(false);
+        setBadgeLevelGatingEnabled(false);
+        setRouteKeys(new Set());
+        setLineUnlocks(new Set());
+        setMasterBallBypassGates(true);
+        setStartingStarter(null);
+
+        // Restore standalone saved data if switching to standalone
+        if (mode === 'standalone') {
+            const savedCaught = localStorage.getItem('pokepelago_standalone_caught');
+            if (savedCaught) { try { setCheckedIds(new Set<number>(JSON.parse(savedCaught))); } catch { /* corrupted */ } }
+            const savedMB = localStorage.getItem('pokepelago_standalone_usedMasterBalls');
+            if (savedMB) { try { setUsedMasterBalls(new Set(JSON.parse(savedMB))); } catch { /* corrupted */ } }
+            const savedPG = localStorage.getItem('pokepelago_standalone_usedPokegears');
+            if (savedPG) { try { setUsedPokegears(new Set(JSON.parse(savedPG))); } catch { /* corrupted */ } }
+            const savedPD = localStorage.getItem('pokepelago_standalone_usedPokedexes');
+            if (savedPD) { try { setUsedPokedexes(new Set(JSON.parse(savedPD))); } catch { /* corrupted */ } }
+        }
+
         setGameModeState(mode);
         if (mode) localStorage.setItem('pokepelago_gamemode', mode);
         else localStorage.removeItem('pokepelago_gamemode');
@@ -1397,6 +1451,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                 `pokepelago_team_${t}_slot_${s}_shiny_pokemon`, []
                             ).add([pick]).commit();
                         }
+                        // Log the shiny assignment
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const pokeName = (pokemonMetadata as any)[pick]?.name ?? `#${pick}`;
+                        setLogs(logs => [{
+                            id: crypto.randomUUID(), timestamp: Date.now(), type: 'system',
+                            text: `Shiny Charm! ${pokeName} is now shiny!`,
+                            parts: [{ text: `Shiny Charm! ${pokeName} is now shiny!`, type: 'color', color: '#EC4899' }],
+                        }, ...logs.slice(0, 99)]);
                         return next;
                     });
                     return checked;

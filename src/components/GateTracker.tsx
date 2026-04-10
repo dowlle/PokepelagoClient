@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { STONE_NAMES_ORDERED } from '../data/pokemon_gates';
-import { getRouteKeysForRegion, getLineUnlocksForRegions, BADGE_LEVEL_THRESHOLDS } from '../data/routeData';
+import { getRouteKeysForRegion, getLineUnlocksForRegions, BADGE_LEVEL_THRESHOLDS, ROUTE_INFO, ROUTE_KEY_ITEMS, ROUTE_POKEMON } from '../data/routeData';
 
 const STONE_COLORS: Record<string, string> = {
     fire:    '#EF4444',
@@ -53,11 +53,13 @@ export const GateTracker: React.FC = () => {
         routeLocksEnabled, routeKeys,
         lineLocksEnabled, lineUnlocks,
         badgeLevelGatingEnabled,
+        checkedIds,
         say, categoryFilter, setCategoryFilter,
     } = useGame();
 
     const [pendingHint, setPendingHint] = useState<string | null>(null);
     const [isOpen, setIsOpen] = useState(true);
+    const [expandedRouteRegion, setExpandedRouteRegion] = useState<string | null>(null);
 
     if (!isConnected || gameMode !== 'archipelago') return null;
 
@@ -258,47 +260,136 @@ export const GateTracker: React.FC = () => {
                 </div>
             )}
 
-            {/* Route Keys */}
-            {routeLocksEnabled && Object.keys(activeRegions).length > 0 && (
-                <div>
-                    <div className="text-[9px] font-bold uppercase text-gray-500 mb-1.5 tracking-wider">Route Keys</div>
-                    <div className="flex flex-col gap-1">
-                        {Object.keys(activeRegions).map(region => {
-                            const allKeys = getRouteKeysForRegion(region);
-                            if (allKeys.length === 0) return null;
-                            const haveCount = allKeys.filter(k => routeKeys.has(k)).length;
-                            const total = allKeys.length;
-                            const pct = Math.round((haveCount / total) * 100);
-                            const filterName = `route-${region}`;
-                            const isActiveFilter = categoryFilter === filterName;
-                            const complete = haveCount === total;
-                            return (
-                                <div
-                                    key={region}
-                                    className={`relative flex items-center justify-between px-2 py-1 rounded border text-[9px] font-bold transition-all cursor-pointer hover:brightness-125 overflow-hidden ${isActiveFilter ? 'ring-1 ring-white/50' : ''}`}
-                                    style={{
-                                        borderColor: complete ? '#22C55E66' : '#37415144',
-                                        backgroundColor: '#1f293744',
-                                        color: complete ? '#4ADE80' : '#6B7280',
-                                    }}
-                                    title={isActiveFilter ? 'Click to clear filter' : `Click to filter ${region} routes`}
-                                    onClick={() => handleFilterClick(filterName)}
-                                >
-                                    <div
-                                        className="absolute inset-0 transition-all"
-                                        style={{
-                                            width: `${pct}%`,
-                                            backgroundColor: complete ? '#22C55E1A' : '#3B82F61A',
-                                        }}
-                                    />
-                                    <span className="relative z-10">Routes: {region}</span>
-                                    <span className="relative z-10 font-normal">{haveCount}/{total}</span>
-                                </div>
-                            );
-                        })}
+            {/* Route Keys + Clearing Progress */}
+            {routeLocksEnabled && Object.keys(activeRegions).length > 0 && (() => {
+                // Build active ID set for filtering route Pokemon
+                const activeIdSet = new Set<number>();
+                for (const [, [lo, hi]] of Object.entries(activeRegions)) {
+                    for (let i = lo; i <= hi; i++) activeIdSet.add(i);
+                }
+
+                return (
+                    <div>
+                        <div className="text-[9px] font-bold uppercase text-gray-500 mb-1.5 tracking-wider">Route Keys</div>
+                        <div className="flex flex-col gap-1">
+                            {Object.keys(activeRegions).map(region => {
+                                const allKeys = getRouteKeysForRegion(region);
+                                if (allKeys.length === 0) return null;
+                                const haveCount = allKeys.filter(k => routeKeys.has(k)).length;
+                                const total = allKeys.length;
+                                const pct = Math.round((haveCount / total) * 100);
+                                const filterName = `route-${region}`;
+                                const isActiveFilter = categoryFilter === filterName;
+                                const complete = haveCount === total;
+
+                                // Compute per-route clearing data for this region
+                                const regionRoutes = Object.entries(ROUTE_INFO)
+                                    .filter(([, info]) => info.region === region)
+                                    .sort(([a], [b]) => a.localeCompare(b));
+                                const routeClearingData = regionRoutes.map(([rk, info]) => {
+                                    const itemName = ROUTE_KEY_ITEMS[rk];
+                                    const hasKey = itemName ? routeKeys.has(itemName) : false;
+                                    const pokemonIds = (ROUTE_POKEMON[rk] || []).filter(pid => activeIdSet.has(pid));
+                                    const threshold = Math.min(5, pokemonIds.length);
+                                    const caught = pokemonIds.filter(pid => checkedIds.has(pid)).length;
+                                    const cleared = caught >= threshold && pokemonIds.length > 0;
+                                    return { rk, name: info.name, hasKey, pokemonIds, threshold, caught, cleared };
+                                });
+                                const clearedCount = routeClearingData.filter(r => r.hasKey && r.cleared).length;
+                                const unlockedCount = routeClearingData.filter(r => r.hasKey).length;
+                                const isExpanded = expandedRouteRegion === region;
+
+                                return (
+                                    <div key={region}>
+                                        <div
+                                            className={`relative flex items-center justify-between px-2 py-1 rounded border text-[9px] font-bold transition-all cursor-pointer hover:brightness-125 overflow-hidden ${isActiveFilter ? 'ring-1 ring-white/50' : ''}`}
+                                            style={{
+                                                borderColor: complete ? '#22C55E66' : '#37415144',
+                                                backgroundColor: '#1f293744',
+                                                color: complete ? '#4ADE80' : '#6B7280',
+                                            }}
+                                            title={isActiveFilter ? 'Click to clear filter' : `Click to filter ${region} routes`}
+                                            onClick={(e) => {
+                                                if (e.shiftKey || e.detail === 2) {
+                                                    // Double-click or shift-click toggles detail view
+                                                    setExpandedRouteRegion(prev => prev === region ? null : region);
+                                                } else {
+                                                    handleFilterClick(filterName);
+                                                }
+                                            }}
+                                        >
+                                            <div
+                                                className="absolute inset-0 transition-all"
+                                                style={{
+                                                    width: `${pct}%`,
+                                                    backgroundColor: complete ? '#22C55E1A' : '#3B82F61A',
+                                                }}
+                                            />
+                                            <span className="relative z-10 flex items-center gap-1.5">
+                                                Routes: {region}
+                                                {unlockedCount > 0 && (
+                                                    <span className="text-[8px] font-normal" style={{ color: clearedCount === unlockedCount ? '#4ADE80' : '#9CA3AF' }}>
+                                                        ({clearedCount}/{unlockedCount} cleared)
+                                                    </span>
+                                                )}
+                                            </span>
+                                            <span className="relative z-10 font-normal flex items-center gap-1">
+                                                {haveCount}/{total}
+                                                <ChevronDown
+                                                    size={8}
+                                                    className={`transition-transform duration-200 ${isExpanded ? '' : '-rotate-90'}`}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setExpandedRouteRegion(prev => prev === region ? null : region);
+                                                    }}
+                                                />
+                                            </span>
+                                        </div>
+                                        {/* Expanded route clearing details */}
+                                        {isExpanded && (
+                                            <div className="ml-2 mt-0.5 flex flex-col gap-0.5">
+                                                {routeClearingData.map(route => {
+                                                    const clearPct = route.pokemonIds.length > 0
+                                                        ? Math.round((Math.min(route.caught, route.threshold) / route.threshold) * 100) : 0;
+                                                    return (
+                                                        <div
+                                                            key={route.rk}
+                                                            className="relative flex items-center justify-between px-1.5 py-0.5 rounded text-[8px] overflow-hidden"
+                                                            style={{
+                                                                backgroundColor: '#1f293722',
+                                                                color: !route.hasKey ? '#4B5563' : route.cleared ? '#4ADE80' : '#9CA3AF',
+                                                                opacity: route.hasKey ? 1 : 0.5,
+                                                            }}
+                                                        >
+                                                            {route.hasKey && (
+                                                                <div
+                                                                    className="absolute inset-0 transition-all"
+                                                                    style={{
+                                                                        width: `${clearPct}%`,
+                                                                        backgroundColor: route.cleared ? '#22C55E15' : '#3B82F610',
+                                                                    }}
+                                                                />
+                                                            )}
+                                                            <span className="relative z-10 truncate">
+                                                                {route.hasKey ? (route.cleared ? '\u2713' : '\u25CB') : '\u2717'} {route.name}
+                                                            </span>
+                                                            {route.hasKey && (
+                                                                <span className="relative z-10 font-normal ml-1 whitespace-nowrap">
+                                                                    {Math.min(route.caught, route.threshold)}/{route.threshold}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
 
             {/* Line Unlocks */}
             {lineLocksEnabled && Object.keys(activeRegions).length > 0 && (() => {
