@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
 import { GENERATIONS } from '../types/pokemon';
-import { X, Server, Wifi, LayoutGrid, Maximize, Image, Trash2, Upload, Link2, ChevronDown, Filter, Monitor, BookOpen, Tv, LogIn, LogOut, Copy, Palette } from 'lucide-react';
+import { X, Server, Wifi, LayoutGrid, Maximize, Image, Trash2, Upload, Link2, ChevronDown, Filter, Monitor, BookOpen, Tv, LogIn, LogOut, Copy, Palette, Eye } from 'lucide-react';
 import { importFromFiles, clearAllSprites } from '../services/spriteService';
 import { ConnectionManager } from './ConnectionManager';
 import { getTwitchAuthUrl, getTwitchUsername, clearTwitchAuth, hasTwitchClientId } from '../services/twitchAuthService';
@@ -791,6 +791,16 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                                     </div>
                                 </div>
                                 <input type="checkbox" checked={uiSettings.persistentDot} onChange={(e) => updateUiSettings({ persistentDot: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-orange-600 focus:ring-orange-500" />
+                            </label>
+                            <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
+                                <div className="flex items-center gap-2">
+                                    <Eye size={16} className="text-cyan-400 group-hover:scale-110 transition-transform" />
+                                    <div>
+                                        <div className="text-xs font-bold text-gray-200">Type Labels</div>
+                                        <div className="text-[9px] text-gray-500">Show type abbreviations on colored indicators (colorblind-friendly)</div>
+                                    </div>
+                                </div>
+                                <input type="checkbox" checked={uiSettings.colorblindMode === 'labels'} onChange={(e) => updateUiSettings({ colorblindMode: e.target.checked ? 'labels' : 'off' })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-cyan-600 focus:ring-cyan-500" />
                             </label>
                             {__TWITCH_ENABLED__ && (
                             <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">

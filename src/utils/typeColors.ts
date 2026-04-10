@@ -5,3 +5,11 @@ export const TYPE_COLORS: Record<string, string> = {
     Rock: '#B6A136', Ghost: '#735797', Dragon: '#6F35FC', Steel: '#B7B7CE',
     Dark: '#705746', Fairy: '#D685AD',
 };
+
+export const TYPE_ABBREVIATIONS: Record<string, string> = {
+    Normal: 'No', Fire: 'Fi', Water: 'Wa', Electric: 'El',
+    Grass: 'Gr', Ice: 'Ic', Fighting: 'Fg', Poison: 'Po',
+    Ground: 'Gn', Flying: 'Fl', Psychic: 'Ps', Bug: 'Bu',
+    Rock: 'Ro', Ghost: 'Gh', Dragon: 'Dr', Steel: 'St',
+    Dark: 'Da', Fairy: 'Fa',
+};
