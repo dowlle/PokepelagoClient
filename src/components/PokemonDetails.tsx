@@ -473,6 +473,9 @@ export const PokemonDetails: React.FC = () => {
                                                 : 'bg-gray-800/40 border-gray-700/50 hover:bg-gray-700/50 active:scale-95 disabled:opacity-30 disabled:grayscale disabled:hover:bg-gray-800/40'}
                                         `}
                                     >
+                                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 text-gray-200 text-[9px] rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-gray-700 z-50">
+                                            Reveals the first letter of this Pokemon's name
+                                        </div>
                                         <div className="w-10 h-10 flex items-center justify-center mb-1">
                                             <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-radar.png" style={{ imageRendering: 'pixelated' }} className={`w-8 h-8 object-contain transition-opacity duration-200 ${gearSpriteLoaded ? 'opacity-100' : 'opacity-0'}`} alt="Poke Radar" onLoad={() => setGearSpriteLoaded(true)} />
                                         </div>
@@ -493,6 +496,9 @@ export const PokemonDetails: React.FC = () => {
                                                 : 'bg-gray-800/40 border-gray-700/50 hover:bg-gray-700/50 active:scale-95 disabled:opacity-30 disabled:grayscale disabled:hover:bg-gray-800/40'}
                                         `}
                                     >
+                                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 text-gray-200 text-[9px] rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-gray-700 z-50">
+                                            Reveals silhouette, types, and generation
+                                        </div>
                                         <div className="w-10 h-10 flex items-center justify-center mb-1">
                                             <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/ss-ticket.png" style={{ imageRendering: 'pixelated' }} className={`w-8 h-8 object-contain transition-opacity duration-200 ${pokedexSpriteLoaded ? 'opacity-100' : 'opacity-0'}`} alt="SS Ticket" onLoad={() => setPokedexSpriteLoaded(true)} />
                                         </div>
@@ -508,6 +514,9 @@ export const PokemonDetails: React.FC = () => {
                                         disabled={masterBalls === 0 || !!itemCooldown || (!masterBallBypassGates && !canGuess)}
                                         className="group relative flex flex-col items-center justify-center p-3 rounded-2xl border bg-gray-800/40 border-gray-700/50 hover:bg-red-900/20 hover:border-red-500/40 active:scale-95 disabled:opacity-30 disabled:grayscale disabled:hover:bg-gray-800/40 transition-all"
                                     >
+                                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 text-gray-200 text-[9px] rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-gray-700 z-50">
+                                            Instantly reveals this Pokemon without guessing
+                                        </div>
                                         <div className="w-10 h-10 flex items-center justify-center mb-1">
                                             <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/master-ball.png" style={{ imageRendering: 'pixelated' }} className={`w-8 h-8 object-contain transition-opacity duration-200 ${masterBallSpriteLoaded ? 'opacity-100' : 'opacity-0'}`} alt="Master Ball" onLoad={() => setMasterBallSpriteLoaded(true)} />
                                         </div>
