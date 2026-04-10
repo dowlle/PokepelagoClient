@@ -105,8 +105,8 @@ export const GlobalGuessInput: React.FC = () => {
 
                     guessedThisLoop = true;
                     setGuess(p.name);
-                    // Must be longer than the auto-submit debounce (250ms) so the guess actually fires
-                    await new Promise(r => setTimeout(r, 350));
+                    // Smart debounce submits most guesses at 0ms; use 100ms to allow React to process
+                    await new Promise(r => setTimeout(r, 100));
                 }
 
                 if (!guessedThisLoop) {
@@ -126,28 +126,48 @@ export const GlobalGuessInput: React.FC = () => {
         };
     }, [allPokemon]);
 
-    // Auto-submit logic (debounced to prevent premature matches, e.g. "Hypno" while typing "Hypnomade")
+    // Auto-submit logic with smart debounce: submit instantly when the match is unambiguous,
+    // only debounce (250ms) when the input could be the start of a longer uncaught Pokemon name
+    // (e.g., "Hypno" while typing "Hypnomade"). This keeps the game feeling snappy for 95%+ of guesses.
     useEffect(() => {
         const normalised = guess.toLowerCase().trim();
         if (normalised.length < 3) return;
 
-        const timer = setTimeout(() => {
-            const match = allPokemon.find(p => {
-                if (!matchesPokemon(p, normalised)) return false;
-                if (checkedIds.has(p.id) && !releasedIds.has(p.id)) return false;
-                return isPokemonGuessable(p.id).canGuess || releasedIds.has(p.id);
-            });
+        // Find match eagerly to decide debounce delay
+        const match = allPokemon.find(p => {
+            if (!matchesPokemon(p, normalised)) return false;
+            if (checkedIds.has(p.id) && !releasedIds.has(p.id)) return false;
+            return isPokemonGuessable(p.id).canGuess || releasedIds.has(p.id);
+        });
+        if (!match) return;
 
-            if (match) {
-                const result = attemptGuess(guess);
-                if ((result.type === 'success' || result.type === 'recaught') && result.pokemonId != null && result.pokemonName) {
-                    addGuess(result.pokemonId, result.pokemonName, null, result.type);
-                }
-                showToast(result.type, result.message);
-                // eslint-disable-next-line react-hooks/set-state-in-effect
-                setGuess('');
+        // Check if the input could be a prefix of any other uncaught Pokemon's name
+        const strip = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+        const inputStripped = strip(normalised);
+        const isPrefix = (name: string) => {
+            const nl = name.toLowerCase();
+            const ns = strip(nl);
+            return (nl.startsWith(normalised) && nl !== normalised) ||
+                (inputStripped !== '' && ns.startsWith(inputStripped) && ns !== inputStripped);
+        };
+
+        const couldBePrefix = allPokemon.some(p => {
+            if (p.id === match.id) return false;
+            if (checkedIds.has(p.id) && !releasedIds.has(p.id)) return false;
+            if (isPrefix(getCleanName(p.name))) return true;
+            const langNames = pokemonNames[p.id.toString()] ?? {};
+            return Object.values(langNames).some(isPrefix);
+        });
+
+        const timer = setTimeout(() => {
+            const result = attemptGuess(guess);
+            if ((result.type === 'success' || result.type === 'recaught') && result.pokemonId != null && result.pokemonName) {
+                addGuess(result.pokemonId, result.pokemonName, null, result.type);
             }
-        }, 250);
+            showToast(result.type, result.message);
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setGuess('');
+        }, couldBePrefix ? 250 : 0);
 
         return () => clearTimeout(timer);
     }, [guess, allPokemon, checkedIds, isPokemonGuessable, releasedIds, matchesPokemon, attemptGuess, showToast, addGuess]);
