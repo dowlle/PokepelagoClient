@@ -5,6 +5,7 @@ import { getCleanName } from '../utils/pokemon';
 import { CreditsModal } from './CreditsModal';
 import { useGuessEngine, POKEMON_LANGUAGES, pokemonNames, type LanguageCode } from '../hooks/useGuessEngine';
 import { useTwitchChat } from '../hooks/useTwitchChat';
+import { PokeLogo } from './PokeLogo';
 
 export const GlobalGuessInput: React.FC = () => {
     const { allPokemon, checkedIds, isPokemonGuessable, activePokemonLimit, releasedIds, toast, showToast, STARTER_OFFSET, MILESTONE_OFFSET, goalCount, gameMode } = useGame();
@@ -165,17 +166,13 @@ export const GlobalGuessInput: React.FC = () => {
 
     return (
         <>
-        <div className="relative z-30 bg-gray-950 border-b border-gray-800 shrink-0">
+        <div className="relative z-30 shrink-0 themed-header" style={{ backgroundColor: 'var(--pp-bg-base)', borderBottom: '1px solid var(--pp-border)' }}>
             <div className="max-w-7xl mx-auto flex items-center gap-3 px-2 py-2 sm:px-4 sm:py-3">
                 {/* Logo */}
-                <h1
-                    className="text-xl font-black tracking-tight bg-linear-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent whitespace-nowrap hidden sm:block cursor-pointer hover:opacity-75 transition-opacity select-none"
-                    onClick={() => setIsCreditsOpen(true)}
-                    title="Credits & Changelog"
-                >
-                    Poképelago
-                    {__IS_BETA__ && <span className="ml-1.5 text-[10px] font-bold uppercase tracking-widest text-amber-400 bg-amber-900/30 border border-amber-700/50 rounded px-1.5 py-0.5 align-middle">beta</span>}
-                </h1>
+                <div className="hidden sm:flex items-center gap-1.5">
+                    <PokeLogo size="sm" onClick={() => setIsCreditsOpen(true)} />
+                    {__IS_BETA__ && <span className="text-[10px] font-bold uppercase tracking-widest text-amber-400 bg-amber-900/30 border border-amber-700/50 rounded px-1.5 py-0.5">beta</span>}
+                </div>
                 {/* Mobile beta badge — visible when logo is hidden */}
                 {__IS_BETA__ && (
                     <span className="sm:hidden text-[9px] font-bold uppercase tracking-widest text-amber-400 bg-amber-900/30 border border-amber-700/50 rounded px-1.5 py-0.5 shrink-0">beta</span>
@@ -189,7 +186,10 @@ export const GlobalGuessInput: React.FC = () => {
                         value={guess}
                         onChange={(e) => setGuess(e.target.value)}
                         placeholder="Name a Pokémon..."
-                        className="w-full px-3 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm outline-none focus:border-green-500 transition-colors"
+                        className="w-full px-3 py-1.5 rounded text-white text-sm outline-none transition-colors"
+                        style={{ backgroundColor: 'var(--pp-input-bg)', border: '1px solid var(--pp-input-border)' }}
+                        onFocus={(e) => e.currentTarget.style.borderColor = 'var(--pp-input-focus)'}
+                        onBlur={(e) => e.currentTarget.style.borderColor = 'var(--pp-input-border)'}
                         autoComplete="off"
                         spellCheck={false}
                         data-tour="guess-input"

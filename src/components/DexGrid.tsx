@@ -265,6 +265,8 @@ export const DexGrid: React.FC = () => {
                 const isRegionOpen = regionOpen[gen.label] !== false;
                 const isDragTarget = dragOverLabel === gen.label && draggedLabel !== gen.label;
 
+                const regionSlug = gen.region.toLowerCase();
+
                 return (
                     <div
                         key={gen.label}
@@ -273,18 +275,25 @@ export const DexGrid: React.FC = () => {
                         onDrop={() => handleDrop(gen.label)}
                         {...(genIndex === 0 ? { 'data-tour': 'dex-region' } : {})}
                         className={`
-                            bg-gray-900/70 border rounded-xl backdrop-blur-sm shadow-2xl flex flex-col h-fit
+                            border backdrop-blur-sm shadow-2xl flex flex-col h-fit
+                            region-card-${regionSlug} region-bg-${regionSlug}
                             ${uiSettings.masonry ? 'break-inside-avoid mb-4' : ''}
                             w-full transition-all duration-150
                             ${isLocked ? 'opacity-80 shadow-none' : ''}
-                            ${isDragTarget ? 'border-blue-500/60 shadow-[0_0_14px_rgba(59,130,246,0.3)]' : 'border-gray-700/50'}
+                            ${isDragTarget ? 'border-blue-500/60 shadow-[0_0_14px_rgba(59,130,246,0.3)]' : ''}
                             ${draggedLabel === gen.label ? 'opacity-40' : ''}
                         `}
+                        style={{
+                            backgroundColor: 'var(--pp-region-bg)',
+                            borderColor: isDragTarget ? undefined : 'var(--pp-border-region)',
+                            borderRadius: 'var(--pp-card-radius)',
+                        }}
                     >
                         {/* Header: drag handle + toggle */}
                         <div
-                            className="flex items-center gap-2 p-3 sm:p-4 cursor-pointer select-none"
+                            className={`flex items-center gap-2 p-3 sm:p-4 cursor-pointer select-none region-header-${regionSlug}`}
                             onClick={() => toggleRegion(gen.label)}
+                            style={{ backgroundColor: 'var(--pp-region-header-bg)', borderRadius: 'var(--pp-card-radius) var(--pp-card-radius) 0 0' }}
                         >
                             <div
                                 draggable
@@ -297,7 +306,7 @@ export const DexGrid: React.FC = () => {
                             </div>
 
                             <div className="flex-1 min-w-0">
-                                <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
+                                <h3 className={`text-sm font-black uppercase tracking-widest flex items-center gap-2 region-text-${regionSlug}`} style={{ color: 'var(--pp-text-region)' }}>
                                     {gen.region}
                                     {isLocked && <Lock size={12} className="text-gray-600" />}
                                     {isShuffled && (

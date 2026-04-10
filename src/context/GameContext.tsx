@@ -21,6 +21,7 @@ import { useAPConnection } from '../hooks/useAPConnection';
 import { useSpriteManager } from '../hooks/useSpriteManager';
 import { useGoalChecker } from '../hooks/useGoalChecker';
 import { useTrapHandler } from '../hooks/useTrapHandler';
+import { applyTheme } from '../utils/themes';
 
 /** localStorage.setItem wrapped in try/catch to handle QuotaExceededError gracefully. */
 function safeSetItem(key: string, value: string): void {
@@ -113,6 +114,7 @@ export interface UISettings {
     typeDot: boolean;
     showDexNumbers: boolean;
     persistentDot: boolean;
+    theme: 'default' | 'pokemon';
 }
 
 interface ConnectionInfo {
@@ -335,7 +337,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const defaults: UISettings = {
             widescreen: false, masonry: false, enableSprites: true,
             enableShadows: false, spriteSet: 'normal', typeDot: true,
-            showDexNumbers: true, persistentDot: true,
+            showDexNumbers: true, persistentDot: true, theme: 'default',
         };
         if (saved) { try { return { ...defaults, ...JSON.parse(saved) }; } catch { /* corrupted */ } }
         return defaults;
@@ -494,6 +496,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         safeSetItem('pokepelago_ui', JSON.stringify(uiSettings));
     }, [uiSettings]);
+
+    // Apply theme CSS variables whenever the theme setting changes
+    useEffect(() => {
+        applyTheme(uiSettings.theme ?? 'default');
+    }, [uiSettings.theme]);
 
     useEffect(() => {
         safeSetItem('pokepelago_connection', JSON.stringify(connectionInfo));

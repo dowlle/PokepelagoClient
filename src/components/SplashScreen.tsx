@@ -3,6 +3,7 @@ import { useGame } from '../context/GameContext';
 import { Shield, Globe, Laptop, ArrowRight, Download, Github, BookOpen } from 'lucide-react';
 import { ConnectionManager } from './ConnectionManager';
 import { CreditsModal } from './CreditsModal';
+import { PokeLogo } from './PokeLogo';
 import type { GameProfile } from '../services/connectionManagerService';
 
 export const SplashScreen: React.FC = () => {
@@ -29,25 +30,19 @@ export const SplashScreen: React.FC = () => {
 
     return (
         <>
-        <div className="fixed inset-0 z-100 bg-gray-950 overflow-y-auto font-sans flex items-center justify-center p-4">
-            <div className="max-w-4xl w-full">
+        <div className="fixed inset-0 z-100 overflow-y-auto font-sans flex items-center justify-center p-4 themed-bg" style={{ backgroundColor: 'var(--pp-splash-bg)' }}>
+            <div className="max-w-4xl w-full relative splash-pokeball">
                 {/* Hero Section */}
-                <div className="text-center mb-12 animate-in fade-in slide-in-from-top-4 duration-1000">
-                    <h1
-                        className="text-6xl font-black tracking-tighter mb-4 bg-linear-to-r from-green-400 via-emerald-500 to-blue-500 bg-clip-text text-transparent cursor-pointer hover:opacity-80 transition-opacity select-none"
-                        onClick={() => setIsCreditsOpen(true)}
-                        title="Credits & Changelog"
-                    >
-                        Poképelago
-                    </h1>
-                    <p className="text-gray-400 text-lg max-w-2xl mx-auto leading-relaxed">
+                <div className="text-center mb-12 animate-in fade-in slide-in-from-top-4 duration-1000 flex flex-col items-center">
+                    <PokeLogo size="lg" onClick={() => setIsCreditsOpen(true)} />
+                    <p className="text-lg max-w-2xl mx-auto leading-relaxed" style={{ color: 'var(--pp-text-secondary)' }}>
                         A modern, collection-focused Pokémon tracking experience designed for the Archipelago multi-world network.
                     </p>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-8 mb-12">
                     {/* Information Card */}
-                    <div className="bg-gray-900/50 border border-gray-800 rounded-3xl p-8 backdrop-blur-sm animate-in fade-in slide-in-from-left-4 duration-700 delay-200">
+                    <div className="rounded-3xl p-8 backdrop-blur-sm animate-in fade-in slide-in-from-left-4 duration-700 delay-200" style={{ backgroundColor: 'var(--pp-bg-surface)', border: '1px solid var(--pp-border)' }}>
                         <div className="flex items-center gap-3 mb-6 text-green-400">
                             <Shield size={24} />
                             <h2 className="text-xl font-bold">Privacy & Sprites</h2>

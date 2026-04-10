@@ -123,13 +123,13 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
                 if (!uiSettings.persistentDot && isReadyToGuess && !hasHovered) setHasHovered(true);
             }}
             className={`
-                w-11 h-11 rounded-md flex items-center justify-center transition-all duration-300 relative group cursor-pointer
+                w-11 h-11 flex items-center justify-center transition-all duration-300 relative group cursor-pointer
                 border
                 ${getBorderClass()}
                 ${isReadyToGuess ? 'hover:scale-110 hover:shadow-[0_0_14px_rgba(34,197,94,0.6)] active:scale-95' : 'hover:scale-105 active:scale-95'}
                 ${isShiny && isChecked ? 'shadow-[0_0_10px_rgba(255,215,0,0.4)]' : ''}
             `}
-            style={order !== undefined ? { order } : undefined}
+            style={{ borderRadius: 'var(--pp-slot-radius)', ...(order !== undefined ? { order } : {}) }}
             title={!canGuess ? reason : (isChecked ? cleanName : status === 'hint' ? `${cleanName} (Hinted)` : `#${pokemon.id}`)}
         >
             {isVisible && normalizedPmdUrl && !pmdError && (

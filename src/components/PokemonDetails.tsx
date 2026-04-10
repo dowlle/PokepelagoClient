@@ -183,7 +183,7 @@ export const PokemonDetails: React.FC = () => {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setSelectedPokemonId(null)}>
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
+            <div className="rounded-2xl w-full max-w-md overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-300" style={{ backgroundColor: 'var(--pp-modal-bg)', border: '1px solid var(--pp-modal-border)' }} onClick={e => e.stopPropagation()}>
                 {/* Header */}
                 <div className="absolute top-4 right-4 z-10">
                     <button
