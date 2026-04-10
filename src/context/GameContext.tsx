@@ -113,6 +113,7 @@ export interface UISettings {
     typeDot: boolean;
     showDexNumbers: boolean;
     persistentDot: boolean;
+    colorblindMode: 'off' | 'labels';
 }
 
 interface ConnectionInfo {
@@ -335,7 +336,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const defaults: UISettings = {
             widescreen: false, masonry: false, enableSprites: true,
             enableShadows: false, spriteSet: 'normal', typeDot: true,
-            showDexNumbers: true, persistentDot: true,
+            showDexNumbers: true, persistentDot: true, colorblindMode: 'off',
         };
         if (saved) { try { return { ...defaults, ...JSON.parse(saved) }; } catch { /* corrupted */ } }
         return defaults;

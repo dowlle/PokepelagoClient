@@ -194,7 +194,7 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
 
             {/* Guessable indicator — type-colored dot; persistent or notification-style */}
             {isReadyToGuess && (uiSettings.persistentDot || !hasHovered) && (
-                <div className="absolute top-0.5 right-0.5 z-20 transition-opacity duration-300">
+                <div className="absolute top-0.5 right-0.5 z-20 transition-opacity duration-300" title={rawTypes.map(capitalize).join(' / ')}>
                     <span className="block w-1.5 h-1.5 rounded-full" style={typeDotStyle} />
                 </div>
             )}
