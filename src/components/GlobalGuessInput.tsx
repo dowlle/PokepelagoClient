@@ -105,7 +105,8 @@ export const GlobalGuessInput: React.FC = () => {
 
                     guessedThisLoop = true;
                     setGuess(p.name);
-                    await new Promise(r => setTimeout(r, 80));
+                    // Must be longer than the auto-submit debounce (250ms) so the guess actually fires
+                    await new Promise(r => setTimeout(r, 350));
                 }
 
                 if (!guessedThisLoop) {
