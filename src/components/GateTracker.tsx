@@ -85,7 +85,7 @@ export const GateTracker: React.FC = () => {
     if (!hasAnyGate) return null;
 
     return (
-        <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-3 space-y-3">
+        <div className="rounded-xl p-3 space-y-3" style={{ backgroundColor: 'var(--pp-bg-surface)', border: '1px solid var(--pp-border)' }}>
             <div
                 className="flex items-center justify-between cursor-pointer select-none"
                 onClick={() => setIsOpen(o => !o)}

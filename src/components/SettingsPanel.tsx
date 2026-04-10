@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
 import { GENERATIONS } from '../types/pokemon';
-import { X, Server, Wifi, LayoutGrid, Maximize, Image, Trash2, Upload, Link2, ChevronDown, Filter, Monitor, BookOpen, Tv, LogIn, LogOut, Copy } from 'lucide-react';
+import { X, Server, Wifi, LayoutGrid, Maximize, Image, Trash2, Upload, Link2, ChevronDown, Filter, Monitor, BookOpen, Tv, LogIn, LogOut, Copy, Palette } from 'lucide-react';
 import { importFromFiles, clearAllSprites } from '../services/spriteService';
 import { ConnectionManager } from './ConnectionManager';
 import { getTwitchAuthUrl, getTwitchUsername, clearTwitchAuth, hasTwitchClientId } from '../services/twitchAuthService';
 import { getProfiles, saveProfile } from '../services/connectionManagerService';
 import type { GameProfile } from '../services/connectionManagerService';
+import { THEMES } from '../utils/themes';
+import type { ThemeId } from '../utils/themes';
 
 const OBS_MODULES = [
     { key: 'progress', label: 'Progress Bar' },
@@ -691,6 +693,44 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                 />
                 {openSections['interface'] && (
                     <div className="px-4 py-4 space-y-4 border-t border-gray-800">
+                        {/* Theme Selector */}
+                        <div className="space-y-2">
+                            <label className="flex items-center gap-2 text-xs font-bold text-gray-300">
+                                <Palette size={14} className="text-amber-400" />
+                                Theme
+                            </label>
+                            <div className={`grid gap-2 ${isEmbedded ? 'grid-cols-2' : 'grid-cols-2'}`}>
+                                {THEMES.map(theme => {
+                                    const isActive = uiSettings.theme === theme.id;
+                                    const previewColors: Record<ThemeId, { from: string; to: string; accent: string }> = {
+                                        default: { from: '#4ADE80', to: '#10B981', accent: '#3B82F6' },
+                                        pokemon: { from: '#EF4444', to: '#EAB308', accent: '#DC2626' },
+                                    };
+                                    const colors = previewColors[theme.id];
+                                    return (
+                                        <button
+                                            key={theme.id}
+                                            onClick={() => updateUiSettings({ theme: theme.id })}
+                                            className={`relative p-3 rounded-xl border text-left transition-all ${
+                                                isActive
+                                                    ? 'border-amber-500/60 shadow-[0_0_12px_rgba(245,158,11,0.15)]'
+                                                    : 'border-gray-700/50 hover:border-gray-600 hover:bg-gray-800/50'
+                                            }`}
+                                            style={isActive ? { backgroundColor: `${colors.accent}10` } : undefined}
+                                        >
+                                            {/* Mini preview */}
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <div className="w-16 h-2 rounded-full" style={{ background: `linear-gradient(to right, ${colors.from}, ${colors.to})` }} />
+                                                {isActive && <span className="text-[9px] text-amber-400 font-bold uppercase">Active</span>}
+                                            </div>
+                                            <div className="text-[11px] font-bold text-gray-200">{theme.label}</div>
+                                            <div className="text-[9px] text-gray-500">{theme.description}</div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
                         <div className={`grid gap-3 ${isEmbedded ? 'grid-cols-1' : 'grid-cols-2'}`}>
                             <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
                                 <div className="flex items-center gap-2">

@@ -48,7 +48,7 @@ export const TypeStatus: React.FC = () => {
     const [isOpen, setIsOpen] = useState(true);
 
     if (!typeLocksEnabled) return (
-        <div data-tour="type-grid" className="bg-gray-900/50 border border-gray-800 rounded-xl p-3">
+        <div data-tour="type-grid" className="rounded-xl p-3" style={{ backgroundColor: 'var(--pp-bg-surface)', border: '1px solid var(--pp-border)' }}>
             <h4 className="text-[10px] font-black uppercase text-gray-500 tracking-widest">
                 Type Proficiency
             </h4>
@@ -57,7 +57,7 @@ export const TypeStatus: React.FC = () => {
     );
 
     return (
-        <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-3 space-y-2">
+        <div className="rounded-xl p-3 space-y-2" style={{ backgroundColor: 'var(--pp-bg-surface)', border: '1px solid var(--pp-border)' }}>
             <div
                 className="flex items-center justify-between cursor-pointer select-none"
                 onClick={() => setIsOpen(o => !o)}
