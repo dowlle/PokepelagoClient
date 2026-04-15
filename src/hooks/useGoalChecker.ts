@@ -28,6 +28,7 @@ interface UseGoalCheckerParams {
     routeLocksEnabled: boolean;
     routeKeys: Set<string>;
     activeRegions: Record<string, [number, number]>;
+    storageReadyRef: MutableRefObject<boolean>;
 }
 
 export function useGoalChecker({
@@ -36,12 +37,16 @@ export function useGoalChecker({
     currentProfileId, typeLocksEnabled, typeUnlocks, unlockedIds,
     slotMilestones, slotTypeMilestones,
     routeLocksEnabled, routeKeys, activeRegions,
+    storageReadyRef,
 }: UseGoalCheckerParams) {
     const celebrationTriggered = useRef(false);
 
     // Extended Locations: milestone and type-milestone AP location checks
+    // Gate on storageReadyRef to prevent sending checks with stale checkedIds
+    // from a previous slot before the current slot's state is fully loaded.
     useEffect(() => {
         if (!clientRef.current || !isConnected || gameMode === 'standalone') return;
+        if (!storageReadyRef.current) return;
 
         const {
             LOCATION_OFFSET, MILESTONE_OFFSET, TYPE_MILESTONE_OFFSET,
@@ -164,6 +169,7 @@ export function useGoalChecker({
     // Victory: send CLIENT_GOAL when guessedCount >= goalCount
     useEffect(() => {
         if (!clientRef.current || !isConnected || gameMode !== 'archipelago') return;
+        if (!storageReadyRef.current) return;
         if (goalCount === undefined) return;
 
         const { STARTER_OFFSET, MILESTONE_OFFSET } = offsetsRef.current;

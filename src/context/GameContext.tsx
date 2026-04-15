@@ -278,7 +278,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [slotTypeMilestones, setSlotTypeMilestones] = useState<Record<string, number[]> | undefined>(undefined);
     const [startingLocationsEnabled, setStartingLocationsEnabled] = useState(true);
     const [connectedTeamSlot, setConnectedTeamSlot] = useState<{ team: number; slot: number } | null>(null);
-    const [dexsanityLocalWarning, setDexsanityLocalWarning] = useState(false);
     const [toast, setToast] = useState<ToastMessage | null>(null);
     const [detectedApWorldVersion, setDetectedApWorldVersion] = useState<'legacy' | 'new' | 'unknown'>('unknown');
     const [currentProfileId, setCurrentProfileId] = useState<string | null>(null);
@@ -447,6 +446,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         slotMilestones,
         slotTypeMilestones,
         routeLocksEnabled, routeKeys, activeRegions,
+        storageReadyRef,
     });
 
     // ── Persistence Effects ──────────────────────────────────────────────────────
@@ -485,14 +485,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             JSON.stringify(Array.from(checkedIds))
         );
     }, [checkedIds, gameMode, dexsanityEnabled, connectedTeamSlot]);
-
-    // Show dexsanity=OFF warning once per slot
-    useEffect(() => {
-        if (!connectedTeamSlot || dexsanityEnabled) { setDexsanityLocalWarning(false); return; }
-        const { team, slot } = connectedTeamSlot;
-        const warned = localStorage.getItem(`pokepelago_team_${team}_slot_${slot}_local_warned`);
-        if (!warned) setDexsanityLocalWarning(true);
-    }, [connectedTeamSlot, dexsanityEnabled]);
 
     useEffect(() => {
         safeSetItem('pokepelago_ui', JSON.stringify(uiSettings));
@@ -907,14 +899,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const say = useCallback((text: string) => {
         if (clientRef.current && isConnected) clientRef.current.messages.say(text);
     }, [isConnected]);
-
-    const dismissDexsanityWarning = useCallback(() => {
-        if (connectedTeamSlot) {
-            const { team, slot } = connectedTeamSlot;
-            localStorage.setItem(`pokepelago_team_${team}_slot_${slot}_local_warned`, 'true');
-        }
-        setDexsanityLocalWarning(false);
-    }, [connectedTeamSlot]);
 
     const setGameMode = useCallback((mode: 'archipelago' | 'standalone' | null) => {
         // Reset all game state when switching modes
@@ -1622,6 +1606,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // ── Public connect / disconnect ───────────────────────────────────────────────
     const connect = useCallback(async (info: ConnectionInfo, profileId?: string) => {
         if (profileId) setCurrentProfileId(profileId);
+        // Always reset game state before connecting to prevent stale data from a
+        // previous slot leaking into the new connection. The orphan guard in
+        // useAPConnection silences the old client's disconnect event, so
+        // onDisconnected may never fire when switching slots without explicit disconnect.
+        onDisconnected();
         storageReadyRef.current = false;
         const isOverlay = urlParams.has('overlay');
         await apConnection.connect(info, profileId, {
@@ -1722,35 +1711,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             recheckMilestones,
         }}>
             {children}
-            {dexsanityLocalWarning && (
-                <div className="fixed inset-0 z-200 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-                    <div className="bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md border border-amber-500/40 flex flex-col overflow-hidden">
-                        <div className="px-6 py-4 border-b border-gray-800 bg-amber-900/20">
-                            <h2 className="text-lg font-bold text-amber-400 flex items-center gap-2">
-                                ⚠ Progress saved locally only
-                            </h2>
-                        </div>
-                        <div className="px-6 py-5 text-gray-300 text-sm leading-relaxed">
-                            <p>
-                                Because <strong className="text-white">Dexsanity is off</strong>, your caught Pokémon are
-                                stored on <strong className="text-white">this device only</strong> — they cannot sync to
-                                the Archipelago server.
-                            </p>
-                            <p className="mt-3 text-gray-400">
-                                If you continue on another device or browser, your catch progress will not carry over.
-                            </p>
-                        </div>
-                        <div className="px-6 py-4 border-t border-gray-800 flex justify-end">
-                            <button
-                                onClick={dismissDexsanityWarning}
-                                className="px-5 py-2 bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded-lg transition-colors"
-                            >
-                                Got it
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </GameContext.Provider>
     );
 };
