@@ -4,9 +4,10 @@ import type { TourState } from '../hooks/useTour';
 interface TourOverlayProps {
   tour: TourState;
   onSwitchPanel: (panel: 'settings' | 'tracker' | null) => void;
+  onOpenSettingsModal?: () => void;
 }
 
-export const TourOverlay: React.FC<TourOverlayProps> = ({ tour, onSwitchPanel }) => {
+export const TourOverlay: React.FC<TourOverlayProps> = ({ tour, onSwitchPanel, onOpenSettingsModal }) => {
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [tooltipPos, setTooltipPos] = useState<'above' | 'below'>('below');
   const observerRef = useRef<ResizeObserver | null>(null);
@@ -40,8 +41,10 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({ tour, onSwitchPanel })
       timers.push(id);
     };
 
-    // Switch the panel
-    if (step.panel) {
+    // Switch the panel or open modal
+    if (step.openModal === 'settings') {
+      onOpenSettingsModal?.();
+    } else if (step.panel) {
       onSwitchPanel(step.panel);
     } else {
       onSwitchPanel(null);
@@ -80,7 +83,7 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({ tour, onSwitchPanel })
       cancelled = true;
       timers.forEach(clearTimeout);
     };
-  }, [tour.isActive, tour.currentStep, step, onSwitchPanel, measureTarget]);
+  }, [tour.isActive, tour.currentStep, step, onSwitchPanel, onOpenSettingsModal, measureTarget]);
 
   // ResizeObserver + scroll/resize listeners
   useEffect(() => {

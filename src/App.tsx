@@ -3,6 +3,7 @@ import { GameProvider, useGame } from './context/GameContext';
 import { DexGrid } from './components/DexGrid';
 import { GlobalGuessInput } from './components/GlobalGuessInput';
 import { SettingsPanel } from './components/SettingsPanel';
+import { SettingsModal } from './components/SettingsModal';
 import { Settings, Wifi, WifiOff, PanelRightClose, PanelRightOpen, PanelLeftClose, PanelLeftOpen, MessageSquare, Tv, LayoutGrid } from 'lucide-react';
 import { ArchipelagoLog } from './components/ArchipelagoLog';
 import { PokemonDetails } from './components/PokemonDetails';
@@ -40,6 +41,7 @@ const GameContent: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
   const [isLogOpen, setIsLogOpen] = React.useState(false);
   const [twitchIntegration, setTwitchIntegration] = React.useState(() => localStorage.getItem('pokepelago_twitch_integration') === 'true');
+  const [isSettingsModalOpen, setSettingsModalOpen] = React.useState(false);
   const [sidebarTab, setSidebarTab] = React.useState<'tracker' | 'settings' | 'twitch'>(() => {
     const defaultTab = localStorage.getItem('pokepelago_defaultTab') as 'tracker' | 'settings' | 'twitch';
     if (defaultTab && (defaultTab === 'tracker' || defaultTab === 'settings' || defaultTab === 'twitch')) {
@@ -205,6 +207,14 @@ const GameContent: React.FC = () => {
 
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setSettingsModalOpen(true)}
+              className="hidden md:block p-1.5 rounded transition-all hover:bg-gray-800 text-gray-400"
+              title="Settings"
+              data-tour="settings-gear"
+            >
+              <Settings size={16} />
+            </button>
+            <button
               onClick={() => {
                 const next = !isSidebarOpen;
                 setIsSidebarOpen(next);
@@ -293,7 +303,7 @@ const GameContent: React.FC = () => {
             ) : sidebarTab === 'twitch' && __TWITCH_ENABLED__ && twitchIntegration ? (
               <TwitchLeaderboard />
             ) : (
-              <SettingsPanel isOpen={true} onClose={() => setIsSidebarOpen(false)} isEmbedded />
+              <SettingsPanel isOpen={true} onClose={() => setIsSidebarOpen(false)} isEmbedded onOpenModal={() => setSettingsModalOpen(true)} />
             )}
           </div>
         </aside>
@@ -331,7 +341,7 @@ const GameContent: React.FC = () => {
           ) : mobilePanel === 'twitch' && __TWITCH_ENABLED__ && twitchIntegration ? (
             <TwitchLeaderboard />
           ) : mobilePanel === 'settings' ? (
-            <SettingsPanel isOpen={true} onClose={() => setMobilePanel(null)} isEmbedded />
+            <SettingsPanel isOpen={true} onClose={() => setMobilePanel(null)} isEmbedded onOpenModal={() => setSettingsModalOpen(true)} />
           ) : null}
         </div>
       </div>
@@ -390,11 +400,13 @@ const GameContent: React.FC = () => {
 
       <PokemonDetails />
 
+      <SettingsModal isOpen={isSettingsModalOpen} onClose={() => setSettingsModalOpen(false)} />
+
       {isConnected && gameMode === 'archipelago' && startingLocationsEnabled && !gameStarted && !adventureOverlayDismissed && (
         <StartGameOverlay onDismiss={() => setAdventureOverlayDismissed(true)} />
       )}
 
-      <TourOverlay tour={tour} onSwitchPanel={handleTourSwitchPanel} />
+      <TourOverlay tour={tour} onSwitchPanel={handleTourSwitchPanel} onOpenSettingsModal={() => setSettingsModalOpen(true)} />
     </div>
   );
 };
