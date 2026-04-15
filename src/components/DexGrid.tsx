@@ -10,7 +10,7 @@ import { SUB_LEGENDARY_IDS, BOX_LEGENDARY_IDS, MYTHIC_IDS, BABY_IDS, TRADE_EVO_I
 const REGION_LAYOUT_KEY = 'pokepelago_region_layout';
 
 export const DexGrid: React.FC = () => {
-    const { allPokemon, unlockedIds, checkedIds, hintedIds, shinyIds, generationFilter, uiSettings, gameMode, isPokemonGuessable, shuffleEndTime, releasedIds, activeRegions, regionPasses, regionLocksEnabled, startingRegion, typeFilter, dexFilter, setDexFilter, categoryFilter } = useGame();
+    const { allPokemon, unlockedIds, checkedIds, hintedIds, shinyIds, generationFilter, uiSettings, gameMode, isPokemonGuessable, shuffleEndTime, releasedIds, activeRegions, regionPasses, regionLocksEnabled, startingRegion, typeFilter, dexFilter, setDexFilter, categoryFilter, usedPokegears, usedPokedexes } = useGame();
 
     const [now, setNow] = useState(() => Date.now());
 
@@ -100,21 +100,26 @@ export const DexGrid: React.FC = () => {
         if (releasedIds.has(id)) return 'shadow';
         if (checkedIds.has(id)) return 'checked';
 
+        // If the player spent a Pokegear or Pokedex on this slot, force the
+        // silhouette regardless of the Enable Shadows setting -- otherwise the
+        // item's grid-side effect is invisible when shadows are off (BUG-04).
+        const hasRevealedItem = usedPokegears.has(id) || usedPokedexes.has(id);
+
         if (gameMode === 'standalone') {
-            return uiSettings.enableShadows ? 'shadow' : 'locked';
+            return (uiSettings.enableShadows || hasRevealedItem) ? 'shadow' : 'locked';
         }
 
         const { canGuess } = isPokemonGuessable(id);
         const isRevealed = unlockedIds.has(id);
 
         if (canGuess) {
-            return uiSettings.enableShadows ? 'shadow' : 'locked';
+            return (uiSettings.enableShadows || hasRevealedItem) ? 'shadow' : 'locked';
         } else if (isRevealed) {
             return 'unlocked';
         }
 
         if (hintedIds.has(id)) return 'hint';
-        return 'locked';
+        return hasRevealedItem ? 'shadow' : 'locked';
     };
 
     // Ordered + filtered generations
