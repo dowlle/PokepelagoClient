@@ -61,6 +61,14 @@ export const PokemonDetails: React.FC = () => {
         [pmdSpriteUrl]
     );
 
+    // Escape-to-close
+    useEffect(() => {
+        if (!selectedPokemonId) return;
+        const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelectedPokemonId(null); };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [selectedPokemonId, setSelectedPokemonId]);
+
     const pokemon = allPokemon.find(p => p.id === selectedPokemonId);
     const isChecked = selectedPokemonId ? checkedIds.has(selectedPokemonId) : false;
     const isHinted = selectedPokemonId ? hintedIds.has(selectedPokemonId) : false;

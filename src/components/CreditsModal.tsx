@@ -131,6 +131,14 @@ const changelog: Array<{
     ];
 
 export const CreditsModal: React.FC<CreditsModalProps> = ({ isOpen, onClose }) => {
+    // Escape-to-close
+    React.useEffect(() => {
+        if (!isOpen) return;
+        const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [isOpen, onClose]);
+
     if (!isOpen) return null;
 
     return createPortal(

@@ -62,6 +62,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
         return () => window.removeEventListener('pokepelago_tour_open_section', handler);
     }, []);
 
+    // Escape-to-close
+    React.useEffect(() => {
+        if (!isOpen) return;
+        const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [isOpen, onClose]);
+
     const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
             setIsImporting(true);

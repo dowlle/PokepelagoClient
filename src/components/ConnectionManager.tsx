@@ -65,6 +65,14 @@ export const ConnectionManager: React.FC<ConnectionManagerProps> = ({ isOpen, on
         reload();
     }, [isOpen, reload]);
 
+    // Escape-to-close
+    useEffect(() => {
+        if (!isOpen) return;
+        const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [isOpen, onClose]);
+
     const handleAutoRemoveChange = (days: number) => {
         setAutoRemoveDaysState(days);
         setAutoRemoveDays(days);
