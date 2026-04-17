@@ -474,7 +474,7 @@ export const PokemonDetails: React.FC = () => {
                                         `}
                                     >
                                         <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 text-gray-200 text-[9px] rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-gray-700 z-50">
-                                            Reveals the first letter of this Pokemon's name
+                                            Reveals silhouette, types, and generation
                                         </div>
                                         <div className="w-10 h-10 flex items-center justify-center mb-1">
                                             <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-radar.png" style={{ imageRendering: 'pixelated' }} className={`w-8 h-8 object-contain transition-opacity duration-200 ${gearSpriteLoaded ? 'opacity-100' : 'opacity-0'}`} alt="Poke Radar" onLoad={() => setGearSpriteLoaded(true)} />
@@ -497,7 +497,7 @@ export const PokemonDetails: React.FC = () => {
                                         `}
                                     >
                                         <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 text-gray-200 text-[9px] rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-gray-700 z-50">
-                                            Reveals silhouette, types, and generation
+                                            Reveals the 3 letters of this Pokemon's name
                                         </div>
                                         <div className="w-10 h-10 flex items-center justify-center mb-1">
                                             <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/ss-ticket.png" style={{ imageRendering: 'pixelated' }} className={`w-8 h-8 object-contain transition-opacity duration-200 ${pokedexSpriteLoaded ? 'opacity-100' : 'opacity-0'}`} alt="SS Ticket" onLoad={() => setPokedexSpriteLoaded(true)} />
