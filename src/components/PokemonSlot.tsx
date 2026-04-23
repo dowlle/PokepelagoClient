@@ -136,16 +136,17 @@ const PokemonSlotImpl: React.FC<PokemonSlotProps> = ({
     const slotPx = 44 * uiSettings.spriteSize;
 
     // UI-01: "Who's That Pokémon?" silhouette. Unguessed/released/hinted slots get a
-    // blacked-out sprite with an indigo (themeable) halo — a direct nod to the
-    // Saturday-morning reveal segment. Pokegeared slots keep the dimmed-but-colored
-    // look so the "I paid to peek" signal stays distinct from a default silhouette.
+    // blacked-out sprite with a gentle indigo (themeable) halo — nod to the anime
+    // reveal segment, tuned down so a 150-slot grid doesn't drown in aura. Pokegeared
+    // slots keep the dimmed-but-colored look so the "I paid to peek" signal stays
+    // distinct from a default silhouette.
     const isSilhouette = status === 'shadow' || status === 'hint' || isReleased;
     const silhouetteFilter = isSilhouette
         ? (isPokegeared
             ? 'brightness(0.5)'
-            : 'brightness(0) drop-shadow(0 0 4px var(--pp-silhouette-glow)) drop-shadow(0 0 10px var(--pp-silhouette-glow))')
+            : 'brightness(0) drop-shadow(0 0 2px var(--pp-silhouette-glow))')
         : undefined;
-    const silhouetteOpacity = isSilhouette && isPokegeared ? 0.8 : 1;
+    const silhouetteOpacity = isSilhouette ? (isPokegeared ? 0.8 : 0.85) : 1;
 
     return (
         <div
