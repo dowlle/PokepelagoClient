@@ -191,7 +191,7 @@ export const GlobalGuessInput: React.FC = () => {
 
     return (
         <>
-        <div className="relative z-30 shrink-0 themed-header" style={{ backgroundColor: 'var(--pp-bg-base)', borderBottom: '1px solid var(--pp-border)' }}>
+        <div className="relative z-[60] shrink-0 themed-header" style={{ backgroundColor: 'var(--pp-bg-base)', borderBottom: '1px solid var(--pp-border)' }}>
             <div className="max-w-7xl mx-auto flex items-center gap-3 px-2 py-2 sm:px-4 sm:py-3">
                 {/* Logo */}
                 <div className="hidden sm:flex items-center gap-1.5">
