@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useGame } from '../context/GameContext';
 import { useTwitch } from '../context/TwitchContext';
-import { X, ExternalLink, HelpCircle, MapPin, Sparkles, CheckCircle2, Lock, Palette, User, Link, Shield } from 'lucide-react';
+import { X, ExternalLink, HelpCircle, MapPin, Sparkles, CheckCircle2, Lock, Palette, User, Link, Shield, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getCleanName } from '../utils/pokemon';
 import { getDerpemonCredit } from '../services/derpemonService';
 import pokemonNamesJson from '../data/pokemon_names.json';
@@ -69,8 +69,21 @@ export const PokemonDetails: React.FC = () => {
         return () => window.removeEventListener('keydown', handler);
     }, [selectedPokemonId, setSelectedPokemonId]);
 
-    // FEAT-08 sub-3: A/D + ArrowLeft/ArrowRight to navigate between unguessed Pokemon.
-    // Wraps around at the ends. Yields to inputs so global guess bar typing is not hijacked.
+    // FEAT-08 sub-3: navigation between Pokemon. A/D = prev/next unguessed only (skip caught);
+    // ArrowLeft/ArrowRight = prev/next ANY Pokemon (caught or not). Side arrow buttons mirror
+    // the ← / → (any) behavior. Wraps around at the ends in both modes.
+    const navigate = React.useCallback((delta: number, mode: 'unguessed' | 'any') => {
+        if (!selectedPokemonId) return;
+        const sorted = [...allPokemon].sort((a, b) => a.id - b.id);
+        const list = mode === 'any' ? sorted : sorted.filter(p => !checkedIds.has(p.id));
+        if (list.length === 0) return;
+        const currentIdx = list.findIndex(p => p.id === selectedPokemonId);
+        const nextIdx = currentIdx === -1
+            ? (delta > 0 ? 0 : list.length - 1)
+            : (currentIdx + delta + list.length) % list.length;
+        setSelectedPokemonId(list[nextIdx].id);
+    }, [selectedPokemonId, allPokemon, checkedIds, setSelectedPokemonId]);
+
     useEffect(() => {
         if (!selectedPokemonId) return;
         const handleKey = (e: KeyboardEvent) => {
@@ -79,24 +92,18 @@ export const PokemonDetails: React.FC = () => {
                 return;
             }
             let delta = 0;
-            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') delta = -1;
-            else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') delta = 1;
+            let mode: 'unguessed' | 'any' = 'unguessed';
+            if (e.key === 'a' || e.key === 'A') { delta = -1; mode = 'unguessed'; }
+            else if (e.key === 'd' || e.key === 'D') { delta = 1; mode = 'unguessed'; }
+            else if (e.key === 'ArrowLeft') { delta = -1; mode = 'any'; }
+            else if (e.key === 'ArrowRight') { delta = 1; mode = 'any'; }
             if (delta === 0) return;
-
-            const sorted = [...allPokemon].sort((a, b) => a.id - b.id);
-            const unguessed = sorted.filter(p => !checkedIds.has(p.id));
-            if (unguessed.length === 0) return;
-
             e.preventDefault();
-            const currentIdx = unguessed.findIndex(p => p.id === selectedPokemonId);
-            const nextIdx = currentIdx === -1
-                ? (delta > 0 ? 0 : unguessed.length - 1)
-                : (currentIdx + delta + unguessed.length) % unguessed.length;
-            setSelectedPokemonId(unguessed[nextIdx].id);
+            navigate(delta, mode);
         };
         window.addEventListener('keydown', handleKey);
         return () => window.removeEventListener('keydown', handleKey);
-    }, [selectedPokemonId, allPokemon, checkedIds, setSelectedPokemonId]);
+    }, [selectedPokemonId, navigate]);
 
     const pokemon = allPokemon.find(p => p.id === selectedPokemonId);
     const isChecked = selectedPokemonId ? checkedIds.has(selectedPokemonId) : false;
@@ -229,6 +236,23 @@ export const PokemonDetails: React.FC = () => {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setSelectedPokemonId(null)}>
+            {/* FEAT-08 sub-3: prev/next buttons mirror ← / → (any Pokemon). A/D keyboard shortcut skips to next unguessed. */}
+            <button
+                onClick={e => { e.stopPropagation(); navigate(-1, 'any'); }}
+                aria-label="Previous Pokemon (← arrow key, or A for previous unguessed)"
+                title="Previous Pokemon (←) — A for previous unguessed"
+                className="group absolute left-4 top-1/2 -translate-y-1/2 z-10 p-3 rounded-full bg-gray-900/80 hover:bg-gray-800 text-white shadow-xl border border-gray-700 hover:border-gray-500 hover:scale-110 active:scale-95 transition-all"
+            >
+                <ChevronLeft size={24} />
+            </button>
+            <button
+                onClick={e => { e.stopPropagation(); navigate(1, 'any'); }}
+                aria-label="Next Pokemon (→ arrow key, or D for next unguessed)"
+                title="Next Pokemon (→) — D for next unguessed"
+                className="group absolute right-4 top-1/2 -translate-y-1/2 z-10 p-3 rounded-full bg-gray-900/80 hover:bg-gray-800 text-white shadow-xl border border-gray-700 hover:border-gray-500 hover:scale-110 active:scale-95 transition-all"
+            >
+                <ChevronRight size={24} />
+            </button>
             <div className="rounded-2xl w-full max-w-md overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-300" style={{ backgroundColor: 'var(--pp-modal-bg)', border: '1px solid var(--pp-modal-border)' }} onClick={e => e.stopPropagation()}>
                 {/* Header */}
                 <div className="absolute top-4 right-4 z-10">
@@ -309,7 +333,7 @@ export const PokemonDetails: React.FC = () => {
 
                         <div className="flex gap-2">
                             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                            {details?.types && showInfo && details.types.map((t: any) => {
+                            {details?.types && (showInfo || uiSettings.alwaysShowTypes) && details.types.map((t: any) => {
                                 const typeName = t.type.name.charAt(0).toUpperCase() + t.type.name.slice(1);
                                 const color = TYPE_COLORS[typeName];
                                 return (
