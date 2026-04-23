@@ -290,7 +290,7 @@ export const PokemonDetails: React.FC = () => {
                                 <img
                                     ref={gifRef}
                                     src={spriteUrl}
-                                    alt={pokemon.name}
+                                    alt={showInfo ? pokemon.name : `Pokemon #${selectedPokemonId}`}
                                     onLoad={() => setGifLoaded(true)}
                                     className={`
                                         w-32 h-32 object-contain relative z-10 transition-opacity duration-300

@@ -163,7 +163,7 @@ const PokemonSlotImpl: React.FC<PokemonSlotProps> = ({ pokemon, status, isShiny 
                 <div className="absolute inset-0 flex items-center justify-center overflow-hidden pointer-events-none">
                     <img
                         src={spriteUrl}
-                        alt={pokemon.name}
+                        alt={isChecked ? pokemon.name : `Pokemon #${pokemon.id}`}
                         onLoad={() => setIsLoaded(true)}
                         onError={() => setHasError(true)}
                         className={`
