@@ -123,6 +123,12 @@ const PokemonSlotImpl: React.FC<PokemonSlotProps> = ({ pokemon, status, isShiny 
         return 'bg-gray-800/60 border-gray-700/30'; // locked
     };
 
+    // FEAT-10: slot + sprite size is driven by uiSettings.spriteSize (1x / 2x / 4x).
+    // Base = 44px (original w-11). Users with complaints about sprites being too small
+    // can bump this. Text overlays (dex #, shiny sparkle) stay at their intrinsic size
+    // so they remain legible at the corner of the larger slot without dominating it.
+    const slotPx = 44 * uiSettings.spriteSize;
+
     return (
         <div
             onClick={() => setSelectedPokemonId(pokemon.id)}
@@ -130,13 +136,13 @@ const PokemonSlotImpl: React.FC<PokemonSlotProps> = ({ pokemon, status, isShiny 
                 if (!uiSettings.persistentDot && isReadyToGuess && !hasHovered) setHasHovered(true);
             }}
             className={`
-                w-11 h-11 flex items-center justify-center transition-all duration-300 relative group cursor-pointer
+                flex items-center justify-center transition-all duration-300 relative group cursor-pointer
                 border
                 ${getBorderClass()}
                 ${isReadyToGuess ? 'hover:scale-110 hover:shadow-[0_0_14px_rgba(34,197,94,0.6)] active:scale-95' : 'hover:scale-105 active:scale-95'}
                 ${isShiny && isChecked ? 'shadow-[0_0_10px_rgba(255,215,0,0.4)]' : ''}
             `}
-            style={{ borderRadius: 'var(--pp-slot-radius)', ...(order !== undefined ? { order } : {}) }}
+            style={{ width: slotPx, height: slotPx, borderRadius: 'var(--pp-slot-radius)', ...(order !== undefined ? { order } : {}) }}
             title={!canGuess ? reason : (isChecked ? cleanName : status === 'hint' ? `${cleanName} (Hinted)` : `#${pokemon.id}`)}
         >
             {isVisible && normalizedPmdUrl && !pmdError && (
@@ -154,7 +160,7 @@ const PokemonSlotImpl: React.FC<PokemonSlotProps> = ({ pokemon, status, isShiny 
                                 ? (isPokegeared ? 'brightness-50 opacity-80' : 'brightness-0 contrast-100 opacity-60')
                                 : ''
                         }
-                        size={44}
+                        size={slotPx}
                     />
                 </div>
             )}
@@ -173,7 +179,7 @@ const PokemonSlotImpl: React.FC<PokemonSlotProps> = ({ pokemon, status, isShiny 
                                 ? (isPokegeared ? 'brightness-50 opacity-80' : 'brightness-0 contrast-100 opacity-60')
                                 : ''}
                         `}
-                        style={{ imageRendering: 'pixelated', width: '2.75rem', height: '2.75rem' }}
+                        style={{ imageRendering: 'pixelated', width: slotPx, height: slotPx }}
                     />
                 </div>
             )}

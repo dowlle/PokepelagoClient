@@ -318,6 +318,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                                     <input type="checkbox" checked={uiSettings.enableSprites} onChange={(e) => updateUiSettings({ enableSprites: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-yellow-600 focus:ring-yellow-500" />
                                 </label>
 
+                                {/* FEAT-10: Sprite size selector */}
+                                <div className="flex items-center justify-between p-3 bg-gray-900/50 border border-gray-700/50 rounded-xl">
+                                    <div className="flex items-center gap-2">
+                                        <Maximize size={16} className="text-yellow-400" />
+                                        <div>
+                                            <div className="text-xs font-bold text-gray-200">Sprite Size</div>
+                                            <div className="text-[9px] text-gray-500">Make boxes and sprites bigger for easier viewing</div>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-1 bg-gray-900/80 border border-gray-700 rounded-lg p-0.5">
+                                        {([1, 2, 4] as const).map(size => (
+                                            <button
+                                                key={size}
+                                                onClick={() => updateUiSettings({ spriteSize: size })}
+                                                className={`px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded transition-all ${uiSettings.spriteSize === size ? 'bg-yellow-600 text-white shadow-lg' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'}`}
+                                            >
+                                                {size}x
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
                                 {/* Sprite Repo URL */}
                                 <div className="space-y-2" data-tour="sprite-url">
                                     <label className="flex items-center gap-2 text-xs font-bold text-gray-300">
