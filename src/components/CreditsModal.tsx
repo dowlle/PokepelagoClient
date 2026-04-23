@@ -13,6 +13,44 @@ const changelog: Array<{
     highlights: Array<{ label: string; text: string }>;
 }> = [
         {
+            version: '0.6.1',
+            date: 'April 2026',
+            highlights: [
+                {
+                    label: 'Who\'s That Pokémon? silhouette',
+                    text: 'Unguessed and hinted slots now render as a silhouette with a subtle indigo halo (warm red in the Pokémon theme). Toggleable in Settings if you prefer pure flat silhouettes.',
+                },
+                {
+                    label: 'Sprite size option',
+                    text: 'Five discrete sizes in the Sprites tab: 1x, 1.25x, 1.5x, 1.75x, and 2x. Sprites and overlays scale together. Default stays at 1x so returning players see no change.',
+                },
+                {
+                    label: 'Pokémon Details upgrade',
+                    text: 'Shadow silhouette for unguessed Pokémon inside the modal. A and D cycle through unguessed Pokémon, arrows cycle through the full dex. The global guess input at the top stays usable while the modal is open. Always Show Types setting reveals type badges before guessing.',
+                },
+                {
+                    label: 'Server version indicator',
+                    text: 'The sidebar now shows which APWorld version the host is running, and tells you when a newer Poképelago release is out so you can ask your host to update for the next seed.',
+                },
+                {
+                    label: 'Game state isolation across servers',
+                    text: 'Switching between Archipelago servers or slots no longer leaks state between games. A full reset fires on every connect, and the new game seeds fresh from the server.',
+                },
+                {
+                    label: 'Grid performance overhaul',
+                    text: 'Catching one Pokémon no longer re-renders the other 1024 slots. Large item batches on connect update in a single pass. Collapsed regions unmount to keep the DOM light.',
+                },
+                {
+                    label: 'Settings groupings',
+                    text: 'Interface toggles are grouped under Grid Layout, Type Display, Catch Feedback, and Integrations. Sidebar link renamed to Preferences and Appearance.',
+                },
+                {
+                    label: 'Bug fixes',
+                    text: 'Derp Trap no longer blanks out other caught sprites. Pokédex and Pokegear items now force the silhouette even when Enable Shadows is off. The guided tour sits above the Settings modal and closes it on steps that do not need it. A/D navigation skips Pokémon that are not in the current game scope.',
+                },
+            ],
+        },
+        {
             version: '0.6.0',
             date: 'April 2026',
             highlights: [
