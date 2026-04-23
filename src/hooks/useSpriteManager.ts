@@ -22,13 +22,14 @@ export function useSpriteManager(params: {
     });
     const [spriteRefreshCounter, setSpriteRefreshCounter] = useState<number>(0);
 
-    // Refs kept in sync every render so getSpriteUrl always reads the latest value
-    // without needing to include uiSettings in its dependency array (which would
-    // cause a cascade of PokemonSlot effect re-runs on every settings change).
-    const spriteSetRef = useRef<'normal' | 'derpemon'>('normal');
-    const enableSpritesRef = useRef<boolean>(true);
-    spriteSetRef.current = uiSettings.spriteSet;
-    enableSpritesRef.current = uiSettings.enableSprites;
+    // derpyfiedIds is read through a ref rather than a callback dep: if it were a
+    // dep, every Derpy trap would recreate getSpriteUrl, propagate through every
+    // PokemonSlot effect dep, and tear down all 1025 sprite-loading effects at
+    // once -- the root cause of BUG-03. Per-slot refresh is handled by
+    // PokemonSlot/PokemonDetails subscribing to derpyfiedIds directly and
+    // re-running only when their own pokemon's derpy state flips.
+    const derpyfiedIdsRef = useRef<Set<number>>(derpyfiedIds);
+    useEffect(() => { derpyfiedIdsRef.current = derpyfiedIds; }, [derpyfiedIds]);
 
     const setSpriteRepoUrl = useCallback((url: string) => {
         setSpriteRepoUrlState(url);
@@ -46,24 +47,25 @@ export function useSpriteManager(params: {
     }, []);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         refreshSpriteCount();
     }, [refreshSpriteCount]);
 
     const getSpriteUrl = useCallback(async (id: number, options: { shiny?: boolean; animated?: boolean } = {}) => {
         // 0. Derp Trap Forced Override (takes highest precedence)
-        if (derpyfiedIds.has(id) && !options.animated) {
+        if (derpyfiedIdsRef.current.has(id) && !options.animated) {
             const derpemonUrl = getDerpemonUrl(derpemonIndex, id);
             if (derpemonUrl) return derpemonUrl;
         }
 
         // 1. Derpemon sprite set (GitHub CDN, static sprites only — no shiny/animated)
-        if (spriteSetRef.current === 'derpemon' && !options.animated) {
+        if (uiSettings.spriteSet === 'derpemon' && !options.animated) {
             const derpemonUrl = getDerpemonUrl(derpemonIndex, id);
             if (derpemonUrl) return derpemonUrl;
         }
 
         // 2. Check local IDB sprites
-        if (enableSpritesRef.current) {
+        if (uiSettings.enableSprites) {
             const key = generateSpriteKey(id, options);
             const blob = await getSprite(key);
             if (blob) {
@@ -76,10 +78,7 @@ export function useSpriteManager(params: {
             return resolveExternalSpriteUrl(spriteRepoUrl, id, options);
         }
         return null;
-        // spriteSetRef.current and derpyfiedIds listed here so the callback re-creates when
-        // they change, ensuring PokemonSlot/PokemonDetails effects re-run immediately.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [derpemonIndex, spriteSetRef.current, enableSpritesRef.current, spriteRepoUrl, derpyfiedIds]);
+    }, [derpemonIndex, spriteRepoUrl, uiSettings.spriteSet, uiSettings.enableSprites]);
 
     return {
         spriteCount,

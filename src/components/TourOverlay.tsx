@@ -4,9 +4,11 @@ import type { TourState } from '../hooks/useTour';
 interface TourOverlayProps {
   tour: TourState;
   onSwitchPanel: (panel: 'settings' | 'tracker' | null) => void;
+  onOpenSettingsModal?: () => void;
+  onCloseSettingsModal?: () => void;
 }
 
-export const TourOverlay: React.FC<TourOverlayProps> = ({ tour, onSwitchPanel }) => {
+export const TourOverlay: React.FC<TourOverlayProps> = ({ tour, onSwitchPanel, onOpenSettingsModal, onCloseSettingsModal }) => {
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [tooltipPos, setTooltipPos] = useState<'above' | 'below'>('below');
   const observerRef = useRef<ResizeObserver | null>(null);
@@ -40,11 +42,19 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({ tour, onSwitchPanel })
       timers.push(id);
     };
 
-    // Switch the panel
-    if (step.panel) {
-      onSwitchPanel(step.panel);
+    // Switch the panel or open modal. Steps that don't need the settings modal
+    // must explicitly close it — the SettingsModal (z-100) sits above the tour's
+    // highlighted targets in the main UI and would obscure the view if left open
+    // from a prior step or from the user opening it before starting the tour.
+    if (step.openModal === 'settings') {
+      onOpenSettingsModal?.();
     } else {
-      onSwitchPanel(null);
+      onCloseSettingsModal?.();
+      if (step.panel) {
+        onSwitchPanel(step.panel);
+      } else {
+        onSwitchPanel(null);
+      }
     }
 
     // Open settings accordion section if needed (delay so panel renders first)
@@ -80,7 +90,7 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({ tour, onSwitchPanel })
       cancelled = true;
       timers.forEach(clearTimeout);
     };
-  }, [tour.isActive, tour.currentStep, step, onSwitchPanel, measureTarget]);
+  }, [tour.isActive, tour.currentStep, step, onSwitchPanel, onOpenSettingsModal, onCloseSettingsModal, measureTarget]);
 
   // ResizeObserver + scroll/resize listeners
   useEffect(() => {
@@ -150,7 +160,7 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({ tour, onSwitchPanel })
   }
 
   return (
-    <div className="fixed inset-0 z-[55] tour-overlay">
+    <div className="fixed inset-0 z-[250] tour-overlay">
       {/* SVG overlay with spotlight cutout */}
       <svg className="absolute inset-0 w-full h-full" style={{ pointerEvents: 'none' }}>
         <defs>

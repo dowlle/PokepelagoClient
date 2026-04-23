@@ -13,6 +13,138 @@ const changelog: Array<{
     highlights: Array<{ label: string; text: string }>;
 }> = [
         {
+            version: '0.6.1',
+            date: 'April 2026',
+            highlights: [
+                {
+                    label: 'Who\'s That Pokémon? silhouette',
+                    text: 'Unguessed and hinted slots now render as a silhouette with a subtle indigo halo (warm red in the Pokémon theme). Toggleable in Settings if you prefer pure flat silhouettes.',
+                },
+                {
+                    label: 'Sprite size option',
+                    text: 'Five discrete sizes in the Sprites tab: 1x, 1.25x, 1.5x, 1.75x, and 2x. Sprites and overlays scale together. Default stays at 1x so returning players see no change.',
+                },
+                {
+                    label: 'Pokémon Details upgrade',
+                    text: 'Shadow silhouette for unguessed Pokémon inside the modal. A and D cycle through unguessed Pokémon, arrows cycle through the full dex. The global guess input at the top stays usable while the modal is open. Always Show Types setting reveals type badges before guessing.',
+                },
+                {
+                    label: 'Server version indicator',
+                    text: 'The sidebar now shows which APWorld version the host is running, and tells you when a newer Poképelago release is out so you can ask your host to update for the next seed.',
+                },
+                {
+                    label: 'Game state isolation across servers',
+                    text: 'Switching between Archipelago servers or slots no longer leaks state between games. A full reset fires on every connect, and the new game seeds fresh from the server.',
+                },
+                {
+                    label: 'Grid performance overhaul',
+                    text: 'Catching one Pokémon no longer re-renders the other 1024 slots. Large item batches on connect update in a single pass. Collapsed regions unmount to keep the DOM light.',
+                },
+                {
+                    label: 'Settings groupings',
+                    text: 'Interface toggles are grouped under Grid Layout, Type Display, Catch Feedback, and Integrations. Sidebar link renamed to Preferences and Appearance.',
+                },
+                {
+                    label: 'Bug fixes',
+                    text: 'Derp Trap no longer blanks out other caught sprites. Pokédex and Pokegear items now force the silhouette even when Enable Shadows is off. The guided tour sits above the Settings modal and closes it on steps that do not need it. A/D navigation skips Pokémon that are not in the current game scope.',
+                },
+            ],
+        },
+        {
+            version: '0.6.0',
+            date: 'April 2026',
+            highlights: [
+                {
+                    label: 'Settings redesign',
+                    text: 'Settings now live in a tabbed modal (Interface / Sprites / Twitch) accessible from the gear icon in the top bar. The sidebar keeps Connection, Generations, and Sprite Set always one click away. Escape closes modals.',
+                },
+                {
+                    label: 'Progression v2',
+                    text: 'New optional locks layered on top of the existing gate system: Route Keys unlock groups of Pokémon by area, Line Unlocks unlock whole evolution families, and Badge Level Gating ties legendary tiers to gym badge count.',
+                },
+                {
+                    label: 'Pokémon theme',
+                    text: 'An alternative colourful, game-inspired skin. Pick it in Settings → Interface → Theme. The default dark theme is still there.',
+                },
+                {
+                    label: 'Smart auto-submit',
+                    text: 'Guesses submit instantly when your input has a single match (most of the time). The 250ms debounce only kicks in when your prefix could still grow into a longer Pokémon name.',
+                },
+                {
+                    label: 'Route Clearing display',
+                    text: 'The Gate Tracker now shows per-route progress so you can see which areas are almost cleared and which still have Pokémon hiding.',
+                },
+                {
+                    label: 'Shiny Charm log entry',
+                    text: 'When a Shiny Charm turns one of your caught Pokémon shiny, the log shows a pink entry naming exactly who got the glow-up.',
+                },
+                {
+                    label: 'Release Trap fix',
+                    text: 'Recaught Pokémon no longer get released again by stale DataStorage updates on reconnect.',
+                },
+                {
+                    label: 'Colorblind-friendly labels',
+                    text: 'Optional type abbreviations on the colored indicator dots, with full type-name tooltips on hover.',
+                },
+                {
+                    label: 'Dependency security hardening',
+                    text: 'All 28 dependencies pinned to exact versions. Patched vite path-traversal + WebSocket file read, picomatch method injection / ReDoS, and brace-expansion zero-step hang.',
+                },
+                {
+                    label: 'Built for Archipelago 0.6.6',
+                    text: 'Updated for the latest AP release. Small bug fixes in the standalone-mode state reset and the confetti CSP.',
+                },
+            ],
+        },
+        {
+            version: '0.5.1',
+            date: 'April 2026',
+            highlights: [
+                {
+                    label: 'Cleaner .apworld bundles',
+                    text: 'Test and dev files are now stripped from released .apworld packages.',
+                },
+                {
+                    label: 'Release workflow stability',
+                    text: 'Internal ap-actions checkout disabled for the public release path so CI no longer flakes on protected branches.',
+                },
+            ],
+        },
+        {
+            version: '0.5.0',
+            date: 'April 2026',
+            highlights: [
+                {
+                    label: 'Guided tour',
+                    text: 'First-time players get an interactive walkthrough covering connection, key settings, and how to guess. Re-run it any time from the Settings footer.',
+                },
+                {
+                    label: 'Master Ball bypass toggle',
+                    text: 'New YAML option master_ball_bypass_gates (default true) lets you decide whether Master Balls bypass lock gates or respect them.',
+                },
+                {
+                    label: 'Trade-evolution lock fixes',
+                    text: 'Foongus, Trevenant, and Gourgeist now correctly require the Link Cable when trade-locks are on.',
+                },
+                {
+                    label: 'Nidoran matching across languages',
+                    text: 'Nidoran♂ and Nidoran♀ now match correctly in all 11 languages regardless of how you type the symbol or abbreviation.',
+                },
+                {
+                    label: 'Automated releases',
+                    text: '.apworld and template YAML are now built and published by a CI workflow, with pre-flight version checks and an npm audit gate.',
+                },
+                {
+                    label: 'Reconnect safety',
+                    text: 'Traps no longer re-fire when you reconnect to an existing slot — processed counts are properly synced from the server.',
+                },
+                {
+                    label: 'Security + accessibility polish',
+                    text: 'Patched a high-severity flatted vulnerability and landed several medium-severity error-handling and accessibility improvements across the app.',
+                },
+            ],
+        },
+        {
             version: '0.4.0',
             date: 'March 2026',
             highlights: [
@@ -131,6 +263,14 @@ const changelog: Array<{
     ];
 
 export const CreditsModal: React.FC<CreditsModalProps> = ({ isOpen, onClose }) => {
+    // Escape-to-close
+    React.useEffect(() => {
+        if (!isOpen) return;
+        const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [isOpen, onClose]);
+
     if (!isOpen) return null;
 
     return createPortal(
@@ -225,35 +365,6 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({ isOpen, onClose }) =
                                 <img src="https://sprites.pmdcollab.org/favicon.ico" alt="" className="w-3 h-3 shrink-0" />
                                 Mystery Dungeon sprites by SpriteCollab
                             </a>
-                        </div>
-                    </section>
-
-                    {/* Upcoming */}
-                    <section>
-                        <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 mb-4">Upcoming</h3>
-                        <div className="bg-indigo-900/10 border border-indigo-500/20 rounded-2xl p-5 space-y-3">
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm font-black text-indigo-300">APWorld v0.4.0</span>
-                                <span className="text-[9px] uppercase tracking-widest text-indigo-400 font-bold bg-indigo-900/40 px-2 py-0.5 rounded-full border border-indigo-700/40">Built for Archipelago 0.6.7</span>
-                            </div>
-                            <div className="space-y-2">
-                                <p className="text-xs leading-relaxed">
-                                    <span className="font-bold text-gray-300">Gate lock system:</span>
-                                    <span className="text-gray-500"> Legendary tiers (sub/box/mythic via Gym Badges), trade evolutions (Link Cable), baby Pokemon (Daycare), fossils (Fossil Restorer), Ultra Beasts (Ultra Wormhole), Paradox Pokemon (Time Rift), and evolution stones. All configurable per-game via YAML options.</span>
-                                </p>
-                                <p className="text-xs leading-relaxed">
-                                    <span className="font-bold text-gray-300">Starter selection:</span>
-                                    <span className="text-gray-500"> Choose which starter Pokemon you begin with, or let the game pick randomly. Fewer pre-collected Type Keys for a less predictable start.</span>
-                                </p>
-                                <p className="text-xs leading-relaxed">
-                                    <span className="font-bold text-gray-300">Accurate goals:</span>
-                                    <span className="text-gray-500"> Percentage and count goals no longer snap to milestones. Set any target count up to the total number of guessable Pokemon.</span>
-                                </p>
-                                <p className="text-xs leading-relaxed">
-                                    <span className="font-bold text-gray-300">Integration tests:</span>
-                                    <span className="text-gray-500"> Full test suite covering all lock combinations, region combos, and edge cases. 59 tests pass across all configurations.</span>
-                                </p>
-                            </div>
                         </div>
                     </section>
 

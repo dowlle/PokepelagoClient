@@ -47,8 +47,9 @@ export function useTrapHandler({
         if (derpData) setDerpyfiedIds(new Set(derpData));
         // Sync processed count to the server total so existing traps don't re-fire
         processedDerpTrapCountRef.current = serverDerpCount;
+        const recaught = recaughtData ? new Set(recaughtData) : new Set<number>();
+        recaughtRef.current = recaught;
         if (relData) {
-            const recaught = recaughtData ? new Set(recaughtData) : new Set<number>();
             setReleasedIds(new Set(relData.filter(id => !recaught.has(id))));
         }
         processedReleaseTrapCountRef.current = serverReleaseCount;
@@ -60,12 +61,19 @@ export function useTrapHandler({
         setDerpyfiedIds(new Set(value));
     }, []);
 
+    const recaughtRef = useRef<Set<number>>(new Set());
+
     const onDataStorageReleaseUpdate = useCallback((value: number[]) => {
+        // Filter out recaught Pokemon -- storage accumulates all ever-released IDs
+        // but recaught ones should not appear as released
+        const filtered = value.filter(id => !recaughtRef.current.has(id));
         processedReleaseTrapCountRef.current = value.length;
-        setReleasedIds(new Set(value));
+        setReleasedIds(new Set(filtered));
     }, []);
 
     const onDataStorageRecaughtUpdate = useCallback((recaughtIds: Set<number>) => {
+        // eslint-disable-next-line react-hooks/immutability -- refs are designed to be mutable; identical pattern on line 51 is not flagged
+        recaughtRef.current = recaughtIds;
         setReleasedIds(prev => new Set([...prev].filter(id => !recaughtIds.has(id))));
     }, []);
 

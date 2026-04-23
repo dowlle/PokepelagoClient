@@ -6,6 +6,7 @@ import type { PokemonRef } from '../types/pokemon';
 import type { OffsetTable } from './useOffsets';
 import pokemonMetadata from '../data/pokemon_metadata.json';
 import { updateProfile } from '../services/connectionManagerService';
+import { ROUTE_INFO, ROUTE_KEY_ITEMS, ROUTE_POKEMON } from '../data/routeData';
 
 interface UseGoalCheckerParams {
     clientRef: MutableRefObject<Client | null>;
@@ -24,6 +25,10 @@ interface UseGoalCheckerParams {
     unlockedIds: Set<number>;
     slotMilestones?: number[];
     slotTypeMilestones?: Record<string, number[]>;
+    routeLocksEnabled: boolean;
+    routeKeys: Set<string>;
+    activeRegions: Record<string, [number, number]>;
+    storageReadyRef: MutableRefObject<boolean>;
 }
 
 export function useGoalChecker({
@@ -31,12 +36,17 @@ export function useGoalChecker({
     releasedIds, isConnected, goalCount, gameMode,
     currentProfileId, typeLocksEnabled, typeUnlocks, unlockedIds,
     slotMilestones, slotTypeMilestones,
+    routeLocksEnabled, routeKeys, activeRegions,
+    storageReadyRef,
 }: UseGoalCheckerParams) {
     const celebrationTriggered = useRef(false);
 
     // Extended Locations: milestone and type-milestone AP location checks
+    // Gate on storageReadyRef to prevent sending checks with stale checkedIds
+    // from a previous slot before the current slot's state is fully loaded.
     useEffect(() => {
         if (!clientRef.current || !isConnected || gameMode === 'standalone') return;
+        if (!storageReadyRef.current) return;
 
         const {
             LOCATION_OFFSET, MILESTONE_OFFSET, TYPE_MILESTONE_OFFSET,
@@ -120,12 +130,46 @@ export function useGoalChecker({
                 });
             });
         }
-    }, [checkedIds, isConnected, gameMode, typeLocksEnabled, typeUnlocks, unlockedIds, slotMilestones, slotTypeMilestones]);
+
+        // 3. Route Completion Milestones ("Cleared {Route}")
+        // Check when we have the route key AND all active Pokemon on the route are guessed
+        if (routeLocksEnabled && Object.keys(activeRegions).length > 0) {
+            const { ROUTE_MILESTONE_OFFSET } = offsetsRef.current;
+            const activeIdSet = new Set<number>();
+            for (const [, [lo, hi]] of Object.entries(activeRegions)) {
+                for (let i = lo; i <= hi; i++) activeIdSet.add(i);
+            }
+            const sortedRouteKeys = Object.keys(ROUTE_INFO).sort();
+            sortedRouteKeys.forEach((rk, i) => {
+                const info = ROUTE_INFO[rk];
+                if (!info) return;
+                const itemName = ROUTE_KEY_ITEMS[rk];
+                if (!itemName || !routeKeys.has(itemName)) return;
+                if (!Object.keys(activeRegions).includes(info.region)) return;
+                const routePokemonIds = (ROUTE_POKEMON[rk] || []).filter(pid => activeIdSet.has(pid));
+                if (routePokemonIds.length === 0) return;
+                // Threshold: catch 5 Pokemon on the route (or all if fewer than 5)
+                const threshold = Math.min(5, routePokemonIds.length);
+                const guessedOnRoute = routePokemonIds.filter(pid => checkedIds.has(pid)).length;
+                const allGuessed = guessedOnRoute >= threshold;
+                if (allGuessed) {
+                    const apLocationId = LOCATION_OFFSET + ROUTE_MILESTONE_OFFSET + i;
+                    const localId = apLocationId - LOCATION_OFFSET;
+                    if (!checkedIds.has(localId)) {
+                        console.log(`[RouteMilestone] Clearing ${rk}: all ${routePokemonIds.length} Pokemon guessed (apId=${apLocationId})`);
+                        clientRef.current?.check(apLocationId);
+                        setCheckedIds(prev => new Set(prev).add(localId));
+                    }
+                }
+            });
+        }
+    }, [checkedIds, isConnected, gameMode, typeLocksEnabled, typeUnlocks, unlockedIds, slotMilestones, slotTypeMilestones, routeLocksEnabled, routeKeys, activeRegions]);
 
 
     // Victory: send CLIENT_GOAL when guessedCount >= goalCount
     useEffect(() => {
         if (!clientRef.current || !isConnected || gameMode !== 'archipelago') return;
+        if (!storageReadyRef.current) return;
         if (goalCount === undefined) return;
 
         const { STARTER_OFFSET, MILESTONE_OFFSET } = offsetsRef.current;

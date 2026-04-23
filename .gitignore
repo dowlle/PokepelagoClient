@@ -33,3 +33,4 @@ _orig
 
 # Internal documentation
 docs/
+.worktrees/

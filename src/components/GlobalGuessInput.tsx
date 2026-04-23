@@ -5,6 +5,7 @@ import { getCleanName } from '../utils/pokemon';
 import { CreditsModal } from './CreditsModal';
 import { useGuessEngine, POKEMON_LANGUAGES, pokemonNames, type LanguageCode } from '../hooks/useGuessEngine';
 import { useTwitchChat } from '../hooks/useTwitchChat';
+import { PokeLogo } from './PokeLogo';
 
 export const GlobalGuessInput: React.FC = () => {
     const { allPokemon, checkedIds, isPokemonGuessable, activePokemonLimit, releasedIds, toast, showToast, STARTER_OFFSET, MILESTONE_OFFSET, goalCount, gameMode } = useGame();
@@ -104,7 +105,8 @@ export const GlobalGuessInput: React.FC = () => {
 
                     guessedThisLoop = true;
                     setGuess(p.name);
-                    await new Promise(r => setTimeout(r, 80));
+                    // Smart debounce submits most guesses at 0ms; use 100ms to allow React to process
+                    await new Promise(r => setTimeout(r, 100));
                 }
 
                 if (!guessedThisLoop) {
@@ -124,18 +126,40 @@ export const GlobalGuessInput: React.FC = () => {
         };
     }, [allPokemon]);
 
-    // Auto-submit logic
+    // Auto-submit logic with smart debounce: submit instantly when the match is unambiguous,
+    // only debounce (250ms) when the input could be the start of a longer uncaught Pokemon name
+    // (e.g., "Hypno" while typing "Hypnomade"). This keeps the game feeling snappy for 95%+ of guesses.
     useEffect(() => {
         const normalised = guess.toLowerCase().trim();
         if (normalised.length < 3) return;
 
+        // Find match eagerly to decide debounce delay
         const match = allPokemon.find(p => {
             if (!matchesPokemon(p, normalised)) return false;
             if (checkedIds.has(p.id) && !releasedIds.has(p.id)) return false;
             return isPokemonGuessable(p.id).canGuess || releasedIds.has(p.id);
         });
+        if (!match) return;
 
-        if (match) {
+        // Check if the input could be a prefix of any other uncaught Pokemon's name
+        const strip = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+        const inputStripped = strip(normalised);
+        const isPrefix = (name: string) => {
+            const nl = name.toLowerCase();
+            const ns = strip(nl);
+            return (nl.startsWith(normalised) && nl !== normalised) ||
+                (inputStripped !== '' && ns.startsWith(inputStripped) && ns !== inputStripped);
+        };
+
+        const couldBePrefix = allPokemon.some(p => {
+            if (p.id === match.id) return false;
+            if (checkedIds.has(p.id) && !releasedIds.has(p.id)) return false;
+            if (isPrefix(getCleanName(p.name))) return true;
+            const langNames = pokemonNames[p.id.toString()] ?? {};
+            return Object.values(langNames).some(isPrefix);
+        });
+
+        const timer = setTimeout(() => {
             const result = attemptGuess(guess);
             if ((result.type === 'success' || result.type === 'recaught') && result.pokemonId != null && result.pokemonName) {
                 addGuess(result.pokemonId, result.pokemonName, null, result.type);
@@ -143,7 +167,9 @@ export const GlobalGuessInput: React.FC = () => {
             showToast(result.type, result.message);
             // eslint-disable-next-line react-hooks/set-state-in-effect
             setGuess('');
-        }
+        }, couldBePrefix ? 250 : 0);
+
+        return () => clearTimeout(timer);
     }, [guess, allPokemon, checkedIds, isPokemonGuessable, releasedIds, matchesPokemon, attemptGuess, showToast, addGuess]);
 
     const handleManualGuess = (name: string) => {
@@ -165,17 +191,13 @@ export const GlobalGuessInput: React.FC = () => {
 
     return (
         <>
-        <div className="relative z-30 bg-gray-950 border-b border-gray-800 shrink-0">
+        <div className="relative z-[60] shrink-0 themed-header" style={{ backgroundColor: 'var(--pp-bg-base)', borderBottom: '1px solid var(--pp-border)' }}>
             <div className="max-w-7xl mx-auto flex items-center gap-3 px-2 py-2 sm:px-4 sm:py-3">
                 {/* Logo */}
-                <h1
-                    className="text-xl font-black tracking-tight bg-linear-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent whitespace-nowrap hidden sm:block cursor-pointer hover:opacity-75 transition-opacity select-none"
-                    onClick={() => setIsCreditsOpen(true)}
-                    title="Credits & Changelog"
-                >
-                    Poképelago
-                    {__IS_BETA__ && <span className="ml-1.5 text-[10px] font-bold uppercase tracking-widest text-amber-400 bg-amber-900/30 border border-amber-700/50 rounded px-1.5 py-0.5 align-middle">beta</span>}
-                </h1>
+                <div className="hidden sm:flex items-center gap-1.5">
+                    <PokeLogo size="sm" onClick={() => setIsCreditsOpen(true)} />
+                    {__IS_BETA__ && <span className="text-[10px] font-bold uppercase tracking-widest text-amber-400 bg-amber-900/30 border border-amber-700/50 rounded px-1.5 py-0.5">beta</span>}
+                </div>
                 {/* Mobile beta badge — visible when logo is hidden */}
                 {__IS_BETA__ && (
                     <span className="sm:hidden text-[9px] font-bold uppercase tracking-widest text-amber-400 bg-amber-900/30 border border-amber-700/50 rounded px-1.5 py-0.5 shrink-0">beta</span>
@@ -189,7 +211,10 @@ export const GlobalGuessInput: React.FC = () => {
                         value={guess}
                         onChange={(e) => setGuess(e.target.value)}
                         placeholder="Name a Pokémon..."
-                        className="w-full px-3 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm outline-none focus:border-green-500 transition-colors"
+                        className="w-full px-3 py-1.5 rounded text-white text-sm outline-none transition-colors"
+                        style={{ backgroundColor: 'var(--pp-input-bg)', border: '1px solid var(--pp-input-border)' }}
+                        onFocus={(e) => e.currentTarget.style.borderColor = 'var(--pp-input-focus)'}
+                        onBlur={(e) => e.currentTarget.style.borderColor = 'var(--pp-input-border)'}
                         autoComplete="off"
                         spellCheck={false}
                         data-tour="guess-input"

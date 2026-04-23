@@ -1,222 +1,22 @@
 import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
 import { GENERATIONS } from '../types/pokemon';
-import { X, Server, Wifi, LayoutGrid, Maximize, Image, Trash2, Upload, Link2, ChevronDown, Filter, Monitor, BookOpen, Tv, LogIn, LogOut, Copy } from 'lucide-react';
-import { importFromFiles, clearAllSprites } from '../services/spriteService';
+import { Server, Wifi, Image, Filter, BookOpen, Settings, ArrowUpCircle } from 'lucide-react';
 import { ConnectionManager } from './ConnectionManager';
-import { getTwitchAuthUrl, getTwitchUsername, clearTwitchAuth, hasTwitchClientId } from '../services/twitchAuthService';
 import { getProfiles, saveProfile } from '../services/connectionManagerService';
 import type { GameProfile } from '../services/connectionManagerService';
-
-const OBS_MODULES = [
-    { key: 'progress', label: 'Progress Bar' },
-    { key: 'types', label: 'Type Tracker' },
-    { key: 'items', label: 'Item Tracker' },
-    { key: 'feed', label: 'Live Feed' },
-    { key: 'guessers', label: 'Leaderboard' },
-    { key: 'dex', label: 'Dex Grid' },
-    { key: 'log', label: 'AP Log' },
-] as const;
-
-const DEX_FILTERS = [
-    { key: 'all', label: 'All' },
-    { key: 'guessable', label: 'Guessable' },
-    { key: 'guessed', label: 'Guessed' },
-] as const;
-
-const ObsOverlayBuilder: React.FC<{
-    connectionInfo: { hostname: string; port: number; slotName: string; password?: string };
-    spriteRepoUrl: string;
-    pmdSpriteUrl: string;
-}> = ({ connectionInfo, spriteRepoUrl, pmdSpriteUrl }) => {
-    const [modules, setModules] = useState<Set<string>>(() => new Set(OBS_MODULES.map(m => m.key)));
-    const [dexFilters, setDexFilters] = useState<Set<string>>(() => new Set(['all']));
-    const [carousel, setCarousel] = useState(false);
-    const [carouselSpeed, setCarouselSpeed] = useState(10);
-    const [copied, setCopied] = useState(false);
-
-    const toggleModule = (key: string) => {
-        setModules(prev => {
-            const next = new Set(prev);
-            if (next.has(key)) next.delete(key);
-            else next.add(key);
-            return next;
-        });
-    };
-
-    const buildUrl = () => {
-        const url = new URL(window.location.origin + window.location.pathname);
-        url.searchParams.set('overlay', '1');
-        url.searchParams.set('host', connectionInfo.hostname);
-        url.searchParams.set('port', String(connectionInfo.port));
-        url.searchParams.set('name', connectionInfo.slotName);
-        if (connectionInfo.password) url.searchParams.set('password', connectionInfo.password);
-        if (spriteRepoUrl) url.searchParams.set('sprites', spriteRepoUrl);
-        if (pmdSpriteUrl) url.searchParams.set('pmd', pmdSpriteUrl);
-        const enabledModules = OBS_MODULES.map(m => m.key).filter(k => modules.has(k));
-        if (enabledModules.length > 0 && enabledModules.length < OBS_MODULES.length) {
-            url.searchParams.set('modules', enabledModules.join(','));
-        }
-        if (modules.has('dex')) {
-            const selected = DEX_FILTERS.map(f => f.key).filter(k => dexFilters.has(k));
-            // Only emit param if not just 'all' (the default)
-            if (!(selected.length === 1 && selected[0] === 'all')) {
-                url.searchParams.set('dexfilter', selected.join(','));
-            }
-        }
-        if (carousel) {
-            url.searchParams.set('carousel', String(carouselSpeed));
-        }
-        return url.toString();
-    };
-
-    const handleCopy = () => {
-        navigator.clipboard.writeText(buildUrl());
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-    };
-
-    return (
-        <div className="space-y-3 pt-2 border-t border-gray-800">
-            <div className="text-[10px] text-gray-400 uppercase tracking-tight font-bold">OBS Overlay</div>
-
-            {/* Module toggles */}
-            <div className="grid grid-cols-2 gap-1">
-                {OBS_MODULES.map(({ key, label }) => (
-                    <label
-                        key={key}
-                        className={`flex items-center gap-1.5 px-2 py-1.5 rounded border text-[10px] font-bold cursor-pointer transition-all ${
-                            modules.has(key)
-                                ? 'bg-purple-900/30 border-purple-700/50 text-purple-300'
-                                : 'bg-gray-800/30 border-gray-700/30 text-gray-600'
-                        }`}
-                    >
-                        <input
-                            type="checkbox"
-                            checked={modules.has(key)}
-                            onChange={() => toggleModule(key)}
-                            className="w-3 h-3 rounded border-gray-700 bg-gray-900 text-purple-600 focus:ring-purple-500"
-                        />
-                        {label}
-                    </label>
-                ))}
-            </div>
-
-            {/* Dex filter */}
-            {modules.has('dex') && (
-                <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-gray-500 font-bold">Dex Views:</span>
-                    <div className="flex gap-1 flex-1">
-                        {DEX_FILTERS.map(({ key, label }) => (
-                            <button
-                                key={key}
-                                onClick={() => setDexFilters(prev => {
-                                    const next = new Set(prev);
-                                    if (next.has(key)) {
-                                        if (next.size > 1) next.delete(key); // keep at least one
-                                    } else {
-                                        next.add(key);
-                                    }
-                                    return next;
-                                })}
-                                className={`flex-1 py-1 text-[9px] font-bold rounded transition-all ${
-                                    dexFilters.has(key)
-                                        ? 'bg-green-900/40 text-green-400 border border-green-700/50'
-                                        : 'bg-gray-800/30 text-gray-600 border border-gray-700/30'
-                                }`}
-                            >
-                                {label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Carousel toggle */}
-            <div className="flex items-center gap-2">
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                    <input
-                        type="checkbox"
-                        checked={carousel}
-                        onChange={(e) => setCarousel(e.target.checked)}
-                        className="w-3 h-3 rounded border-gray-700 bg-gray-900 text-purple-600 focus:ring-purple-500"
-                    />
-                    <span className="text-[10px] text-gray-400 font-bold">Carousel</span>
-                </label>
-                {carousel && (
-                    <div className="flex items-center gap-1.5 ml-auto">
-                        <input
-                            type="range"
-                            min={3}
-                            max={30}
-                            value={carouselSpeed}
-                            onChange={(e) => setCarouselSpeed(Number(e.target.value))}
-                            className="w-16 h-1 accent-purple-500"
-                        />
-                        <span className="text-[9px] text-gray-500 font-mono w-6 text-right">{carouselSpeed}s</span>
-                    </div>
-                )}
-            </div>
-
-            {/* URL preview */}
-            <div className="bg-gray-950/60 rounded border border-gray-800/50 p-2 break-all text-[10px] text-gray-500 font-mono max-h-16 overflow-y-auto select-all">
-                {buildUrl()}
-            </div>
-
-            {connectionInfo.password && (
-                <div className="flex items-start gap-1.5 text-[10px] text-yellow-600 bg-yellow-900/10 border border-yellow-800/30 rounded px-2 py-1.5">
-                    This URL contains your AP password in plaintext. Do not share it or show it on stream.
-                </div>
-            )}
-
-            {/* Copy button */}
-            <button
-                onClick={handleCopy}
-                className={`w-full flex items-center justify-center gap-2 py-2.5 border rounded-lg text-xs font-bold transition-all ${
-                    copied
-                        ? 'bg-green-900/30 border-green-700/50 text-green-400'
-                        : 'bg-gray-800/50 hover:bg-gray-800 text-gray-300 border-gray-700/50 hover:border-gray-600'
-                }`}
-            >
-                <Copy size={14} />
-                {copied ? 'Copied!' : 'Copy OBS Overlay URL'}
-            </button>
-        </div>
-    );
-};
-
-const AccordionHeader: React.FC<{
-    sectionKey: string;
-    icon: React.ReactNode;
-    label: string;
-    badge?: React.ReactNode;
-    isEmbedded?: boolean;
-    openSections: Record<string, boolean>;
-    toggleSection: (key: string) => void;
-}> = ({ sectionKey, icon, label, badge, isEmbedded, openSections, toggleSection }) => (
-    <button
-        onClick={() => toggleSection(sectionKey)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-gray-900/60 hover:bg-gray-800/60 transition-colors"
-    >
-        <h3 className={`font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2 ${isEmbedded ? 'text-[10px]' : 'text-xs'}`}>
-            {icon}
-            {label}
-            {badge}
-        </h3>
-        <ChevronDown
-            size={14}
-            className={`text-gray-600 transition-transform duration-200 ${openSections[sectionKey] ? 'rotate-180' : ''}`}
-        />
-    </button>
-);
+import { AccordionHeader } from './settings/AccordionHeader';
+import { useLatestRelease } from '../hooks/useLatestRelease';
+import { compareVersions, formatVersion } from '../utils/version';
 
 interface SettingsPanelProps {
     isOpen: boolean;
     onClose: () => void;
     isEmbedded?: boolean;
+    onOpenModal?: () => void;
 }
 
-export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, isEmbedded = false }) => {
+export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, isEmbedded = false, onOpenModal }) => {
     const {
         generationFilter,
         setGenerationFilter,
@@ -229,44 +29,30 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
         connectionInfo,
         setConnectionInfo,
         pingLatency,
-        spriteCount,
-        refreshSpriteCount,
         gameMode,
         setGameMode,
-        spriteRepoUrl,
-        setSpriteRepoUrl,
-        pmdSpriteUrl,
-        setPmdSpriteUrl,
         connectionQuality,
         derpemonSpriteCount,
         currentProfileId,
         setCurrentProfileId,
+        apWorldServerVersion,
     } = useGame();
 
+    // FEAT-11: latest Pokepelago release tag (client repo is the release surface).
+    // Cached for 24h so this is a no-op on most loads.
+    const { version: latestReleaseVersion, url: latestReleaseUrl } = useLatestRelease();
+    const versionComparison = compareVersions(apWorldServerVersion, latestReleaseVersion);
+    const serverIsOutdated = versionComparison === -1;
+
     const [isConnecting, setIsConnecting] = useState(false);
-    const [importProgress, setImportProgress] = useState<number | null>(null);
     const [isManagerOpen, setIsManagerOpen] = useState(false);
-
-    // Twitch settings (persisted in localStorage, read by useTwitchChat in GlobalGuessInput)
-    const [twitchEnabled, setTwitchEnabled] = useState(() => localStorage.getItem('pokepelago_twitch_enabled') === 'true');
-    const [twitchChannel, setTwitchChannel] = useState(() => localStorage.getItem('pokepelago_twitch_channel') ?? '');
-    const [twitchAuthUser, setTwitchAuthUser] = useState(() => getTwitchUsername());
-    const [chatFeedback, setChatFeedback] = useState(() => localStorage.getItem('pokepelago_twitch_chat_feedback') !== 'false');
-    const [twitchIntegration, setTwitchIntegration] = useState(() => localStorage.getItem('pokepelago_twitch_integration') === 'true');
-
-    // Listen for auth changes
-    React.useEffect(() => {
-        const handler = () => setTwitchAuthUser(getTwitchUsername());
-        window.addEventListener('pokepelago_twitch_auth_changed', handler);
-        return () => window.removeEventListener('pokepelago_twitch_auth_changed', handler);
-    }, []);
 
     const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
         try {
             const saved = localStorage.getItem('pokepelago_settings_sections');
-            return saved ? JSON.parse(saved) : { connection: true, generations: true, sprites: false, interface: false };
+            return saved ? JSON.parse(saved) : { connection: true, generations: true, sprites: false };
         } catch {
-            return { connection: true, generations: true, sprites: false, interface: false };
+            return { connection: true, generations: true, sprites: false };
         }
     });
 
@@ -357,7 +143,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
     const handleConnectProfile = async (profile: GameProfile) => {
         setCurrentProfileId(profile.id);
         // Build one canonical connInfo used for both form state and connect() call.
-        // password must be '' not undefined — JSON.stringify omits undefined fields,
+        // password must be '' not undefined -- JSON.stringify omits undefined fields,
         // which can cause the AP server to reject the Connect packet.
         const connInfo = {
             hostname: profile.hostname,
@@ -369,27 +155,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
         setIsConnecting(true);
         await connect(connInfo, profile.id);
         setIsConnecting(false);
-    };
-
-    const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files) {
-            setIsConnecting(true);
-            const count = await importFromFiles(e.target.files, (current) => {
-                setImportProgress(current);
-            });
-            await refreshSpriteCount();
-            setIsConnecting(false);
-            setImportProgress(null);
-            alert(`Successfully imported ${count} sprites! Reloading game...`);
-            window.location.reload();
-        }
-    };
-
-    const handleClearSprites = async () => {
-        if (confirm('Are you sure you want to clear all imported sprites? This will revert to placeholders.')) {
-            await clearAllSprites();
-            await refreshSpriteCount();
-        }
     };
 
     const settingsContent = (
@@ -459,7 +224,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                                     </button>
                                 </form>
                                 <div className="bg-gray-800/40 border border-gray-700 rounded-xl p-4 text-center space-y-3">
-                                    <p className="text-[10px] text-gray-400">Not playing with Archipelago? Switch to <strong>Standalone Mode</strong> to freely guess all Pokémon.</p>
+                                    <p className="text-[10px] text-gray-400">Not playing with Archipelago? Switch to <strong>Standalone Mode</strong> to freely guess all Pokemon.</p>
                                     <button
                                         onClick={() => {
                                             if (confirm('Switch to Standalone Mode? Your guess progress will remain.')) {
@@ -548,400 +313,78 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
                 )}
             </section>
 
-            {/* Sprite Management */}
+            {/* Sprite Set */}
             <section className="border border-gray-800 rounded-xl overflow-hidden">
                 <AccordionHeader
                     sectionKey="sprites"
                     icon={<Image size={13} className="text-yellow-400" />}
-                    label="Sprite Management"
-                    badge={spriteCount > 0 ? <span className="text-[9px] text-yellow-400 bg-yellow-900/20 px-1.5 py-0.5 rounded border border-yellow-700/30 normal-case font-normal tracking-normal">{spriteCount} local</span> : undefined}
+                    label="Sprites"
+                    badge={uiSettings.spriteSet === 'derpemon' && derpemonSpriteCount > 0 ? <span className="text-[9px] text-purple-400 bg-purple-900/20 px-1.5 py-0.5 rounded border border-purple-700/30 normal-case font-normal tracking-normal">{derpemonSpriteCount} sprites</span> : undefined}
                     isEmbedded={isEmbedded}
                     openSections={openSections}
                     toggleSection={toggleSection}
                 />
                 {openSections['sprites'] && (
                     <div className="px-4 py-4 border-t border-gray-800">
-                        <div className="bg-gray-800/20 border border-gray-800 rounded-xl p-4 space-y-4">
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <div className="text-xs font-bold text-gray-200">Local Sprites</div>
-                                    <div className="text-[10px] text-gray-500">{spriteCount} sprites in storage</div>
-                                </div>
-                                {spriteCount > 0 && (
-                                    <button onClick={handleClearSprites} className="p-2 text-red-500 hover:bg-red-950/30 rounded-lg transition-colors" title="Clear All Sprites">
-                                        <Trash2 size={16} />
-                                    </button>
-                                )}
-                            </div>
-
-                            {/* Sprite Set */}
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-300 flex items-center gap-2">
-                                    <span>Sprite Set</span>
-                                    {uiSettings.spriteSet === 'derpemon' && derpemonSpriteCount > 0 && (
-                                        <span className="text-[9px] text-purple-400 bg-purple-900/20 px-1.5 py-0.5 rounded border border-purple-700/30">{derpemonSpriteCount} sprites</span>
-                                    )}
-                                </label>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <button onClick={() => updateUiSettings({ spriteSet: 'normal' })} className={`py-2 px-3 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all border ${uiSettings.spriteSet !== 'derpemon' ? 'bg-blue-600/20 border-blue-500/50 text-blue-200' : 'bg-gray-800/40 border-gray-700/50 text-gray-400 hover:bg-gray-800/80'}`}>
-                                        Normal
-                                    </button>
-                                    <button onClick={() => updateUiSettings({ spriteSet: 'derpemon' })} className={`py-2 px-3 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all border ${uiSettings.spriteSet === 'derpemon' ? 'bg-purple-600/20 border-purple-500/50 text-purple-200' : 'bg-gray-800/40 border-gray-700/50 text-gray-400 hover:bg-gray-800/80'}`}>
-                                        Derpémon 🐾
-                                    </button>
-                                </div>
-                                {uiSettings.spriteSet === 'derpemon' && (
-                                    <p className="text-[9px] text-gray-600 italic">
-                                        Sprites by the community • <a href="https://github.com/TheShadowOfLight/DerpemonCommunityProject" target="_blank" rel="noreferrer" className="text-purple-500 hover:underline">Derpemon Community Project ↗</a>
-                                    </p>
-                                )}
-                            </div>
-
-                            <label className="flex items-center justify-between p-3 bg-gray-900/50 border border-gray-700/50 rounded-xl hover:bg-gray-800/80 transition-colors cursor-pointer group">
-                                <div className="flex items-center gap-2">
-                                    <Image size={16} className="text-yellow-400 group-hover:scale-110 transition-transform" />
-                                    <div>
-                                        <div className="text-xs font-bold text-gray-200">Enable Custom Sprites</div>
-                                        <div className="text-[9px] text-gray-500">Show downloaded sprite packs</div>
-                                    </div>
-                                </div>
-                                <input type="checkbox" checked={uiSettings.enableSprites} onChange={(e) => updateUiSettings({ enableSprites: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-yellow-600 focus:ring-yellow-500" />
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-300 flex items-center gap-2">
+                                <span>Sprite Set</span>
                             </label>
-
-                            {/* Sprite Repo URL */}
-                            <div className="space-y-2" data-tour="sprite-url">
-                                <label className="flex items-center gap-2 text-xs font-bold text-gray-300">
-                                    <Link2 size={14} className="text-blue-400" />
-                                    Sprite Repo URL
-                                </label>
-                                <div className="flex gap-2">
-                                    <input type="url" value={spriteRepoUrl} onChange={(e) => setSpriteRepoUrl(e.target.value)} placeholder="https://github.com/PokeAPI/sprites/tree/master/sprites" className="flex-1 bg-gray-900/60 border border-gray-700 rounded-lg px-3 py-2 text-[11px] text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors" />
-                                    {spriteRepoUrl && (
-                                        <button onClick={() => setSpriteRepoUrl('')} className="p-2 text-gray-500 hover:text-red-400 hover:bg-gray-800 rounded-lg transition-colors" title="Clear URL">
-                                            <X size={14} />
-                                        </button>
-                                    )}
-                                </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <button onClick={() => updateUiSettings({ spriteSet: 'normal' })} className={`py-2 px-3 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all border ${uiSettings.spriteSet !== 'derpemon' ? 'bg-blue-600/20 border-blue-500/50 text-blue-200' : 'bg-gray-800/40 border-gray-700/50 text-gray-400 hover:bg-gray-800/80'}`}>
+                                    Normal
+                                </button>
+                                <button onClick={() => updateUiSettings({ spriteSet: 'derpemon' })} className={`py-2 px-3 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all border ${uiSettings.spriteSet === 'derpemon' ? 'bg-purple-600/20 border-purple-500/50 text-purple-200' : 'bg-gray-800/40 border-gray-700/50 text-gray-400 hover:bg-gray-800/80'}`}>
+                                    Derpemon
+                                </button>
+                            </div>
+                            {uiSettings.spriteSet === 'derpemon' && (
                                 <p className="text-[9px] text-gray-600 italic">
-                                    Paste a GitHub sprites tree URL to load sprites directly. Local imports take priority.
-                                    Try: <a href="https://github.com/PokeAPI/sprites/tree/master/sprites" target="_blank" rel="noreferrer" className="text-blue-500 hover:underline">PokeAPI sprites</a>
+                                    Sprites by the community <a href="https://github.com/TheShadowOfLight/DerpemonCommunityProject" target="_blank" rel="noreferrer" className="text-purple-500 hover:underline">Derpemon Community Project</a>
                                 </p>
-                            </div>
-
-                            {/* Animated (PMD) Sprite URL */}
-                            <div className="space-y-2">
-                                <label className="flex items-center gap-2 text-xs font-bold text-gray-300">
-                                    <span className="text-pink-400 text-sm">✨</span>
-                                    Animated Sprites
-                                    {pmdSpriteUrl && (
-                                        <span className="text-[9px] text-pink-400 bg-pink-900/20 px-1.5 py-0.5 rounded border border-pink-700/30">Active</span>
-                                    )}
-                                </label>
-                                <div className="flex gap-2">
-                                    <input
-                                        type="url"
-                                        value={pmdSpriteUrl}
-                                        onChange={(e) => setPmdSpriteUrl(e.target.value)}
-                                        placeholder="Go find the Mystery Sprite Repo!"
-                                        className="flex-1 bg-gray-900/60 border border-gray-700 rounded-lg px-3 py-2 text-[11px] text-gray-200 placeholder-gray-600 focus:outline-none focus:border-pink-500 transition-colors"
-                                    />
-                                    {pmdSpriteUrl && (
-                                        <button onClick={() => setPmdSpriteUrl('')} className="p-2 text-gray-500 hover:text-red-400 hover:bg-gray-800 rounded-lg transition-colors" title="Clear URL">
-                                            <X size={14} />
-                                        </button>
-                                    )}
-                                </div>
-                                <p className="text-[9px] text-gray-600 italic">
-                                    There's a sprite repo out there that has animated sprites. Can you solve this Mystery?
-                                </p>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-700 rounded-xl hover:bg-gray-800/40 hover:border-gray-600 transition-all cursor-pointer group">
-                                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                        <Upload size={24} className="text-gray-500 group-hover:text-blue-400 mb-2" />
-                                        <p className="text-[11px] text-gray-400 group-hover:text-gray-200 font-bold uppercase tracking-tighter">
-                                            {importProgress !== null ? `Processing ${importProgress}...` : 'Import Sprite Folder'}
-                                        </p>
-                                        <p className="text-[9px] text-gray-600">
-                                            {importProgress !== null ? 'Please wait' : "Select the 'sprites' directory"}
-                                        </p>
-                                    </div>
-                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                    <input type="file" className="hidden" multiple {...{ webkitdirectory: '', directory: '' } as any} onChange={handleImport} />
-                                </label>
-                                <p className="text-[9px] text-gray-500 italic text-center">
-                                    Check the <a href="https://github.com/dowlle/PokepelagoClient" target="_blank" rel="noreferrer" className="text-gray-400 hover:text-white underline">Poképelago README</a> for sprite pack instructions.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </section>
-
-            {/* Interface */}
-            <section className="border border-gray-800 rounded-xl overflow-hidden">
-                <AccordionHeader
-                    sectionKey="interface"
-                    icon={<Monitor size={13} className="text-purple-400" />}
-                    label="Interface"
-                    isEmbedded={isEmbedded}
-                    openSections={openSections}
-                    toggleSection={toggleSection}
-                />
-                {openSections['interface'] && (
-                    <div className="px-4 py-4 space-y-4 border-t border-gray-800">
-                        <div className={`grid gap-3 ${isEmbedded ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                            <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
-                                <div className="flex items-center gap-2">
-                                    <Maximize size={16} className="text-purple-400 group-hover:scale-110 transition-transform" />
-                                    <div>
-                                        <div className="text-xs font-bold text-gray-200">Widescreen</div>
-                                        <div className="text-[9px] text-gray-500">Full page width</div>
-                                    </div>
-                                </div>
-                                <input type="checkbox" checked={uiSettings.widescreen} onChange={(e) => updateUiSettings({ widescreen: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-purple-600 focus:ring-purple-500" />
-                            </label>
-                            <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
-                                <div className="flex items-center gap-2">
-                                    <LayoutGrid size={16} className="text-emerald-400 group-hover:scale-110 transition-transform" />
-                                    <div>
-                                        <div className="text-xs font-bold text-gray-200">Fit Regions</div>
-                                        <div className="text-[9px] text-gray-500">Remove gaps</div>
-                                    </div>
-                                </div>
-                                <input type="checkbox" checked={uiSettings.masonry} onChange={(e) => updateUiSettings({ masonry: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-emerald-600 focus:ring-emerald-500" />
-                            </label>
-                            <label data-tour="shadow-toggle" className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-4 h-4 rounded-full bg-blue-950 border border-blue-800 opacity-40 group-hover:scale-110 transition-transform" />
-                                    <div>
-                                        <div className="text-xs font-bold text-gray-200">Enable Shadows</div>
-                                        <div className="text-[9px] text-gray-500">Show silhouettes for unexplored Pokémon</div>
-                                    </div>
-                                </div>
-                                <input type="checkbox" checked={uiSettings.enableShadows} onChange={(e) => updateUiSettings({ enableShadows: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-blue-600 focus:ring-blue-500" />
-                            </label>
-                            <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-4 h-4 rounded-full group-hover:scale-110 transition-transform" style={{ background: 'linear-gradient(135deg, #7AC74C 50%, #6390F0 50%)' }} />
-                                    <div>
-                                        <div className="text-xs font-bold text-gray-200">Type-Colored Dot</div>
-                                        <div className="text-[9px] text-gray-500">Use Pokémon type colors for the guessable indicator dot</div>
-                                    </div>
-                                </div>
-                                <input type="checkbox" checked={uiSettings.typeDot} onChange={(e) => updateUiSettings({ typeDot: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-emerald-600 focus:ring-emerald-500" />
-                            </label>
-                            <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-4 h-4 flex items-center justify-center text-cyan-400 font-mono text-[10px] font-bold group-hover:scale-110 transition-transform">#</div>
-                                    <div>
-                                        <div className="text-xs font-bold text-gray-200">Show Dex Numbers</div>
-                                        <div className="text-[9px] text-gray-500">Show Pokémon number on each grid tile</div>
-                                    </div>
-                                </div>
-                                <input type="checkbox" checked={uiSettings.showDexNumbers} onChange={(e) => updateUiSettings({ showDexNumbers: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-cyan-600 focus:ring-cyan-500" />
-                            </label>
-                            <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-4 h-4 flex items-center justify-center text-orange-400 text-[10px] group-hover:scale-110 transition-transform">📌</div>
-                                    <div>
-                                        <div className="text-xs font-bold text-gray-200">Persistent Type Dot</div>
-                                        <div className="text-[9px] text-gray-500">Keep dot visible until guessed instead of hiding on hover</div>
-                                    </div>
-                                </div>
-                                <input type="checkbox" checked={uiSettings.persistentDot} onChange={(e) => updateUiSettings({ persistentDot: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-orange-600 focus:ring-orange-500" />
-                            </label>
-                            {__TWITCH_ENABLED__ && (
-                            <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
-                                <div className="flex items-center gap-2">
-                                    <Tv size={16} className="text-purple-400 group-hover:scale-110 transition-transform" />
-                                    <div>
-                                        <div className="text-xs font-bold text-gray-200">Enable Twitch Integration</div>
-                                        <div className="text-[9px] text-gray-500">Show Twitch chat guessing and leaderboard features</div>
-                                    </div>
-                                </div>
-                                <input
-                                    type="checkbox"
-                                    checked={twitchIntegration}
-                                    onChange={(e) => {
-                                        setTwitchIntegration(e.target.checked);
-                                        localStorage.setItem('pokepelago_twitch_integration', String(e.target.checked));
-                                        window.dispatchEvent(new Event('pokepelago_twitch_integration_changed'));
-                                    }}
-                                    className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-purple-600 focus:ring-purple-500"
-                                />
-                            </label>
                             )}
                         </div>
-                        <div className="pt-2 border-t border-gray-800/50">
-                            <button
-                                onClick={() => {
-                                    if (confirm('Reset Game Mode? This will return you to the splash screen. Your local progress (imported sprites and checked/guessed Pokémon) will NOT be deleted.')) {
-                                        setGameMode(null);
-                                    }
-                                }}
-                                className="w-full py-2 bg-red-950/10 hover:bg-red-950/20 text-red-400/60 hover:text-red-400 border border-red-900/20 hover:border-red-500/30 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
-                            >
-                                Reset Game Mode
-                            </button>
-                        </div>
                     </div>
                 )}
             </section>
 
-            {/* Twitch Integration */}
-            {twitchIntegration && (
-            <section className="border border-gray-800 rounded-xl overflow-hidden">
-                <AccordionHeader
-                    sectionKey="twitch"
-                    icon={<Tv size={13} className="text-purple-400" />}
-                    label="Twitch Chat Guessing"
-                    badge={twitchEnabled && twitchChannel ? <span className="text-[9px] text-purple-400 bg-purple-900/20 px-1.5 py-0.5 rounded border border-purple-700/30 normal-case font-normal tracking-normal">● Active</span> : undefined}
-                    isEmbedded={isEmbedded}
-                    openSections={openSections}
-                    toggleSection={toggleSection}
-                />
-                {openSections['twitch'] && (
-                    <div className="px-4 py-4 space-y-4 border-t border-gray-800">
-                        <p className="text-[10px] text-gray-400 leading-relaxed">
-                            Let your Twitch chat guess Pokémon for you! Viewers type <code className="text-purple-300 bg-purple-900/20 px-1 rounded">!guess pikachu</code> in chat and it counts as a guess in your game.
-                        </p>
-
-                        <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
-                            <div className="flex items-center gap-2">
-                                <Tv size={16} className="text-purple-400 group-hover:scale-110 transition-transform" />
-                                <div>
-                                    <div className="text-xs font-bold text-gray-200">Enable Chat Guessing</div>
-                                    <div className="text-[9px] text-gray-500">Connect to Twitch IRC (read-only, no login needed)</div>
-                                </div>
-                            </div>
-                            <input
-                                type="checkbox"
-                                checked={twitchEnabled}
-                                onChange={(e) => {
-                                    setTwitchEnabled(e.target.checked);
-                                    localStorage.setItem('pokepelago_twitch_enabled', String(e.target.checked));
-                                    window.dispatchEvent(new Event('pokepelago_twitch_changed'));
-                                }}
-                                className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-purple-600 focus:ring-purple-500"
-                            />
-                        </label>
-
-                        {twitchEnabled && (
-                            <div className="space-y-3">
-                                <div>
-                                    <label className="block text-[10px] text-gray-400 mb-1 uppercase tracking-tight">Channel Name</label>
-                                    <input
-                                        type="text"
-                                        value={twitchChannel}
-                                        onChange={(e) => {
-                                            setTwitchChannel(e.target.value);
-                                            localStorage.setItem('pokepelago_twitch_channel', e.target.value);
-                                            window.dispatchEvent(new Event('pokepelago_twitch_changed'));
-                                        }}
-                                        placeholder="your_twitch_channel"
-                                        className="w-full px-3 py-2 bg-gray-950 border border-gray-700 rounded text-xs text-white outline-none focus:border-purple-500 transition-colors"
-                                    />
-                                </div>
-                                <div className="text-[9px] text-gray-500 space-y-1">
-                                    <p>Viewers can guess with: <code className="text-purple-300 bg-purple-900/20 px-1 rounded">!guess &lt;pokemon name&gt;</code></p>
-                                    <p>Rate limited to 1 guess per viewer every 5 seconds. Wrong guesses are silently ignored.</p>
-                                </div>
-
-                                {/* OAuth / Chat Feedback */}
-                                {hasTwitchClientId() && (
-                                    <div className="space-y-3 pt-2 border-t border-gray-800">
-                                        <div className="text-[10px] text-gray-400 uppercase tracking-tight font-bold">Chat Feedback (Optional)</div>
-                                        {twitchAuthUser ? (
-                                            <div className="flex items-center justify-between p-3 bg-purple-900/10 border border-purple-700/30 rounded-lg">
-                                                <div className="flex items-center gap-2">
-                                                    <LogIn size={14} className="text-purple-400" />
-                                                    <div>
-                                                        <div className="text-xs font-bold text-purple-300">@{twitchAuthUser}</div>
-                                                        <div className="text-[9px] text-gray-500">Authenticated — bot can post to chat</div>
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    onClick={() => { clearTwitchAuth(); setTwitchAuthUser(null); }}
-                                                    className="p-1.5 rounded hover:bg-gray-800 text-gray-500 hover:text-red-400 transition-colors"
-                                                    title="Disconnect Twitch account"
-                                                >
-                                                    <LogOut size={14} />
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <button
-                                                onClick={() => { window.location.href = getTwitchAuthUrl(); }}
-                                                className="w-full flex items-center justify-center gap-2 py-2.5 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 hover:border-purple-500/50 rounded-lg text-xs font-bold transition-all"
-                                            >
-                                                <LogIn size={14} />
-                                                Connect Twitch Account
-                                            </button>
-                                        )}
-                                        <p className="text-[9px] text-gray-600">Login lets the bot post correct guess confirmations back to your chat.</p>
-
-                                        {twitchAuthUser && (
-                                            <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer">
-                                                <div>
-                                                    <div className="text-xs font-bold text-gray-200">Post correct guesses to chat</div>
-                                                    <div className="text-[9px] text-gray-500">Bot confirms correct guesses in your Twitch chat</div>
-                                                </div>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={chatFeedback}
-                                                    onChange={(e) => {
-                                                        setChatFeedback(e.target.checked);
-                                                        localStorage.setItem('pokepelago_twitch_chat_feedback', String(e.target.checked));
-                                                    }}
-                                                    className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-purple-600 focus:ring-purple-500"
-                                                />
-                                            </label>
-                                        )}
-                                    </div>
-                                )}
-
-                                {/* OBS Overlay URL Builder */}
-                                {isConnected && <ObsOverlayBuilder
-                                    connectionInfo={connectionInfo}
-                                    spriteRepoUrl={spriteRepoUrl}
-                                    pmdSpriteUrl={pmdSpriteUrl}
-                                />}
-                            </div>
-                        )}
+            {/* FEAT-11: APWorld server version + update-available indicator. Only
+                 rendered when connected to an AP server that reported a version in
+                 slot_data (APWorlds >= 2026-04-23). Legacy hosts silently show
+                 nothing — no nag, no false "update needed" claims. */}
+            {isConnected && gameMode === 'archipelago' && apWorldServerVersion && (
+                <div className="px-3 py-2 border-t border-gray-800/50 text-[10px] text-gray-500 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                        <span className="text-gray-600">Server:</span>
+                        <span className="font-mono text-gray-400">{formatVersion(apWorldServerVersion)}</span>
                     </div>
-                )}
-            </section>
+                    {serverIsOutdated && latestReleaseUrl && latestReleaseVersion && (
+                        <a
+                            href={latestReleaseUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-amber-400/90 hover:text-amber-300 transition-colors"
+                            title={`Host is running ${formatVersion(apWorldServerVersion)}. Latest is ${formatVersion(latestReleaseVersion)}. Ask your host to update for new seeds.`}
+                        >
+                            <ArrowUpCircle size={11} />
+                            <span>update to {formatVersion(latestReleaseVersion)}</span>
+                        </a>
+                    )}
+                </div>
             )}
 
-            {/* Restart Tour */}
-            <div className="flex items-center justify-center pt-2">
+            {/* Preferences handoff (UI-02: renamed from "More Settings..." which
+                 undersold what's behind the link — theme, shadows, sprite repos,
+                 type dots, etc. are appearance choices, not buried advanced flags.) */}
+            {onOpenModal && (
                 <button
-                    onClick={() => {
-                        localStorage.removeItem('pokepelago_tour_completed');
-                        localStorage.removeItem('pokepelago_tour_seen_prompt');
-                        window.dispatchEvent(new Event('pokepelago_tour_restart'));
-                    }}
-                    className="text-[10px] text-gray-600 hover:text-gray-400 transition-colors"
+                    onClick={onOpenModal}
+                    className="w-full flex items-center justify-center gap-2 py-3 text-xs text-gray-500 hover:text-gray-300 transition-colors"
                 >
-                    Restart guided tour
+                    <Settings size={14} />
+                    Preferences &amp; Appearance
                 </button>
-            </div>
-
-            {/* Support */}
-            <div className="flex items-center justify-center py-4">
-                <a
-                    href="https://ko-fi.com/dowlle"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group flex items-center gap-2 px-4 py-2 rounded-xl bg-[#FF5E5B]/10 hover:bg-[#FF5E5B]/20 border border-[#FF5E5B]/20 hover:border-[#FF5E5B]/40 transition-all"
-                >
-                    <span className="text-lg group-hover:scale-110 transition-transform">&#9749;</span>
-                    <span className="text-[11px] font-bold text-[#FF5E5B]/80 group-hover:text-[#FF5E5B] tracking-wide">
-                        Support Pokepelago on Ko-fi
-                    </span>
-                </a>
-            </div>
+            )}
 
         </div>
     );
@@ -954,39 +397,10 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, i
         />
     );
 
-    if (isEmbedded) {
-        return (
-            <>
-                <div className="h-full overflow-y-auto custom-scrollbar">{settingsContent}</div>
-                {managerModal}
-            </>
-        );
-    }
-
     return (
         <>
-        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <div className="bg-gray-900 rounded-2xl shadow-2xl w-full max-w-lg border border-gray-800 flex flex-col max-h-[90vh] overflow-hidden">
-                <div className="p-6 border-b border-gray-800 flex justify-between items-center bg-gray-950/50">
-                    <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-                        <Server className="text-blue-400" />
-                        Settings
-                    </h2>
-                    <button onClick={onClose} className="p-2 hover:bg-gray-800 rounded-full text-gray-400 hover:text-white transition-all">
-                        <X size={20} />
-                    </button>
-                </div>
-                <div className="overflow-y-auto custom-scrollbar">
-                    {settingsContent}
-                </div>
-                <div className="p-6 border-t border-gray-800 bg-gray-950/50 flex justify-end">
-                    <button onClick={onClose} className="px-6 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-bold transition-all border border-gray-700">
-                        CLOSE
-                    </button>
-                </div>
-            </div>
-        </div>
-        {managerModal}
+            <div className="h-full overflow-y-auto custom-scrollbar">{settingsContent}</div>
+            {managerModal}
         </>
     );
 };

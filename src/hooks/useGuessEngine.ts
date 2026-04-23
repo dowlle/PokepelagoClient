@@ -12,7 +12,7 @@ export const POKEMON_LANGUAGES = [
     { code: 'es',      label: 'Español',   flag: '🇪🇸', langCode: 'es'     },
     { code: 'it',      label: 'Italiano',  flag: '🇮🇹', langCode: 'it'     },
     { code: 'ja',      label: '日本語',     flag: '🇯🇵', langCode: 'ja'     },
-    { code: 'roomaji', label: 'ローマ字',   flag: '🇯🇵', langCode: 'ja-Hrkt'},
+    { code: 'roomaji', label: 'Romaji',     flag: '🇯🇵', langCode: 'ja-Hrkt'},
     { code: 'ko',      label: '한국어',     flag: '🇰🇷', langCode: 'ko'     },
     { code: 'zh-Hant', label: '繁體中文',   flag: '🇹🇼', langCode: 'zh-Hant'},
     { code: 'zh-Hans', label: '简体中文',   flag: '🇨🇳', langCode: 'zh-Hans'},

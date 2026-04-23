@@ -6,8 +6,8 @@
     line-height: 1.5;
     font-weight: 400;
     color-scheme: dark;
-    color: rgba(255, 255, 255, 0.87);
-    background-color: #0a0a0a;
+    color: var(--pp-text-primary, rgba(255, 255, 255, 0.87));
+    background-color: var(--pp-bg-base, #0a0a0a);
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
@@ -24,6 +24,123 @@
     min-height: 100vh;
   }
 }
+
+/* ================================================================== */
+/*  Pokemon theme — BOLD, warm, game-inspired                          */
+/* ================================================================== */
+
+@layer base {
+
+  /* --- Background: dark maroon with pokeball dot pattern + warm glows --- */
+  [data-theme="pokemon"] .themed-bg {
+    background:
+      /* Pokeball dots — subtle grid pattern */
+      radial-gradient(circle at 20px 20px, rgba(255,255,255,0.02) 6px, transparent 7px),
+      /* Top warm red glow */
+      radial-gradient(ellipse 900px 400px at 50% -150px, rgba(220,38,38,0.12) 0%, transparent 70%),
+      /* Bottom-left gold glow */
+      radial-gradient(ellipse 600px 600px at 10% 100%, rgba(234,179,8,0.06) 0%, transparent 70%),
+      /* Bottom-right magenta glow */
+      radial-gradient(ellipse 400px 400px at 90% 80%, rgba(236,72,153,0.04) 0%, transparent 70%),
+      /* Base */
+      linear-gradient(180deg, #1a0a0e 0%, #1e0e14 50%, #1a0a0e 100%);
+    background-size: 40px 40px, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
+  }
+
+  /* --- Header: red band with warm glow --- */
+  [data-theme="pokemon"] .themed-header {
+    background: linear-gradient(90deg, #1a0a0e 0%, #2a0e16 30%, #2a0e16 70%, #1a0a0e 100%) !important;
+    border-bottom: 2px solid #EF444455 !important;
+    box-shadow: 0 2px 24px rgba(239,68,68,0.1), 0 1px 0 rgba(239,68,68,0.2);
+  }
+
+  /* --- Region cards: bold coloured left border --- */
+  [data-theme="pokemon"] .region-card-kanto  { border-left: 4px solid #EF4444cc !important; }
+  [data-theme="pokemon"] .region-card-johto  { border-left: 4px solid #EAB308cc !important; }
+  [data-theme="pokemon"] .region-card-hoenn  { border-left: 4px solid #06B6D4cc !important; }
+  [data-theme="pokemon"] .region-card-sinnoh { border-left: 4px solid #3B82F6cc !important; }
+  [data-theme="pokemon"] .region-card-unova  { border-left: 4px solid #8B5CF6cc !important; }
+  [data-theme="pokemon"] .region-card-kalos  { border-left: 4px solid #EC4899cc !important; }
+  [data-theme="pokemon"] .region-card-alola  { border-left: 4px solid #F97316cc !important; }
+  [data-theme="pokemon"] .region-card-galar  { border-left: 4px solid #A855F7cc !important; }
+  [data-theme="pokemon"] .region-card-hisui  { border-left: 4px solid #14B8A6cc !important; }
+  [data-theme="pokemon"] .region-card-paldea { border-left: 4px solid #F43F5Ecc !important; }
+
+  /* --- Region name text: bold vivid colours --- */
+  [data-theme="pokemon"] .region-text-kanto  { color: #FCA5A5 !important; }
+  [data-theme="pokemon"] .region-text-johto  { color: #FDE047 !important; }
+  [data-theme="pokemon"] .region-text-hoenn  { color: #67E8F9 !important; }
+  [data-theme="pokemon"] .region-text-sinnoh { color: #93C5FD !important; }
+  [data-theme="pokemon"] .region-text-unova  { color: #C4B5FD !important; }
+  [data-theme="pokemon"] .region-text-kalos  { color: #F9A8D4 !important; }
+  [data-theme="pokemon"] .region-text-alola  { color: #FDBA74 !important; }
+  [data-theme="pokemon"] .region-text-galar  { color: #D8B4FE !important; }
+  [data-theme="pokemon"] .region-text-hisui  { color: #5EEAD4 !important; }
+  [data-theme="pokemon"] .region-text-paldea { color: #FDA4AF !important; }
+
+  /* --- Region card body: strong colour-tinted gradient fills --- */
+  [data-theme="pokemon"] .region-bg-kanto  { background: linear-gradient(145deg, rgba(239,68,68,0.18) 0%, rgba(239,68,68,0.04) 50%, transparent 80%) !important; }
+  [data-theme="pokemon"] .region-bg-johto  { background: linear-gradient(145deg, rgba(234,179,8,0.18) 0%, rgba(234,179,8,0.04) 50%, transparent 80%) !important; }
+  [data-theme="pokemon"] .region-bg-hoenn  { background: linear-gradient(145deg, rgba(6,182,212,0.18) 0%, rgba(6,182,212,0.04) 50%, transparent 80%) !important; }
+  [data-theme="pokemon"] .region-bg-sinnoh { background: linear-gradient(145deg, rgba(59,130,246,0.18) 0%, rgba(59,130,246,0.04) 50%, transparent 80%) !important; }
+  [data-theme="pokemon"] .region-bg-unova  { background: linear-gradient(145deg, rgba(139,92,246,0.18) 0%, rgba(139,92,246,0.04) 50%, transparent 80%) !important; }
+  [data-theme="pokemon"] .region-bg-kalos  { background: linear-gradient(145deg, rgba(236,72,153,0.18) 0%, rgba(236,72,153,0.04) 50%, transparent 80%) !important; }
+  [data-theme="pokemon"] .region-bg-alola  { background: linear-gradient(145deg, rgba(249,115,22,0.18) 0%, rgba(249,115,22,0.04) 50%, transparent 80%) !important; }
+  [data-theme="pokemon"] .region-bg-galar  { background: linear-gradient(145deg, rgba(168,85,247,0.18) 0%, rgba(168,85,247,0.04) 50%, transparent 80%) !important; }
+  [data-theme="pokemon"] .region-bg-hisui  { background: linear-gradient(145deg, rgba(20,184,166,0.18) 0%, rgba(20,184,166,0.04) 50%, transparent 80%) !important; }
+  [data-theme="pokemon"] .region-bg-paldea { background: linear-gradient(145deg, rgba(244,63,94,0.18) 0%, rgba(244,63,94,0.04) 50%, transparent 80%) !important; }
+
+  /* --- Region header bars: coloured band behind region name --- */
+  [data-theme="pokemon"] .region-header-kanto  { background: linear-gradient(90deg, rgba(239,68,68,0.22), transparent 70%) !important; }
+  [data-theme="pokemon"] .region-header-johto  { background: linear-gradient(90deg, rgba(234,179,8,0.22), transparent 70%) !important; }
+  [data-theme="pokemon"] .region-header-hoenn  { background: linear-gradient(90deg, rgba(6,182,212,0.22), transparent 70%) !important; }
+  [data-theme="pokemon"] .region-header-sinnoh { background: linear-gradient(90deg, rgba(59,130,246,0.22), transparent 70%) !important; }
+  [data-theme="pokemon"] .region-header-unova  { background: linear-gradient(90deg, rgba(139,92,246,0.22), transparent 70%) !important; }
+  [data-theme="pokemon"] .region-header-kalos  { background: linear-gradient(90deg, rgba(236,72,153,0.22), transparent 70%) !important; }
+  [data-theme="pokemon"] .region-header-alola  { background: linear-gradient(90deg, rgba(249,115,22,0.22), transparent 70%) !important; }
+  [data-theme="pokemon"] .region-header-galar  { background: linear-gradient(90deg, rgba(168,85,247,0.22), transparent 70%) !important; }
+  [data-theme="pokemon"] .region-header-hisui  { background: linear-gradient(90deg, rgba(20,184,166,0.22), transparent 70%) !important; }
+  [data-theme="pokemon"] .region-header-paldea { background: linear-gradient(90deg, rgba(244,63,94,0.22), transparent 70%) !important; }
+
+  /* --- Splash: large pokeball silhouette --- */
+  [data-theme="pokemon"] .splash-pokeball::before {
+    content: '';
+    position: absolute;
+    top: -180px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 460px;
+    height: 460px;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 50% 50%, transparent 38%, rgba(239,68,68,0.1) 39%, rgba(239,68,68,0.1) 42%, transparent 43%),
+      radial-gradient(circle at 50% 50%, rgba(239,68,68,0.08) 0%, transparent 50%);
+    pointer-events: none;
+  }
+  [data-theme="pokemon"] .splash-pokeball::after {
+    content: '';
+    position: absolute;
+    top: 42px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 3px solid rgba(239,68,68,0.15);
+    background: rgba(239,68,68,0.06);
+    pointer-events: none;
+  }
+
+  /* --- Sidebar accent line --- */
+  [data-theme="pokemon"] .themed-sidebar-section {
+    border-left: 2px solid #EF444444;
+    padding-left: 8px;
+  }
+}
+
+/* ================================================================== */
+/*  Animations (shared across themes)                                  */
+/* ================================================================== */
 
 @layer utilities {
   @keyframes fade-in {

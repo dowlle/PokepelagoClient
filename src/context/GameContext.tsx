@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { PokemonRef } from '../types/pokemon';
 import { GENERATIONS } from '../types/pokemon';
 import { fetchAllPokemon } from '../services/pokeapi';
@@ -14,12 +14,15 @@ import {
     BABY_IDS, TRADE_EVO_IDS, FOSSIL_IDS, ULTRA_BEAST_IDS, PARADOX_IDS,
     STONE_EVO_IDS, STONE_NAMES_ORDERED,
 } from '../data/pokemon_gates';
+import { getRouteKeysForPokemon, getLineUnlockForPokemon, getBadgeRequirement, ROUTE_KEY_ITEMS, LINE_UNLOCK_ITEMS, ROUTE_INFO, ROUTE_POKEMON } from '../data/routeData';
 import type { OffsetTable } from '../hooks/useOffsets';
 import type { MutableRefObject } from 'react';
 import { useAPConnection } from '../hooks/useAPConnection';
 import { useSpriteManager } from '../hooks/useSpriteManager';
 import { useGoalChecker } from '../hooks/useGoalChecker';
 import { useTrapHandler } from '../hooks/useTrapHandler';
+import { applyTheme } from '../utils/themes';
+import { PokemonSlotContext, type PokemonSlotContextValue } from './PokemonSlotContext';
 
 /** localStorage.setItem wrapped in try/catch to handle QuotaExceededError gracefully. */
 function safeSetItem(key: string, value: string): void {
@@ -112,6 +115,10 @@ export interface UISettings {
     typeDot: boolean;
     showDexNumbers: boolean;
     persistentDot: boolean;
+    theme: 'default' | 'pokemon';
+    alwaysShowTypes: boolean;
+    spriteSize: 1 | 1.25 | 1.5 | 1.75 | 2;
+    silhouetteGlow: boolean;
 }
 
 interface ConnectionInfo {
@@ -148,6 +155,9 @@ interface GameContextType extends GameState {
         missingTypes?: string[];
         missingPokemon?: boolean;
         legendaryGatingCount?: number;
+        missingRouteKeys?: string[];
+        missingLineUnlock?: string;
+        badgeLevelRequired?: number;
     };
     consumeMasterBall: (pokemonId: number) => void;
     consumePokegear: (pokemonId: number) => void;
@@ -196,6 +206,7 @@ interface GameContextType extends GameState {
     STARTER_OFFSET: number;
     MILESTONE_OFFSET: number;
     detectedApWorldVersion: 'legacy' | 'new' | 'unknown';
+    apWorldServerVersion: string | null;
     currentProfileId: string | null;
     setCurrentProfileId: React.Dispatch<React.SetStateAction<string | null>>;
     typeFilter: string[];
@@ -223,6 +234,12 @@ interface GameContextType extends GameState {
     paradoxLocksEnabled: boolean;
     stoneLocksEnabled: boolean;
     startingStarter: string | null;
+    // Route/Line/Badge lock state (v2 progression)
+    routeLocksEnabled: boolean;
+    lineLocksEnabled: boolean;
+    badgeLevelGatingEnabled: boolean;
+    routeKeys: Set<string>;
+    lineUnlocks: Set<string>;
     connectedTeamSlot: { team: number; slot: number } | null;
     slotMilestones: number[] | undefined;
     slotTypeMilestones: Record<string, number[]> | undefined;
@@ -265,9 +282,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [slotTypeMilestones, setSlotTypeMilestones] = useState<Record<string, number[]> | undefined>(undefined);
     const [startingLocationsEnabled, setStartingLocationsEnabled] = useState(true);
     const [connectedTeamSlot, setConnectedTeamSlot] = useState<{ team: number; slot: number } | null>(null);
-    const [dexsanityLocalWarning, setDexsanityLocalWarning] = useState(false);
     const [toast, setToast] = useState<ToastMessage | null>(null);
     const [detectedApWorldVersion, setDetectedApWorldVersion] = useState<'legacy' | 'new' | 'unknown'>('unknown');
+    // FEAT-11: exact APWorld semver the server reports in slot_data (e.g. "0.6.0").
+    // Legacy APWorlds pre-dating the APWorld agent's slot_data change report null,
+    // so the UI falls back to "unknown" or hides the version badge.
+    const [apWorldServerVersion, setApWorldServerVersion] = useState<string | null>(null);
     const [currentProfileId, setCurrentProfileId] = useState<string | null>(null);
     const [typeFilter, setTypeFilter] = useState<string[]>([]);
     const [dexFilter, setDexFilter] = useState<Set<'guessable' | 'guessed'>>(new Set());
@@ -291,6 +311,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [stoneLocksEnabled, setStoneLocksEnabled] = useState(false);
     const [masterBallBypassGates, setMasterBallBypassGates] = useState(true);
     const [startingStarter, setStartingStarter] = useState<string | null>(null);
+
+    // ── Route/Line/Badge lock state (v2 progression) ────────────────────────────
+    const [routeLocksEnabled, setRouteLocksEnabled] = useState(false);
+    const [lineLocksEnabled, setLineLocksEnabled] = useState(false);
+    const [badgeLevelGatingEnabled, setBadgeLevelGatingEnabled] = useState(false);
+    const [routeKeys, setRouteKeys] = useState<Set<string>>(new Set());
+    const [lineUnlocks, setLineUnlocks] = useState<Set<string>>(new Set());
 
     // ── Item Counts ──────────────────────────────────────────────────────────────
     const [masterBalls, setMasterBalls] = useState(0);
@@ -318,9 +345,22 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const defaults: UISettings = {
             widescreen: false, masonry: false, enableSprites: true,
             enableShadows: false, spriteSet: 'normal', typeDot: true,
-            showDexNumbers: true, persistentDot: true,
+            showDexNumbers: true, persistentDot: true, theme: 'default',
+            alwaysShowTypes: false,
+            spriteSize: 1,
+            silhouetteGlow: true,
         };
-        if (saved) { try { return { ...defaults, ...JSON.parse(saved) }; } catch { /* corrupted */ } }
+        if (saved) {
+            try {
+                const merged = { ...defaults, ...JSON.parse(saved) };
+                // FEAT-10: spriteSize has gone through two schema changes today —
+                // first 1 | 2 | 4, then 1 | 1.5 | 2, now 1 | 1.25 | 1.5 | 1.75 | 2.
+                // Sanitize any stale localStorage value not in the current set back to 1
+                // so the UI stays consistent with the SettingsModal picker.
+                if (![1, 1.25, 1.5, 1.75, 2].includes(merged.spriteSize)) merged.spriteSize = 1;
+                return merged;
+            } catch { /* corrupted */ }
+        }
         return defaults;
     });
     const [isLoading, setIsLoading] = useState(true);
@@ -426,6 +466,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentProfileId, typeLocksEnabled, typeUnlocks, unlockedIds,
         slotMilestones,
         slotTypeMilestones,
+        routeLocksEnabled, routeKeys, activeRegions,
+        storageReadyRef,
     });
 
     // ── Persistence Effects ──────────────────────────────────────────────────────
@@ -465,17 +507,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         );
     }, [checkedIds, gameMode, dexsanityEnabled, connectedTeamSlot]);
 
-    // Show dexsanity=OFF warning once per slot
-    useEffect(() => {
-        if (!connectedTeamSlot || dexsanityEnabled) { setDexsanityLocalWarning(false); return; }
-        const { team, slot } = connectedTeamSlot;
-        const warned = localStorage.getItem(`pokepelago_team_${team}_slot_${slot}_local_warned`);
-        if (!warned) setDexsanityLocalWarning(true);
-    }, [connectedTeamSlot, dexsanityEnabled]);
-
     useEffect(() => {
         safeSetItem('pokepelago_ui', JSON.stringify(uiSettings));
     }, [uiSettings]);
+
+    // Apply theme CSS variables whenever the theme setting changes
+    useEffect(() => {
+        applyTheme(uiSettings.theme ?? 'default');
+    }, [uiSettings.theme]);
 
     useEffect(() => {
         safeSetItem('pokepelago_connection', JSON.stringify(connectionInfo));
@@ -691,6 +730,38 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
         }
 
+        // Route completion milestones ("Cleared {Route}")
+        // Check when we have the route key AND all Pokemon on the route are guessed
+        let routeSent = 0;
+        if (routeLocksEnabled && Object.keys(activeRegions).length > 0) {
+            const { ROUTE_MILESTONE_OFFSET } = offsetsRef.current;
+            const activeIdSet = new Set<number>();
+            for (const [, [lo, hi]] of Object.entries(activeRegions)) {
+                for (let i = lo; i <= hi; i++) activeIdSet.add(i);
+            }
+            const sortedRouteKeys = Object.keys(ROUTE_INFO).sort();
+            sortedRouteKeys.forEach((rk, i) => {
+                const info = ROUTE_INFO[rk];
+                if (!info) return;
+                const itemName = ROUTE_KEY_ITEMS[rk];
+                if (!itemName || !routeKeys.has(itemName)) return;
+                // Only check routes in active regions
+                if (!Object.keys(activeRegions).includes(info.region)) return;
+                // Check if ALL active Pokemon on this route are guessed
+                const routePokemonIds: number[] = (ROUTE_POKEMON[rk] || [])
+                    .filter(pid => activeIdSet.has(pid));
+                if (routePokemonIds.length === 0) return;
+                const guessedCount = routePokemonIds.filter(pid => checkedIds.has(pid)).length;
+                const allGuessed = guessedCount === routePokemonIds.length;
+                if (allGuessed) {
+                    const apLocationId = LOCATION_OFFSET + ROUTE_MILESTONE_OFFSET + i;
+                    console.log(`[RouteMilestone] Clearing ${rk}: ${guessedCount}/${routePokemonIds.length} Pokemon guessed (apId=${apLocationId})`);
+                    clientRef.current!.check(apLocationId);
+                    routeSent++;
+                }
+            });
+        }
+
         // Update local checkedIds to include all sent milestones
         if (newChecked.size > 0) {
             setCheckedIds(prev => {
@@ -700,11 +771,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
         }
 
-        console.log(`[recheckMilestones] Done: ${result.globalSent} global + ${result.typeSent} type milestones sent`);
+        console.log(`[recheckMilestones] Done: ${result.globalSent} global + ${result.typeSent} type + ${routeSent} route milestones sent`);
         return result;
-    }, [checkedIds, slotMilestones, slotTypeMilestones]);
+    }, [checkedIds, slotMilestones, slotTypeMilestones, routeLocksEnabled, routeKeys, activeRegions]);
 
-    const isPokemonGuessable = useCallback((id: number) => {
+    const isPokemonGuessableImpl = useCallback((id: number) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const data = (pokemonMetadata as any)[id];
         if (!data) return { canGuess: true };
@@ -752,11 +823,44 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             : [];
 
         const gateReasons: string[] = [];
-        if (legendaryLocksEnabled) {
-            const needed = MYTHIC_IDS.has(id) ? 8 : BOX_LEGENDARY_IDS.has(id) ? 7 : SUB_LEGENDARY_IDS.has(id) ? 6 : 0;
-            if (needed > 0 && gymBadges < needed)
-                gateReasons.push(`Badges: ${gymBadges}/${needed}`);
+        let missingRouteKeys: string[] | undefined;
+        let missingLineUnlock: string | undefined;
+        let badgeLevelRequired: number | undefined;
+
+        // Route locks: need ANY route key for a route this Pokemon appears on
+        if (routeLocksEnabled) {
+            const neededKeys = getRouteKeysForPokemon(id, activeRegions);
+            if (neededKeys.length > 0 && !neededKeys.some(k => routeKeys.has(k))) {
+                missingRouteKeys = neededKeys;
+                gateReasons.push('Route Key');
+            }
         }
+
+        // Line locks: need the family's Line Unlock
+        if (lineLocksEnabled) {
+            const lineItem = getLineUnlockForPokemon(id);
+            if (lineItem && !lineUnlocks.has(lineItem)) {
+                missingLineUnlock = lineItem;
+                gateReasons.push('Line Unlock');
+            }
+        }
+
+        // Badge gating: max(level requirement, legendary tier)
+        {
+            let badgeReq = 0;
+            if (badgeLevelGatingEnabled) {
+                badgeReq = getBadgeRequirement(id);
+            }
+            if (legendaryLocksEnabled) {
+                const legendaryReq = MYTHIC_IDS.has(id) ? 8 : BOX_LEGENDARY_IDS.has(id) ? 7 : SUB_LEGENDARY_IDS.has(id) ? 6 : 0;
+                badgeReq = Math.max(badgeReq, legendaryReq);
+            }
+            if (badgeReq > 0 && gymBadges < badgeReq) {
+                badgeLevelRequired = badgeReq;
+                gateReasons.push(`Badges: ${gymBadges}/${badgeReq}`);
+            }
+        }
+
         if (tradeLocksEnabled && TRADE_EVO_IDS.has(id) && !hasLinkCable)
             gateReasons.push('Link Cable');
         if (babyLocksEnabled && BABY_IDS.has(id) && daycareCount < daycareRequired)
@@ -783,16 +887,34 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 reason: firstReason,
                 reasons: gateReasons,
                 missingTypes: missingTypesList.length > 0 ? missingTypesList : undefined,
+                missingRouteKeys,
+                missingLineUnlock,
+                badgeLevelRequired,
             };
         }
 
         return { canGuess: true };
     }, [gameMode, isConnected, generationFilter, activePokemonLimit, activeRegions, startingRegion,
         regionLocksEnabled, regionPasses, typeLocksEnabled, typeUnlocks, detectedApWorldVersion, unlockedIds,
-        legendaryLocksEnabled, gymBadges, tradeLocksEnabled, hasLinkCable,
+        routeLocksEnabled, routeKeys, lineLocksEnabled, lineUnlocks,
+        badgeLevelGatingEnabled, legendaryLocksEnabled, gymBadges, tradeLocksEnabled, hasLinkCable,
         babyLocksEnabled, daycareCount, daycareRequired, fossilLocksEnabled, hasFossilRestorer,
         ultraBeastLocksEnabled, hasUltraWormhole, paradoxLocksEnabled, hasTimeRift,
         stoneLocksEnabled, unlockedStones]);
+
+    // PERF-05: wrap isPokemonGuessable in a per-id memo cache. The inner function has 28 deps
+    // and ran ~1025 times per DexGrid render. Cache invalidates whenever any dep to the inner
+    // function changes (ie. whenever the answer could differ), so correctness is preserved.
+    const isPokemonGuessable = useMemo(() => {
+        const cache = new Map<number, ReturnType<typeof isPokemonGuessableImpl>>();
+        return (id: number) => {
+            const hit = cache.get(id);
+            if (hit !== undefined) return hit;
+            const result = isPokemonGuessableImpl(id);
+            cache.set(id, result);
+            return result;
+        };
+    }, [isPokemonGuessableImpl]);
 
     useEffect(() => { isPokemonGuessableRef.current = isPokemonGuessable; }, [isPokemonGuessable]);
 
@@ -813,19 +935,100 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (clientRef.current && isConnected) clientRef.current.messages.say(text);
     }, [isConnected]);
 
-    const dismissDexsanityWarning = useCallback(() => {
-        if (connectedTeamSlot) {
-            const { team, slot } = connectedTeamSlot;
-            localStorage.setItem(`pokepelago_team_${team}_slot_${slot}_local_warned`, 'true');
-        }
-        setDexsanityLocalWarning(false);
-    }, [connectedTeamSlot]);
+    // Clear every piece of slot-specific state so nothing from a previous game/slot
+    // can leak into the next one. Used by onDisconnected() and setGameMode().
+    // Deliberately preserves: uiSettings, connectionInfo, gameMode, generationFilter,
+    // allPokemon, derpemonIndex, and loading flags.
+    const resetGameState = useCallback(() => {
+        // Per-player collections
+        setUnlockedIds(new Set());
+        setCheckedIds(new Set());
+        setHintedIds(new Set());
+        setShinyIds(new Set());
+        setDerpyfiedIds(new Set());
+        setReleasedIds(new Set());
+
+        // Logs + UI ephemeral state
+        setLogs([]);
+        setSelectedPokemonId(null);
+        setTypeFilter([]);
+        setDexFilter(new Set());
+        setCategoryFilter(null);
+        setSpriteRefreshCounter(0);
+
+        // Useful-item counters + used sets
+        setMasterBalls(0); setPokegears(0); setPokedexes(0);
+        setUsedMasterBalls(new Set()); setUsedPokegears(new Set()); setUsedPokedexes(new Set());
+        setShuffleEndTime(0);
+
+        // Slot/session identity
+        setConnectedTeamSlot(null);
+        setSlotMilestones(undefined);
+        setSlotTypeMilestones(undefined);
+        setDetectedApWorldVersion('unknown');
+        setApWorldServerVersion(null);
+        setGoal(undefined);
+        setGoalCount(undefined);
+
+        // Gate items / progression
+        setGymBadges(0);
+        setHasLinkCable(false);
+        setDaycareCount(0);
+        setHasFossilRestorer(false);
+        setHasUltraWormhole(false);
+        setHasTimeRift(false);
+        setUnlockedStones(new Set());
+        setRouteKeys(new Set());
+        setLineUnlocks(new Set());
+        setRegionPasses(new Set());
+        setTypeUnlocks(new Set());
+
+        // Lock-config flags (slot_data)
+        setLegendaryLocksEnabled(false);
+        setTradeLocksEnabled(false);
+        setBabyLocksEnabled(false);
+        setDaycareRequired(1);
+        setFossilLocksEnabled(false);
+        setUltraBeastLocksEnabled(false);
+        setParadoxLocksEnabled(false);
+        setStoneLocksEnabled(false);
+        setRouteLocksEnabled(false);
+        setLineLocksEnabled(false);
+        setBadgeLevelGatingEnabled(false);
+        setTypeLocksEnabled(false);
+        setRegionLocksEnabled(false);
+        setLegendaryGating(0);
+
+        // Slot-data scalars
+        setShadowsEnabled(false);
+        setDexsanityEnabled(true);
+        setMasterBallBypassGates(true);
+        setStartingStarter(null);
+        setActiveRegions({});
+        setStartingRegion('');
+        setStartingLocationsEnabled(true);
+        setActivePokemonLimit(386);
+    }, []);
 
     const setGameMode = useCallback((mode: 'archipelago' | 'standalone' | null) => {
+        resetGameState();
+
+        // Restore standalone saved data if switching to standalone
+        if (mode === 'standalone') {
+            const savedCaught = localStorage.getItem('pokepelago_standalone_caught');
+            if (savedCaught) { try { setCheckedIds(new Set<number>(JSON.parse(savedCaught))); } catch { /* corrupted */ } }
+            const savedMB = localStorage.getItem('pokepelago_standalone_usedMasterBalls');
+            if (savedMB) { try { setUsedMasterBalls(new Set(JSON.parse(savedMB))); } catch { /* corrupted */ } }
+            const savedPG = localStorage.getItem('pokepelago_standalone_usedPokegears');
+            if (savedPG) { try { setUsedPokegears(new Set(JSON.parse(savedPG))); } catch { /* corrupted */ } }
+            const savedPD = localStorage.getItem('pokepelago_standalone_usedPokedexes');
+            if (savedPD) { try { setUsedPokedexes(new Set(JSON.parse(savedPD))); } catch { /* corrupted */ } }
+        }
+
         setGameModeState(mode);
         if (mode) localStorage.setItem('pokepelago_gamemode', mode);
         else localStorage.removeItem('pokepelago_gamemode');
-    }, []);
+    }, [resetGameState]);
 
     const updateUiSettings = (newSettings: Partial<UISettings>) => {
         setUiSettings(prev => {
@@ -958,6 +1161,49 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         setRegionPasses(newRegionPasses);
 
+        // Reconstruct Route Keys (v2 progression)
+        // Route Key IDs: ITEM_OFFSET + ROUTE_KEY_OFFSET + sequential index
+        // We store the item NAME (resolved from routeData) since that's what gate checks use
+        {
+            const routeKeyIdToName = new Map<number, string>();
+            const sortedKeys = Object.keys(ROUTE_KEY_ITEMS).sort();
+            sortedKeys.forEach((rk, i) => {
+                routeKeyIdToName.set(o.ITEM_OFFSET + o.ROUTE_KEY_OFFSET + i, ROUTE_KEY_ITEMS[rk]);
+            });
+            const newRouteKeys = new Set<string>();
+            receivedItems.forEach(item => {
+                const name = routeKeyIdToName.get(item.id);
+                if (name) newRouteKeys.add(name);
+            });
+            setRouteKeys(newRouteKeys);
+
+            // Reconstruct Line Unlocks
+            // Line Unlock IDs: ITEM_OFFSET + LINE_UNLOCK_OFFSET + base_pokemon_id
+            const newLineUnlocks = new Set<string>();
+            receivedItems.forEach(item => {
+                const baseId = item.id - (o.ITEM_OFFSET + o.LINE_UNLOCK_OFFSET);
+                if (baseId > 0 && baseId <= 1025) {
+                    const name = LINE_UNLOCK_ITEMS[String(baseId)];
+                    if (name) newLineUnlocks.add(name);
+                }
+            });
+            setLineUnlocks(newLineUnlocks);
+
+            // DEBUG: log reconstruction results
+            console.log('[DEBUG] Route/Line reconstruction:', {
+                totalReceivedItems: receivedItems.length,
+                routeKeysFound: newRouteKeys.size,
+                lineUnlocksFound: newLineUnlocks.size,
+                routeKeys: [...newRouteKeys],
+                lineUnlocks: [...newLineUnlocks],
+                routeKeyMapSize: routeKeyIdToName.size,
+                sampleRouteKeyIds: [...routeKeyIdToName.entries()].slice(0, 3),
+                itemOffsets: { ITEM_OFFSET: o.ITEM_OFFSET, ROUTE_KEY_OFFSET: o.ROUTE_KEY_OFFSET, LINE_UNLOCK_OFFSET: o.LINE_UNLOCK_OFFSET },
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                allItemIds: receivedItems.map((i: any) => i.id).sort((a: number, b: number) => a - b),
+            });
+        }
+
         // Parse slot data
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const slotData = packet.slot_data as any || {};
@@ -974,6 +1220,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUltraBeastLocksEnabled(!!slotData.ultra_beast_locks);
         setParadoxLocksEnabled(!!slotData.paradox_locks);
         setStoneLocksEnabled(!!slotData.stone_locks);
+        setRouteLocksEnabled(!!slotData.route_locks);
+        setLineLocksEnabled(!!slotData.line_locks);
+        setBadgeLevelGatingEnabled(!!slotData.badge_level_gating);
         setMasterBallBypassGates(slotData.master_ball_bypass_gates !== false);
         setStartingStarter(slotData.starting_starter ?? null);
 
@@ -1073,6 +1322,15 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         setStartingLocationsEnabled(!!slotData.starting_locations);
         setDetectedApWorldVersion(isNewVersion ? 'new' : 'legacy');
+
+        // FEAT-11: read the exact APWorld version string if the server exposes it.
+        // Only APWorlds built after 2026-04-23 include this; pre-FEAT-11 servers
+        // leave it null and the UI simply shows no version line.
+        if (typeof slotData.apworld_version === 'string') {
+            setApWorldServerVersion(slotData.apworld_version);
+        } else {
+            setApWorldServerVersion(null);
+        }
 
         if (!isNewVersion) {
             setLogs(prev => [{
@@ -1188,106 +1446,96 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [currentProfileId, onDataStorageDerpUpdate, onDataStorageReleaseUpdate, onDataStorageRecaughtUpdate, initFromDataStorage]);
 
     const onDisconnected = useCallback(() => {
-        setUnlockedIds(new Set());
-        setCheckedIds(new Set());
-        setHintedIds(new Set());
-        setShinyIds(new Set());
-        setLogs([]);
-        setDerpyfiedIds(new Set());
-        setReleasedIds(new Set());
-        setSpriteRefreshCounter(0);
-        setTypeFilter([]);
-        setDexFilter(new Set());
-        setCategoryFilter(null);
-        setSelectedPokemonId(null);
-        setMasterBalls(0); setPokegears(0); setPokedexes(0);
-        setUsedMasterBalls(new Set()); setUsedPokegears(new Set()); setUsedPokedexes(new Set());
-        setShuffleEndTime(0);
-        setConnectedTeamSlot(null);
-        setSlotMilestones(undefined);
-        setSlotTypeMilestones(undefined);
-        // Reset gate items
-        setGymBadges(0);
-        setHasLinkCable(false);
-        setDaycareCount(0);
-        setHasFossilRestorer(false);
-        setHasUltraWormhole(false);
-        setHasTimeRift(false);
-        setUnlockedStones(new Set());
-        setLegendaryLocksEnabled(false);
-        setTradeLocksEnabled(false);
-        setBabyLocksEnabled(false);
-        setDaycareRequired(1);
-        setFossilLocksEnabled(false);
-        setUltraBeastLocksEnabled(false);
-        setParadoxLocksEnabled(false);
-        setStoneLocksEnabled(false);
-        setMasterBallBypassGates(true);
-        setStartingStarter(null);
+        resetGameState();
         localStorage.setItem('pokepelago_connected', 'false');
-    }, []);
+    }, [resetGameState]);
 
     const onItemsReceived = useCallback((items: Item[], client: Client) => {
         const o = offsetsRef.current;
+
+        // PERF-04: batch AP item updates. Collect every change from the batch into
+        // local accumulators, then apply ONE setter call per affected field. The old
+        // handler called setters inside the forEach — N items caused N renders per
+        // field (gym badges incrementing one at a time, Set re-copies for every
+        // stone, type key, route key, line unlock, region pass, and log entry).
+        const pokemonUnlocks: number[] = [];
+        const stonesAdd: string[] = [];
+        const typesAdd: string[] = [];
+        const regionsAdd: string[] = [];
+        const routeKeysAdd: string[] = [];
+        const lineUnlocksAdd: string[] = [];
+        const newLogs: LogEntry[] = [];
+        let gymBadgeDelta = 0;
+        let daycareDelta = 0;
+        let linkCable = false;
+        let ultraWormhole = false;
+        let timeRift = false;
+        let fossilRestorer = false;
+        let shinyCharmCount = 0;
         let recalculateItems = false;
+
+        const typesMap = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
+        const sortedRouteKeys = Object.keys(ROUTE_KEY_ITEMS).sort();
 
         items.forEach(item => {
             if (item.id > o.ITEM_OFFSET && item.id <= o.ITEM_OFFSET + 1025) {
-                unlockPokemon(item.id - o.ITEM_OFFSET);
+                pokemonUnlocks.push(item.id - o.ITEM_OFFSET);
             } else if (item.id === o.ITEM_OFFSET + 6020) {
-                // Shiny Charm: randomly assign shiny to a caught Pokemon
-                setCheckedIds(checked => {
-                    const caughtPokemon = Array.from(checked).filter(id => id >= 1 && id <= 1025);
-                    setShinyIds(prev => {
-                        const candidates = caughtPokemon.filter(id => !prev.has(id));
-                        if (candidates.length === 0) return prev;
-                        const pick = candidates[Math.floor(Math.random() * candidates.length)];
-                        const next = new Set(prev);
-                        next.add(pick);
-                        // Persist to DataStorage
-                        if (clientRef.current?.authenticated) {
-                            const t = clientRef.current.players.self.team;
-                            const s = clientRef.current.players.self.slot;
-                            clientRef.current.storage.prepare(
-                                `pokepelago_team_${t}_slot_${s}_shiny_pokemon`, []
-                            ).add([pick]).commit();
-                        }
-                        return next;
-                    });
-                    return checked;
-                });
+                shinyCharmCount++;
             } else if (item.id === o.ITEM_OFFSET + 6000) {
-                setGymBadges(prev => prev + 1);
+                gymBadgeDelta++;
             } else if (item.id === o.ITEM_OFFSET + 6001) {
-                setHasLinkCable(true);
+                linkCable = true;
             } else if (item.id === o.ITEM_OFFSET + 6002) {
-                setDaycareCount(prev => prev + 1);
+                daycareDelta++;
             } else if (item.id === o.ITEM_OFFSET + 6003) {
-                setHasUltraWormhole(true);
+                ultraWormhole = true;
             } else if (item.id === o.ITEM_OFFSET + 6004) {
-                setHasTimeRift(true);
+                timeRift = true;
             } else if (item.id === o.ITEM_OFFSET + 6005) {
-                setHasFossilRestorer(true);
+                fossilRestorer = true;
             } else if (item.id >= o.ITEM_OFFSET + 6010 && item.id <= o.ITEM_OFFSET + 6019) {
                 const stone = STONE_NAMES_ORDERED[item.id - (o.ITEM_OFFSET + 6010)];
-                if (stone) setUnlockedStones(prev => new Set(prev).add(stone));
+                if (stone) stonesAdd.push(stone);
             } else if (item.id >= o.ITEM_OFFSET + o.TYPE_ITEM_OFFSET && item.id <= o.ITEM_OFFSET + o.TYPE_ITEM_OFFSET + 17) {
-                const types = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
-                const typeName = types[item.id - (o.ITEM_OFFSET + o.TYPE_ITEM_OFFSET)];
-                setTypeUnlocks(prev => new Set(prev).add(typeName));
-                setLogs(prev => [{
+                const typeName = typesMap[item.id - (o.ITEM_OFFSET + o.TYPE_ITEM_OFFSET)];
+                typesAdd.push(typeName);
+                newLogs.push({
                     id: crypto.randomUUID(), timestamp: Date.now(), type: 'system',
                     text: `Received Type Unlock: ${typeName}`,
                     parts: [{ text: `Received Type Unlock: ${typeName}`, type: 'color', color: '#10B981' }],
-                }, ...prev.slice(0, 99)]);
+                });
+            } else if (item.id >= o.ITEM_OFFSET + o.ROUTE_KEY_OFFSET && item.id < o.ITEM_OFFSET + o.ROUTE_KEY_OFFSET + 1000) {
+                const idx = item.id - (o.ITEM_OFFSET + o.ROUTE_KEY_OFFSET);
+                const rk = sortedRouteKeys[idx];
+                if (rk) {
+                    const keyName = ROUTE_KEY_ITEMS[rk];
+                    routeKeysAdd.push(keyName);
+                    newLogs.push({
+                        id: crypto.randomUUID(), timestamp: Date.now(), type: 'system',
+                        text: `Received ${keyName}`,
+                        parts: [{ text: `Received ${keyName}`, type: 'color', color: '#F97316' }],
+                    });
+                }
+            } else if (item.id >= o.ITEM_OFFSET + o.LINE_UNLOCK_OFFSET && item.id < o.ITEM_OFFSET + o.LINE_UNLOCK_OFFSET + 1026) {
+                const baseId = item.id - (o.ITEM_OFFSET + o.LINE_UNLOCK_OFFSET);
+                const lineName = LINE_UNLOCK_ITEMS[String(baseId)];
+                if (lineName) {
+                    lineUnlocksAdd.push(lineName);
+                    newLogs.push({
+                        id: crypto.randomUUID(), timestamp: Date.now(), type: 'system',
+                        text: `Received ${lineName}`,
+                        parts: [{ text: `Received ${lineName}`, type: 'color', color: '#A855F7' }],
+                    });
+                }
             } else if (item.id >= o.ITEM_OFFSET + o.REGION_PASS_OFFSET && item.id < o.ITEM_OFFSET + o.REGION_PASS_OFFSET + GAME_REGIONS_ORDER.length) {
                 const regionName = GAME_REGIONS_ORDER[item.id - (o.ITEM_OFFSET + o.REGION_PASS_OFFSET)];
-                setRegionPasses(prev => new Set(prev).add(regionName));
-                setLogs(prev => [{
+                regionsAdd.push(regionName);
+                newLogs.push({
                     id: crypto.randomUUID(), timestamp: Date.now(), type: 'system',
                     text: `Received ${regionName} Pass!`,
                     parts: [{ text: `Received ${regionName} Pass!`, type: 'color', color: '#F59E0B' }],
-                }, ...prev.slice(0, 99)]);
+                });
             } else if (
                 item.id === o.ITEM_OFFSET + o.TRAP_ITEM_OFFSET + 1 ||
                 item.id === o.ITEM_OFFSET + o.TRAP_ITEM_OFFSET + 2 ||
@@ -1301,13 +1549,111 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
         });
 
+        // ── Apply batched updates: at most one setter call per affected field ──
+        if (pokemonUnlocks.length > 0) {
+            setUnlockedIds(prev => {
+                const next = new Set(prev);
+                let changed = false;
+                for (const id of pokemonUnlocks) {
+                    if (!next.has(id)) { next.add(id); changed = true; }
+                }
+                return changed ? next : prev;
+            });
+        }
+        if (stonesAdd.length > 0) {
+            setUnlockedStones(prev => {
+                const next = new Set(prev);
+                for (const s of stonesAdd) next.add(s);
+                return next;
+            });
+        }
+        if (typesAdd.length > 0) {
+            setTypeUnlocks(prev => {
+                const next = new Set(prev);
+                for (const t of typesAdd) next.add(t);
+                return next;
+            });
+        }
+        if (regionsAdd.length > 0) {
+            setRegionPasses(prev => {
+                const next = new Set(prev);
+                for (const r of regionsAdd) next.add(r);
+                return next;
+            });
+        }
+        if (routeKeysAdd.length > 0) {
+            setRouteKeys(prev => {
+                const next = new Set(prev);
+                for (const k of routeKeysAdd) next.add(k);
+                return next;
+            });
+        }
+        if (lineUnlocksAdd.length > 0) {
+            setLineUnlocks(prev => {
+                const next = new Set(prev);
+                for (const l of lineUnlocksAdd) next.add(l);
+                return next;
+            });
+        }
+        if (gymBadgeDelta > 0) setGymBadges(prev => prev + gymBadgeDelta);
+        if (daycareDelta > 0) setDaycareCount(prev => prev + daycareDelta);
+        if (linkCable) setHasLinkCable(true);
+        if (ultraWormhole) setHasUltraWormhole(true);
+        if (timeRift) setHasTimeRift(true);
+        if (fossilRestorer) setHasFossilRestorer(true);
+
+        // Shiny Charm: pick N distinct caught Pokemon in one pass. Uses checkedIdsRef
+        // (kept in sync via useEffect at line 393) instead of the old setCheckedIds →
+        // setShinyIds nested-callback hack for peeking at current state.
+        if (shinyCharmCount > 0) {
+            const caught = Array.from(checkedIdsRef.current).filter(id => id >= 1 && id <= 1025);
+            setShinyIds(prev => {
+                const pool = caught.filter(id => !prev.has(id));
+                if (pool.length === 0) return prev;
+                const picks: number[] = [];
+                const toPick = Math.min(shinyCharmCount, pool.length);
+                for (let i = 0; i < toPick; i++) {
+                    const idx = Math.floor(Math.random() * pool.length);
+                    picks.push(pool.splice(idx, 1)[0]);
+                }
+                // Persist all picks in one DataStorage commit
+                if (clientRef.current?.authenticated && picks.length > 0) {
+                    const t = clientRef.current.players.self.team;
+                    const s = clientRef.current.players.self.slot;
+                    clientRef.current.storage.prepare(
+                        `pokepelago_team_${t}_slot_${s}_shiny_pokemon`, []
+                    ).add(picks).commit();
+                }
+                // Push shiny-log entries into the same batched newLogs array so the
+                // single setLogs below covers them too
+                for (const pick of picks) {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const pokeName = (pokemonMetadata as any)[pick]?.name ?? `#${pick}`;
+                    newLogs.push({
+                        id: crypto.randomUUID(), timestamp: Date.now(), type: 'system',
+                        text: `Shiny Charm! ${pokeName} is now shiny!`,
+                        parts: [{ text: `Shiny Charm! ${pokeName} is now shiny!`, type: 'color', color: '#EC4899' }],
+                    });
+                }
+                const next = new Set(prev);
+                picks.forEach(id => next.add(id));
+                return next;
+            });
+        }
+
+        // Batch log entries. Old code prepended each log with prev.slice(0, 99);
+        // matching that: concatenate newLogs (reversed so newest-first) + prev, cap 100.
+        if (newLogs.length > 0) {
+            setLogs(prev => [...newLogs.slice().reverse(), ...prev].slice(0, 100));
+        }
+
         if (recalculateItems) {
             setUsedMasterBalls(used => { setMasterBalls(Math.max(0, client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 1).length - used.size)); return used; });
             setUsedPokegears(used => { setPokegears(Math.max(0, client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 2).length - used.size)); return used; });
             setUsedPokedexes(used => { setPokedexes(Math.max(0, client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 3).length - used.size)); return used; });
             processTrapItems(items, client);
         }
-    }, [unlockPokemon, processTrapItems]);
+    }, [processTrapItems]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const onPrintJSON = useCallback((packet: any, client: Client) => {
@@ -1389,6 +1735,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // ── Public connect / disconnect ───────────────────────────────────────────────
     const connect = useCallback(async (info: ConnectionInfo, profileId?: string) => {
         if (profileId) setCurrentProfileId(profileId);
+        // Always reset game state before connecting to prevent stale data from a
+        // previous slot leaking into the new connection. The orphan guard in
+        // useAPConnection silences the old client's disconnect event, so
+        // onDisconnected may never fire when switching slots without explicit disconnect.
+        onDisconnected();
         storageReadyRef.current = false;
         const isOverlay = urlParams.has('overlay');
         await apConnection.connect(info, profileId, {
@@ -1437,6 +1788,19 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const gameStarted = !startingLocationsEnabled ||
         Array.from({ length: STARTER_COUNT }, (_, i) => i).some(i => checkedIds.has(STARTER_OFFSET + i));
 
+    // PERF-02: narrow context for the 1025x-rendered PokemonSlot. Only fields that
+    // are stable during gameplay live here; per-pokemon state (canGuess/isReleased/
+    // isPokegeared/isDerpified) flows via props from DexGrid instead. Value is
+    // memoized so React.memo on PokemonSlot can finally skip re-renders caused by
+    // unrelated game state changes.
+    const pokemonSlotContextValue = useMemo<PokemonSlotContextValue>(() => ({
+        uiSettings,
+        getSpriteUrl,
+        spriteRefreshCounter,
+        pmdSpriteUrl,
+        setSelectedPokemonId,
+    }), [uiSettings, getSpriteUrl, spriteRefreshCounter, pmdSpriteUrl]);
+
     return (
         <GameContext.Provider value={{
             allPokemon, unlockedIds, checkedIds, hintedIds, shinyIds, isLoading,
@@ -1472,6 +1836,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             STARTER_OFFSET: offsetsRef.current.STARTER_OFFSET,
             MILESTONE_OFFSET: offsetsRef.current.MILESTONE_OFFSET,
             detectedApWorldVersion,
+            apWorldServerVersion,
             currentProfileId, setCurrentProfileId,
             typeFilter, setTypeFilter,
             dexFilter, setDexFilter,
@@ -1480,6 +1845,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             gymBadges, hasLinkCable, daycareCount, hasFossilRestorer, hasUltraWormhole, hasTimeRift,
             unlockedStones, legendaryLocksEnabled, tradeLocksEnabled, babyLocksEnabled, daycareRequired,
             fossilLocksEnabled, ultraBeastLocksEnabled, paradoxLocksEnabled, stoneLocksEnabled, masterBallBypassGates, startingStarter,
+            routeLocksEnabled, lineLocksEnabled, badgeLevelGatingEnabled, routeKeys, lineUnlocks,
             connectedTeamSlot,
             slotMilestones,
             slotTypeMilestones,
@@ -1487,36 +1853,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             TYPE_MILESTONE_MULTIPLIER: offsetsRef.current.TYPE_MILESTONE_MULTIPLIER,
             recheckMilestones,
         }}>
-            {children}
-            {dexsanityLocalWarning && (
-                <div className="fixed inset-0 z-200 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-                    <div className="bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md border border-amber-500/40 flex flex-col overflow-hidden">
-                        <div className="px-6 py-4 border-b border-gray-800 bg-amber-900/20">
-                            <h2 className="text-lg font-bold text-amber-400 flex items-center gap-2">
-                                ⚠ Progress saved locally only
-                            </h2>
-                        </div>
-                        <div className="px-6 py-5 text-gray-300 text-sm leading-relaxed">
-                            <p>
-                                Because <strong className="text-white">Dexsanity is off</strong>, your caught Pokémon are
-                                stored on <strong className="text-white">this device only</strong> — they cannot sync to
-                                the Archipelago server.
-                            </p>
-                            <p className="mt-3 text-gray-400">
-                                If you continue on another device or browser, your catch progress will not carry over.
-                            </p>
-                        </div>
-                        <div className="px-6 py-4 border-t border-gray-800 flex justify-end">
-                            <button
-                                onClick={dismissDexsanityWarning}
-                                className="px-5 py-2 bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded-lg transition-colors"
-                            >
-                                Got it
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <PokemonSlotContext.Provider value={pokemonSlotContextValue}>
+                {children}
+            </PokemonSlotContext.Provider>
         </GameContext.Provider>
     );
 };

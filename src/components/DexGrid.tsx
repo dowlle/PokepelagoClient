@@ -10,7 +10,7 @@ import { SUB_LEGENDARY_IDS, BOX_LEGENDARY_IDS, MYTHIC_IDS, BABY_IDS, TRADE_EVO_I
 const REGION_LAYOUT_KEY = 'pokepelago_region_layout';
 
 export const DexGrid: React.FC = () => {
-    const { allPokemon, unlockedIds, checkedIds, hintedIds, shinyIds, generationFilter, uiSettings, gameMode, isPokemonGuessable, shuffleEndTime, releasedIds, activeRegions, regionPasses, regionLocksEnabled, startingRegion, typeFilter, dexFilter, setDexFilter, categoryFilter } = useGame();
+    const { allPokemon, unlockedIds, checkedIds, hintedIds, shinyIds, generationFilter, uiSettings, gameMode, isPokemonGuessable, shuffleEndTime, releasedIds, activeRegions, regionPasses, regionLocksEnabled, startingRegion, typeFilter, dexFilter, setDexFilter, categoryFilter, usedPokegears, usedPokedexes, derpyfiedIds } = useGame();
 
     const [now, setNow] = useState(() => Date.now());
 
@@ -100,21 +100,26 @@ export const DexGrid: React.FC = () => {
         if (releasedIds.has(id)) return 'shadow';
         if (checkedIds.has(id)) return 'checked';
 
+        // If the player spent a Pokegear or Pokedex on this slot, force the
+        // silhouette regardless of the Enable Shadows setting -- otherwise the
+        // item's grid-side effect is invisible when shadows are off (BUG-04).
+        const hasRevealedItem = usedPokegears.has(id) || usedPokedexes.has(id);
+
         if (gameMode === 'standalone') {
-            return uiSettings.enableShadows ? 'shadow' : 'locked';
+            return (uiSettings.enableShadows || hasRevealedItem) ? 'shadow' : 'locked';
         }
 
         const { canGuess } = isPokemonGuessable(id);
         const isRevealed = unlockedIds.has(id);
 
         if (canGuess) {
-            return uiSettings.enableShadows ? 'shadow' : 'locked';
+            return (uiSettings.enableShadows || hasRevealedItem) ? 'shadow' : 'locked';
         } else if (isRevealed) {
             return 'unlocked';
         }
 
         if (hintedIds.has(id)) return 'hint';
-        return 'locked';
+        return hasRevealedItem ? 'shadow' : 'locked';
     };
 
     // Ordered + filtered generations
@@ -265,6 +270,8 @@ export const DexGrid: React.FC = () => {
                 const isRegionOpen = regionOpen[gen.label] !== false;
                 const isDragTarget = dragOverLabel === gen.label && draggedLabel !== gen.label;
 
+                const regionSlug = gen.region.toLowerCase();
+
                 return (
                     <div
                         key={gen.label}
@@ -273,18 +280,25 @@ export const DexGrid: React.FC = () => {
                         onDrop={() => handleDrop(gen.label)}
                         {...(genIndex === 0 ? { 'data-tour': 'dex-region' } : {})}
                         className={`
-                            bg-gray-900/70 border rounded-xl backdrop-blur-sm shadow-2xl flex flex-col h-fit
+                            border backdrop-blur-sm shadow-2xl flex flex-col h-fit
+                            region-card-${regionSlug} region-bg-${regionSlug}
                             ${uiSettings.masonry ? 'break-inside-avoid mb-4' : ''}
                             w-full transition-all duration-150
                             ${isLocked ? 'opacity-80 shadow-none' : ''}
-                            ${isDragTarget ? 'border-blue-500/60 shadow-[0_0_14px_rgba(59,130,246,0.3)]' : 'border-gray-700/50'}
+                            ${isDragTarget ? 'border-blue-500/60 shadow-[0_0_14px_rgba(59,130,246,0.3)]' : ''}
                             ${draggedLabel === gen.label ? 'opacity-40' : ''}
                         `}
+                        style={{
+                            backgroundColor: 'var(--pp-region-bg)',
+                            borderColor: isDragTarget ? undefined : 'var(--pp-border-region)',
+                            borderRadius: 'var(--pp-card-radius)',
+                        }}
                     >
                         {/* Header: drag handle + toggle */}
                         <div
-                            className="flex items-center gap-2 p-3 sm:p-4 cursor-pointer select-none"
+                            className={`flex items-center gap-2 p-3 sm:p-4 cursor-pointer select-none region-header-${regionSlug}`}
                             onClick={() => toggleRegion(gen.label)}
+                            style={{ backgroundColor: 'var(--pp-region-header-bg)', borderRadius: 'var(--pp-card-radius) var(--pp-card-radius) 0 0' }}
                         >
                             <div
                                 draggable
@@ -297,7 +311,7 @@ export const DexGrid: React.FC = () => {
                             </div>
 
                             <div className="flex-1 min-w-0">
-                                <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
+                                <h3 className={`text-sm font-black uppercase tracking-widest flex items-center gap-2 region-text-${regionSlug}`} style={{ color: 'var(--pp-text-region)' }}>
                                     {gen.region}
                                     {isLocked && <Lock size={12} className="text-gray-600" />}
                                     {isShuffled && (
@@ -323,21 +337,41 @@ export const DexGrid: React.FC = () => {
                             />
                         </div>
 
-                        {/* Body — always mounted so sprites stay loaded; hidden via CSS only */}
-                        <div className={`px-2 pb-3 sm:px-4 sm:pb-4 ${isRegionOpen ? '' : 'hidden'}`}>
-                            <div className="flex flex-wrap gap-1 sm:gap-1.5 justify-start">
-                                {pokemonInGen.map(p => (
-                                    <PokemonSlot
-                                        key={p.id}
-                                        pokemon={p}
-                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                        status={getStatus(p.id) as any}
-                                        isShiny={shinyIds.has(p.id)}
-                                        order={shuffleOrder.get(p.id)}
-                                    />
-                                ))}
+                        {/* PERF-03: unmount collapsed region bodies. Sprites re-fetch from
+                            IDB on re-expand (fast, tens of ms per slot). Keeps ~700 of the
+                            1025 DOM nodes out of the tree when users keep most regions
+                            collapsed. Previously always-mounted to preserve sprite state,
+                            but since PERF-02 broke the context-churn chain and useSpriteManager
+                            already caches in IDB, the always-mounted tradeoff is no longer
+                            worth the DOM weight. */}
+                        {isRegionOpen && (
+                            <div className="px-2 pb-3 sm:px-4 sm:pb-4">
+                                <div className="flex flex-wrap gap-1 sm:gap-1.5 justify-start">
+                                    {pokemonInGen.map(p => {
+                                        // PERF-02: compute per-pokemon state here so PokemonSlot
+                                        // can be a context-free consumer. Pokemon that don't
+                                        // change between renders skip React.memo thanks to
+                                        // primitive-only props + PokemonSlotContext narrowing.
+                                        const { canGuess, reason } = isPokemonGuessable(p.id);
+                                        return (
+                                            <PokemonSlot
+                                                key={p.id}
+                                                pokemon={p}
+                                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                                status={getStatus(p.id) as any}
+                                                isShiny={shinyIds.has(p.id)}
+                                                order={shuffleOrder.get(p.id)}
+                                                canGuess={canGuess}
+                                                reason={reason}
+                                                isReleased={releasedIds.has(p.id)}
+                                                isPokegeared={usedPokegears.has(p.id)}
+                                                isDerpified={derpyfiedIds.has(p.id)}
+                                            />
+                                        );
+                                    })}
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 );
             })}

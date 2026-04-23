@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useGame } from '../context/GameContext';
 import { useTwitch } from '../context/TwitchContext';
-import { X, ExternalLink, HelpCircle, MapPin, Sparkles, CheckCircle2, Lock, Palette, User } from 'lucide-react';
+import { X, ExternalLink, HelpCircle, MapPin, Sparkles, CheckCircle2, Lock, Palette, User, Link, Shield, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getCleanName } from '../utils/pokemon';
 import { getDerpemonCredit } from '../services/derpemonService';
 import pokemonNamesJson from '../data/pokemon_names.json';
@@ -38,7 +38,8 @@ export const PokemonDetails: React.FC = () => {
         derpyfiedIds,
         spriteRefreshCounter,
         locationOffset,
-        pmdSpriteUrl
+        pmdSpriteUrl,
+        gymBadges
     } = useGame();
     const { getCredit } = useTwitch();
 
@@ -60,74 +61,148 @@ export const PokemonDetails: React.FC = () => {
         [pmdSpriteUrl]
     );
 
+    // Escape-to-close
+    useEffect(() => {
+        if (!selectedPokemonId) return;
+        const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelectedPokemonId(null); };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [selectedPokemonId, setSelectedPokemonId]);
+
+    // FEAT-08 sub-3: navigation between Pokemon.
+    //   A/D  = prev/next guessable-right-now unchecked Pokemon (scope-aware: honors
+    //          active regions, type locks, region locks, route/line locks, badges —
+    //          whatever isPokemonGuessable.canGuess reports. Skips Pokemon that are
+    //          out of scope or not-yet-unlocked).
+    //          Fallback: if no guessable unchecked Pokemon remain (e.g. player has
+    //          guessed everything they can right now), cycle through the full dex
+    //          so the keys still do something.
+    //   ←/→  = prev/next ANY Pokemon in the full dex (caught or not, in scope or
+    //          not). Side chevron buttons mirror ← / →.
+    // Both modes wrap around at the ends.
+    const navigate = React.useCallback((delta: number, mode: 'unguessed' | 'any') => {
+        if (!selectedPokemonId) return;
+        const sorted = [...allPokemon].sort((a, b) => a.id - b.id);
+        let list: typeof sorted;
+        if (mode === 'any') {
+            list = sorted;
+        } else {
+            const ready = sorted.filter(p => !checkedIds.has(p.id) && isPokemonGuessable(p.id).canGuess);
+            list = ready.length > 0 ? ready : sorted;
+        }
+        if (list.length === 0) return;
+        const currentIdx = list.findIndex(p => p.id === selectedPokemonId);
+        const nextIdx = currentIdx === -1
+            ? (delta > 0 ? 0 : list.length - 1)
+            : (currentIdx + delta + list.length) % list.length;
+        setSelectedPokemonId(list[nextIdx].id);
+    }, [selectedPokemonId, allPokemon, checkedIds, isPokemonGuessable, setSelectedPokemonId]);
+
+    useEffect(() => {
+        if (!selectedPokemonId) return;
+        const handleKey = (e: KeyboardEvent) => {
+            const target = document.activeElement as HTMLElement | null;
+            if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+                return;
+            }
+            let delta = 0;
+            let mode: 'unguessed' | 'any' = 'unguessed';
+            if (e.key === 'a' || e.key === 'A') { delta = -1; mode = 'unguessed'; }
+            else if (e.key === 'd' || e.key === 'D') { delta = 1; mode = 'unguessed'; }
+            else if (e.key === 'ArrowLeft') { delta = -1; mode = 'any'; }
+            else if (e.key === 'ArrowRight') { delta = 1; mode = 'any'; }
+            if (delta === 0) return;
+            e.preventDefault();
+            navigate(delta, mode);
+        };
+        window.addEventListener('keydown', handleKey);
+        return () => window.removeEventListener('keydown', handleKey);
+    }, [selectedPokemonId, navigate]);
+
     const pokemon = allPokemon.find(p => p.id === selectedPokemonId);
     const isChecked = selectedPokemonId ? checkedIds.has(selectedPokemonId) : false;
     const isHinted = selectedPokemonId ? hintedIds.has(selectedPokemonId) : false;
+    // Only re-runs this effect when the selected pokemon's own derpy state flips,
+    // so opening the detail view does not force a full re-fetch on every Derp trap.
+    const isDerpified = selectedPokemonId ? derpyfiedIds.has(selectedPokemonId) : false;
 
     useEffect(() => {
-        if (selectedPokemonId) {
+        if (!selectedPokemonId) {
             // eslint-disable-next-line react-hooks/set-state-in-effect
-            setLoading(true);
-            setGifLoaded(false);
-            setPendingHint(null);
-            setScoutedItem(null);
-
-            // Fetch PokeAPI metadata
-            fetch(`https://pokeapi.co/api/v2/pokemon/${selectedPokemonId}`)
-                .then(res => res.json())
-                .then(data => {
-                    setDetails(data);
-                    setLoading(false);
-                })
-                .catch(err => {
-                    console.error('Failed to fetch pokemon details', err);
-                    setLoading(false);
-                });
-
-            // Fetch Local Sprite (prefer Derpemon > animated > static)
-            const loadLocalSprites = async () => {
-                const isShiny = shinyIds.has(selectedPokemonId);
-
-                // When Derpémon set is active, try the Derpemon static sprite first.
-                // Only fall back to animated/showdown if no Derpemon sprite exists.
-                if (uiSettings.spriteSet === 'derpemon') {
-                    const derpUrl = await getSpriteUrl(selectedPokemonId, { shiny: isShiny });
-                    if (derpUrl) {
-                        setSpriteUrl(derpUrl);
-                        return;
-                    }
-                }
-
-                // Default path: prefer animated, fall back to static
-                let url = await getSpriteUrl(selectedPokemonId, { shiny: isShiny, animated: true });
-                if (!url) {
-                    url = await getSpriteUrl(selectedPokemonId, { shiny: isShiny });
-                }
-                setSpriteUrl(url);
-                if (!url) setGifLoaded(true); // No sprite to load, mark as loaded to show info
-            };
-            loadLocalSprites();
-
-            // Scout item contents
-            if (isChecked && isConnected) {
-                scoutLocation(selectedPokemonId + locationOffset).then(res => {
-                    if (res) setScoutedItem(res);
-                }).catch(e => console.warn('Failed to scout location', e));
-            }
-        } else {
             setDetails(null);
             setSpriteUrl(prev => {
                 if (prev && prev.startsWith('blob:')) URL.revokeObjectURL(prev);
                 return null;
             });
+            return;
         }
-        return () => {
-            setSpriteUrl(prev => {
-                if (prev && prev.startsWith('blob:')) URL.revokeObjectURL(prev);
-                return null;
+
+        let active = true;
+        let createdUrl: string | null = null;
+
+        setLoading(true);
+        setGifLoaded(false);
+        setPendingHint(null);
+        setScoutedItem(null);
+
+        // Fetch PokeAPI metadata
+        fetch(`https://pokeapi.co/api/v2/pokemon/${selectedPokemonId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (!active) return;
+                setDetails(data);
+                setLoading(false);
+            })
+            .catch(err => {
+                if (!active) return;
+                console.error('Failed to fetch pokemon details', err);
+                setLoading(false);
             });
+
+        // Fetch Local Sprite (prefer Derpemon > animated > static)
+        //
+        // BUG-10: useSpriteManager.getSpriteUrl() only returns the derpemon sprite when
+        // `!options.animated`. So if this Pokemon is derpyfied (Derp-trap victim), we must
+        // take the non-animated path first — otherwise the animated fetch wins and the
+        // Pokemon shows its normal animated gif in the modal while the grid correctly
+        // shows the derpemon. Applies both to globally-chosen spriteSet === 'derpemon'
+        // AND to per-Pokemon trap-driven derpyfiedIds membership.
+        const loadLocalSprites = async () => {
+            const isShiny = shinyIds.has(selectedPokemonId);
+            const isDerpified = derpyfiedIds.has(selectedPokemonId);
+
+            let url: string | null = null;
+            if (uiSettings.spriteSet === 'derpemon' || isDerpified) {
+                url = await getSpriteUrl(selectedPokemonId, { shiny: isShiny });
+            }
+            if (!url) {
+                url = await getSpriteUrl(selectedPokemonId, { shiny: isShiny, animated: true });
+                if (!url) {
+                    url = await getSpriteUrl(selectedPokemonId, { shiny: isShiny });
+                }
+            }
+            if (active) {
+                createdUrl = url;
+                setSpriteUrl(url);
+                if (!url) setGifLoaded(true);
+            } else if (url && url.startsWith('blob:')) {
+                URL.revokeObjectURL(url);
+            }
         };
-    }, [selectedPokemonId, uiSettings.spriteSet, allPokemon, isChecked, isConnected, scoutLocation, shinyIds, getSpriteUrl, spriteRefreshCounter, locationOffset]);
+        loadLocalSprites();
+
+        // Scout item contents
+        if (isChecked && isConnected) {
+            scoutLocation(selectedPokemonId + locationOffset).then(res => {
+                if (active && res) setScoutedItem(res);
+            }).catch(e => console.warn('Failed to scout location', e));
+        }
+
+        return () => {
+            active = false;
+            if (createdUrl && createdUrl.startsWith('blob:')) URL.revokeObjectURL(createdUrl);
+        };
+    }, [selectedPokemonId, uiSettings.spriteSet, allPokemon, isChecked, isConnected, scoutLocation, shinyIds, getSpriteUrl, spriteRefreshCounter, locationOffset, isDerpified]);
 
     if (!selectedPokemonId || !pokemon) return null;
 
@@ -136,7 +211,8 @@ export const PokemonDetails: React.FC = () => {
 
     // Only show name and real info if guessed (checked)
     const showInfo = isChecked;
-    const showShadow = isUnlocked && !isChecked;
+    // FEAT-08 sub-1: also show shadow when global shadows setting is on, regardless of isUnlocked
+    const showShadow = !isChecked && (isUnlocked || uiSettings.enableShadows);
 
     const handleHintClick = (itemName: string) => {
         if (pendingHint === itemName) {
@@ -158,7 +234,7 @@ export const PokemonDetails: React.FC = () => {
 
     const isPokegeared = usedPokegears.has(selectedPokemonId);
     const isPokedexed = usedPokedexes.has(selectedPokemonId);
-    const { canGuess, reason, reasons, missingRegion, missingTypes, missingPokemon } = isPokemonGuessable(selectedPokemonId);
+    const { canGuess, reason, reasons, missingRegion, missingTypes, missingPokemon, missingRouteKeys, missingLineUnlock, badgeLevelRequired } = isPokemonGuessable(selectedPokemonId);
 
     const lang = localStorage.getItem('pokepelago_language') ?? 'en';
     const langNames = (pokemonNamesJson as Record<string, Record<string, string>>)[selectedPokemonId.toString()];
@@ -182,7 +258,24 @@ export const PokemonDetails: React.FC = () => {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setSelectedPokemonId(null)}>
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
+            {/* FEAT-08 sub-3: prev/next buttons mirror ← / → (any Pokemon). A/D keyboard shortcut skips to next unguessed. */}
+            <button
+                onClick={e => { e.stopPropagation(); navigate(-1, 'any'); }}
+                aria-label="Previous Pokemon (← arrow key, or A for previous unguessed)"
+                title="Previous Pokemon (←) — A for previous unguessed"
+                className="group absolute left-4 top-1/2 -translate-y-1/2 z-10 p-3 rounded-full bg-gray-900/80 hover:bg-gray-800 text-white shadow-xl border border-gray-700 hover:border-gray-500 hover:scale-110 active:scale-95 transition-all"
+            >
+                <ChevronLeft size={24} />
+            </button>
+            <button
+                onClick={e => { e.stopPropagation(); navigate(1, 'any'); }}
+                aria-label="Next Pokemon (→ arrow key, or D for next unguessed)"
+                title="Next Pokemon (→) — D for next unguessed"
+                className="group absolute right-4 top-1/2 -translate-y-1/2 z-10 p-3 rounded-full bg-gray-900/80 hover:bg-gray-800 text-white shadow-xl border border-gray-700 hover:border-gray-500 hover:scale-110 active:scale-95 transition-all"
+            >
+                <ChevronRight size={24} />
+            </button>
+            <div className="rounded-2xl w-full max-w-md overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-300" style={{ backgroundColor: 'var(--pp-modal-bg)', border: '1px solid var(--pp-modal-border)' }} onClick={e => e.stopPropagation()}>
                 {/* Header */}
                 <div className="absolute top-4 right-4 z-10">
                     <button
@@ -199,7 +292,7 @@ export const PokemonDetails: React.FC = () => {
                         <div className="w-12 h-12 border-4 border-blue-500 rounded-full animate-spin border-t-transparent opacity-50 absolute z-0"></div>
                     )}
 
-                    {isUnlocked || isChecked ? (
+                    {isUnlocked || isChecked || uiSettings.enableShadows ? (
                         <div className="relative">
                             {isShiny && isChecked && (
                                 <div className="absolute -inset-8 bg-yellow-500/10 blur-3xl animate-pulse rounded-full" />
@@ -219,7 +312,7 @@ export const PokemonDetails: React.FC = () => {
                                 <img
                                     ref={gifRef}
                                     src={spriteUrl}
-                                    alt={pokemon.name}
+                                    alt={showInfo ? pokemon.name : `Pokemon #${selectedPokemonId}`}
                                     onLoad={() => setGifLoaded(true)}
                                     className={`
                                         w-32 h-32 object-contain relative z-10 transition-opacity duration-300
@@ -262,7 +355,7 @@ export const PokemonDetails: React.FC = () => {
 
                         <div className="flex gap-2">
                             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                            {details?.types && showInfo && details.types.map((t: any) => {
+                            {details?.types && (showInfo || uiSettings.alwaysShowTypes) && details.types.map((t: any) => {
                                 const typeName = t.type.name.charAt(0).toUpperCase() + t.type.name.slice(1);
                                 const color = TYPE_COLORS[typeName];
                                 return (
@@ -316,7 +409,7 @@ export const PokemonDetails: React.FC = () => {
                     )}
 
                     {/* Requirements Section */}
-                    {!isChecked && !canGuess && (missingRegion || missingTypes || missingPokemon || reason) && (
+                    {!isChecked && !canGuess && (missingRegion || missingTypes || missingPokemon || missingRouteKeys || missingLineUnlock || badgeLevelRequired || reason) && (
                         <div className="bg-red-900/10 border border-red-500/30 rounded-xl p-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-500">
                             <div className="flex items-center gap-2 text-red-400 font-bold text-xs uppercase tracking-wider">
                                 <Lock size={14} />
@@ -363,12 +456,42 @@ export const PokemonDetails: React.FC = () => {
                                         </span>
                                     );
                                 })}
-                                {!missingRegion && !missingTypes && !missingPokemon && !reasons && reason && (
+                                {!missingRegion && !missingTypes && !missingPokemon && !missingRouteKeys && !missingLineUnlock && !badgeLevelRequired && !reasons && reason && (
                                     <span className="px-3 py-1 bg-red-950/60 border border-red-500/30 rounded-lg text-[10px] text-red-200 uppercase font-black tracking-widest shadow-lg">
                                         {reason}
                                     </span>
                                 )}
                             </div>
+                            {/* Route Lock */}
+                            {missingRouteKeys && missingRouteKeys.length > 0 && (
+                                <div className="flex items-center gap-2 text-xs">
+                                    <MapPin size={14} className="text-orange-400 shrink-0" />
+                                    <span className="text-orange-300/90">
+                                        Route: Need one of:{' '}
+                                        {missingRouteKeys.length <= 3
+                                            ? missingRouteKeys.join(', ')
+                                            : `${missingRouteKeys.slice(0, 2).join(', ')} +${missingRouteKeys.length - 2} more`}
+                                    </span>
+                                </div>
+                            )}
+                            {/* Line Lock */}
+                            {missingLineUnlock && (
+                                <div className="flex items-center gap-2 text-xs">
+                                    <Link size={14} className="text-orange-400 shrink-0" />
+                                    <span className="text-orange-300/90">
+                                        Family: Need {missingLineUnlock}
+                                    </span>
+                                </div>
+                            )}
+                            {/* Badge Level */}
+                            {badgeLevelRequired && (
+                                <div className="flex items-center gap-2 text-xs">
+                                    <Shield size={14} className="text-orange-400 shrink-0" />
+                                    <span className="text-orange-300/90">
+                                        Badges: {gymBadges}/{badgeLevelRequired}
+                                    </span>
+                                </div>
+                            )}
                             {pendingHint && (
                                 <p className="text-[9px] text-yellow-400/70 italic">Click the highlighted badge again to send the hint request.</p>
                             )}
@@ -442,6 +565,9 @@ export const PokemonDetails: React.FC = () => {
                                                 : 'bg-gray-800/40 border-gray-700/50 hover:bg-gray-700/50 active:scale-95 disabled:opacity-30 disabled:grayscale disabled:hover:bg-gray-800/40'}
                                         `}
                                     >
+                                        <div className="absolute -top-9 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 text-gray-200 text-[9px] rounded w-max max-w-[180px] text-center leading-tight opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-gray-700 z-50">
+                                            Reveals silhouette, types, and generation
+                                        </div>
                                         <div className="w-10 h-10 flex items-center justify-center mb-1">
                                             <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-radar.png" style={{ imageRendering: 'pixelated' }} className={`w-8 h-8 object-contain transition-opacity duration-200 ${gearSpriteLoaded ? 'opacity-100' : 'opacity-0'}`} alt="Poke Radar" onLoad={() => setGearSpriteLoaded(true)} />
                                         </div>
@@ -462,6 +588,9 @@ export const PokemonDetails: React.FC = () => {
                                                 : 'bg-gray-800/40 border-gray-700/50 hover:bg-gray-700/50 active:scale-95 disabled:opacity-30 disabled:grayscale disabled:hover:bg-gray-800/40'}
                                         `}
                                     >
+                                        <div className="absolute -top-9 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 text-gray-200 text-[9px] rounded w-max max-w-[180px] text-center leading-tight opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-gray-700 z-50">
+                                            Reveals the 3 letters of this Pokemon's name
+                                        </div>
                                         <div className="w-10 h-10 flex items-center justify-center mb-1">
                                             <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/ss-ticket.png" style={{ imageRendering: 'pixelated' }} className={`w-8 h-8 object-contain transition-opacity duration-200 ${pokedexSpriteLoaded ? 'opacity-100' : 'opacity-0'}`} alt="SS Ticket" onLoad={() => setPokedexSpriteLoaded(true)} />
                                         </div>
@@ -477,6 +606,9 @@ export const PokemonDetails: React.FC = () => {
                                         disabled={masterBalls === 0 || !!itemCooldown || (!masterBallBypassGates && !canGuess)}
                                         className="group relative flex flex-col items-center justify-center p-3 rounded-2xl border bg-gray-800/40 border-gray-700/50 hover:bg-red-900/20 hover:border-red-500/40 active:scale-95 disabled:opacity-30 disabled:grayscale disabled:hover:bg-gray-800/40 transition-all"
                                     >
+                                        <div className="absolute -top-9 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 text-gray-200 text-[9px] rounded w-max max-w-[180px] text-center leading-tight opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-gray-700 z-50">
+                                            Instantly reveals this Pokemon without guessing
+                                        </div>
                                         <div className="w-10 h-10 flex items-center justify-center mb-1">
                                             <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/master-ball.png" style={{ imageRendering: 'pixelated' }} className={`w-8 h-8 object-contain transition-opacity duration-200 ${masterBallSpriteLoaded ? 'opacity-100' : 'opacity-0'}`} alt="Master Ball" onLoad={() => setMasterBallSpriteLoaded(true)} />
                                         </div>

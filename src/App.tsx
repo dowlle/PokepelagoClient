@@ -3,6 +3,7 @@ import { GameProvider, useGame } from './context/GameContext';
 import { DexGrid } from './components/DexGrid';
 import { GlobalGuessInput } from './components/GlobalGuessInput';
 import { SettingsPanel } from './components/SettingsPanel';
+import { SettingsModal } from './components/SettingsModal';
 import { Settings, Wifi, WifiOff, PanelRightClose, PanelRightOpen, PanelLeftClose, PanelLeftOpen, MessageSquare, Tv, LayoutGrid } from 'lucide-react';
 import { ArchipelagoLog } from './components/ArchipelagoLog';
 import { PokemonDetails } from './components/PokemonDetails';
@@ -40,6 +41,7 @@ const GameContent: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
   const [isLogOpen, setIsLogOpen] = React.useState(false);
   const [twitchIntegration, setTwitchIntegration] = React.useState(() => localStorage.getItem('pokepelago_twitch_integration') === 'true');
+  const [isSettingsModalOpen, setSettingsModalOpen] = React.useState(false);
   const [sidebarTab, setSidebarTab] = React.useState<'tracker' | 'settings' | 'twitch'>(() => {
     const defaultTab = localStorage.getItem('pokepelago_defaultTab') as 'tracker' | 'settings' | 'twitch';
     if (defaultTab && (defaultTab === 'tracker' || defaultTab === 'settings' || defaultTab === 'twitch')) {
@@ -106,7 +108,7 @@ const GameContent: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-950 text-white">
+      <div className="flex h-screen items-center justify-center text-white themed-bg" style={{ backgroundColor: 'var(--pp-bg-base)' }}>
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-green-500 rounded-full animate-spin border-t-transparent"></div>
           <span className="text-gray-400">Loading Pokédex...</span>
@@ -117,7 +119,7 @@ const GameContent: React.FC = () => {
 
   if (pokemonLoadError) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-950 text-white p-8">
+      <div className="flex h-screen items-center justify-center text-white p-8 themed-bg" style={{ backgroundColor: 'var(--pp-bg-base)' }}>
         <div className="flex flex-col items-center gap-6 max-w-md text-center">
           <div className="text-5xl">⚠️</div>
           <div>
@@ -146,7 +148,7 @@ const GameContent: React.FC = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-950 text-white font-sans overflow-hidden">
+    <div className="h-screen flex flex-col text-white font-sans overflow-hidden themed-bg" style={{ backgroundColor: 'var(--pp-bg-base)' }}>
       <div className="relative shrink-0">
         <GlobalGuessInput />
         <TourPrompt
@@ -158,7 +160,7 @@ const GameContent: React.FC = () => {
       </div>
 
       {/* Toolbar - hidden on mobile (merged into DexGrid filter bar), visible on md+ */}
-      <div className="z-20 bg-gray-900 border-b border-gray-800 shrink-0 hidden md:block">
+      <div className="z-20 shrink-0 hidden md:block themed-header" style={{ backgroundColor: 'var(--pp-bg-surface)', borderBottom: '1px solid var(--pp-border)' }}>
         <div className={`${uiSettings.widescreen ? 'max-w-none px-8' : 'max-w-screen-xl'} mx-auto flex items-center justify-between px-2 py-1 sm:px-4 sm:py-2`}>
           <div className="flex items-center gap-3">
             {/* Log sidebar toggle (desktop only) */}
@@ -205,6 +207,14 @@ const GameContent: React.FC = () => {
 
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setSettingsModalOpen(true)}
+              className="hidden md:block p-1.5 rounded transition-all hover:bg-gray-800 text-gray-400"
+              title="Settings"
+              data-tour="settings-gear"
+            >
+              <Settings size={16} />
+            </button>
+            <button
               onClick={() => {
                 const next = !isSidebarOpen;
                 setIsSidebarOpen(next);
@@ -222,13 +232,14 @@ const GameContent: React.FC = () => {
         {/* Left Sidebar - Log (desktop only) */}
         <aside
           className={`
-            hidden md:flex flex-col bg-gray-900/95 backdrop-blur-md transition-[width,transform] duration-300 border-r border-gray-800
+            hidden md:flex flex-col backdrop-blur-md transition-[width,transform] duration-300
             relative
             ${isLogOpen ? 'w-80' : 'w-0 overflow-hidden border-none'}
           `}
+          style={{ backgroundColor: 'var(--pp-sidebar-bg)', borderRight: isLogOpen ? '1px solid var(--pp-border)' : 'none' }}
         >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800 shrink-0">
-            <span className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
+          <div className="flex items-center justify-between px-4 py-3 shrink-0" style={{ borderBottom: '1px solid var(--pp-border)' }}>
+            <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-2" style={{ color: 'var(--pp-text-secondary)' }}>
               <MessageSquare size={14} />
               Log
             </span>
@@ -248,13 +259,14 @@ const GameContent: React.FC = () => {
         {/* Right Sidebar - Tracker / Settings / Twitch (desktop only) */}
         <aside
           className={`
-            hidden md:flex flex-col bg-gray-900/95 backdrop-blur-md transition-[width,transform] duration-300 border-l border-gray-800
+            hidden md:flex flex-col backdrop-blur-md transition-[width,transform] duration-300
             relative
             ${isSidebarOpen ? 'w-80' : 'w-0 overflow-hidden border-none'}
           `}
+          style={{ backgroundColor: 'var(--pp-sidebar-bg)', borderLeft: isSidebarOpen ? '1px solid var(--pp-border)' : 'none' }}
         >
           {/* Tabs */}
-          <div className="flex border-b border-gray-800 shrink-0">
+          <div className="flex shrink-0" style={{ borderBottom: '1px solid var(--pp-border)' }}>
             <button
               onClick={() => setSidebarTab('tracker')}
               data-tour="tracker-tab"
@@ -291,7 +303,7 @@ const GameContent: React.FC = () => {
             ) : sidebarTab === 'twitch' && __TWITCH_ENABLED__ && twitchIntegration ? (
               <TwitchLeaderboard />
             ) : (
-              <SettingsPanel isOpen={true} onClose={() => setIsSidebarOpen(false)} isEmbedded />
+              <SettingsPanel isOpen={true} onClose={() => setIsSidebarOpen(false)} isEmbedded onOpenModal={() => setSettingsModalOpen(true)} />
             )}
           </div>
         </aside>
@@ -310,11 +322,11 @@ const GameContent: React.FC = () => {
       {/* Mobile bottom sheet panel */}
       <div className={`
         fixed inset-x-0 bottom-20 z-40 md:hidden
-        bg-gray-900 border-t border-gray-800 rounded-t-2xl
+        rounded-t-2xl
         transition-transform duration-300
         ${mobilePanel ? 'translate-y-0' : 'translate-y-full'}
         h-[85vh] flex flex-col
-      `}>
+      `} style={{ backgroundColor: 'var(--pp-bg-surface)', borderTop: '1px solid var(--pp-border)' }}>
         <div className="flex justify-center py-2 shrink-0">
           <div className="w-10 h-1 rounded-full bg-gray-700" />
         </div>
@@ -329,13 +341,13 @@ const GameContent: React.FC = () => {
           ) : mobilePanel === 'twitch' && __TWITCH_ENABLED__ && twitchIntegration ? (
             <TwitchLeaderboard />
           ) : mobilePanel === 'settings' ? (
-            <SettingsPanel isOpen={true} onClose={() => setMobilePanel(null)} isEmbedded />
+            <SettingsPanel isOpen={true} onClose={() => setMobilePanel(null)} isEmbedded onOpenModal={() => setSettingsModalOpen(true)} />
           ) : null}
         </div>
       </div>
 
       {/* Mobile status strip — sits above bottom nav */}
-      <div className="fixed bottom-14 inset-x-0 z-50 md:hidden bg-gray-900/95 backdrop-blur-sm border-t border-gray-800 flex items-center justify-center gap-3 px-3 py-1">
+      <div className="fixed bottom-14 inset-x-0 z-50 md:hidden backdrop-blur-sm flex items-center justify-center gap-3 px-3 py-1" style={{ backgroundColor: 'var(--pp-sidebar-bg)', borderTop: '1px solid var(--pp-border)' }}>
         <div className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded ${isConnected ? 'bg-green-900/30 text-green-400' : 'bg-gray-800 text-gray-500'}`}>
           {isConnected ? <Wifi size={10} /> : <WifiOff size={10} />}
           {isConnected ? 'Connected' : 'Offline'}
@@ -353,7 +365,7 @@ const GameContent: React.FC = () => {
       </div>
 
       {/* Mobile bottom nav bar */}
-      <nav className="fixed bottom-0 inset-x-0 z-50 md:hidden bg-gray-900 border-t border-gray-800 flex h-14">
+      <nav className="fixed bottom-0 inset-x-0 z-50 md:hidden flex h-14" style={{ backgroundColor: 'var(--pp-nav-bg)', borderTop: '1px solid var(--pp-border)' }}>
         <button
           onClick={() => setMobilePanel(prev => prev === 'log' ? null : 'log')}
           className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${mobilePanel === 'log' ? 'text-blue-400' : 'text-gray-500'}`}
@@ -388,11 +400,13 @@ const GameContent: React.FC = () => {
 
       <PokemonDetails />
 
+      <SettingsModal isOpen={isSettingsModalOpen} onClose={() => setSettingsModalOpen(false)} />
+
       {isConnected && gameMode === 'archipelago' && startingLocationsEnabled && !gameStarted && !adventureOverlayDismissed && (
         <StartGameOverlay onDismiss={() => setAdventureOverlayDismissed(true)} />
       )}
 
-      <TourOverlay tour={tour} onSwitchPanel={handleTourSwitchPanel} />
+      <TourOverlay tour={tour} onSwitchPanel={handleTourSwitchPanel} onOpenSettingsModal={() => setSettingsModalOpen(true)} onCloseSettingsModal={() => setSettingsModalOpen(false)} />
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import React from 'react';
 import type { PokemonRef } from '../types/pokemon';
-import { useGame } from '../context/GameContext';
+import { usePokemonSlotContext } from '../context/PokemonSlotContext';
 import { getCleanName } from '../utils/pokemon';
 import pokemonMetadata from '../data/pokemon_metadata.json';
 import pokemonNamesJson from '../data/pokemon_names.json';
@@ -13,12 +13,22 @@ interface PokemonSlotProps {
     status: 'locked' | 'unlocked' | 'checked' | 'shadow' | 'hint';
     isShiny?: boolean;
     order?: number;
+    // PERF-02: per-pokemon state is computed by DexGrid and passed in as primitives
+    // so PokemonSlot only needs to subscribe to the narrow PokemonSlotContext.
+    // This unblocks React.memo (PERF-01) from skipping renders when unrelated game
+    // state changes.
+    canGuess: boolean;
+    reason?: string;
+    isReleased: boolean;
+    isPokegeared: boolean;
+    isDerpified: boolean;
 }
 
-export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShiny = false, order }) => {
-    const { setSelectedPokemonId, isPokemonGuessable, usedPokegears, getSpriteUrl, uiSettings, releasedIds, spriteRefreshCounter, pmdSpriteUrl } = useGame();
-    const { canGuess, reason } = isPokemonGuessable(pokemon.id);
-    const isPokegeared = usedPokegears.has(pokemon.id);
+const PokemonSlotImpl: React.FC<PokemonSlotProps> = ({
+    pokemon, status, isShiny = false, order,
+    canGuess, reason, isReleased, isPokegeared, isDerpified,
+}) => {
+    const { setSelectedPokemonId, getSpriteUrl, uiSettings, spriteRefreshCounter, pmdSpriteUrl } = usePokemonSlotContext();
 
     const [spriteUrl, setSpriteUrl] = React.useState<string | null>(null);
     const [isLoaded, setIsLoaded] = React.useState(false);
@@ -51,9 +61,12 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
         setPlayingAttack(false);
     }, [normalizedPmdUrl]);
 
-    // Load sprite from local storage
+    // Load sprite. Cleanup does NOT null spriteUrl -- the <img> keeps rendering
+    // the old (possibly just-revoked) blob URL until the next effect resolves,
+    // which eliminates the blank flash on every re-run.
     React.useEffect(() => {
         let active = true;
+        let createdUrl: string | null = null;
         const loadSprite = async () => {
             if (!uiSettings.enableSprites) {
                 if (active) {
@@ -65,19 +78,19 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
 
             const url = await getSpriteUrl(pokemon.id, { shiny: isShiny });
             if (active) {
+                createdUrl = url;
                 setSpriteUrl(url);
                 if (!url) setHasError(true);
+            } else if (url && url.startsWith('blob:')) {
+                URL.revokeObjectURL(url);
             }
         };
         loadSprite();
         return () => {
             active = false;
-            setSpriteUrl(prev => {
-                if (prev && prev.startsWith('blob:')) URL.revokeObjectURL(prev);
-                return null;
-            });
+            if (createdUrl && createdUrl.startsWith('blob:')) URL.revokeObjectURL(createdUrl);
         };
-    }, [pokemon.id, isShiny, getSpriteUrl, uiSettings.enableSprites, spriteRefreshCounter]);
+    }, [pokemon.id, isShiny, getSpriteUrl, uiSettings.enableSprites, spriteRefreshCounter, isDerpified]);
 
     // Reset load state when url changes
     React.useEffect(() => {
@@ -107,7 +120,7 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
     })();
 
     const getBorderClass = () => {
-        if (releasedIds.has(pokemon.id)) return 'bg-blue-950/30 border-blue-800/30 opacity-40';
+        if (isReleased) return 'bg-blue-950/30 border-blue-800/30 opacity-40';
         if (isChecked) return 'bg-green-900/40 border-green-700/60';
         if (isReadyToGuess) return 'bg-emerald-950/80 border-green-500/70 shadow-[0_0_8px_rgba(34,197,94,0.35)]';
         if (status === 'shadow') return 'bg-blue-950/30 border-blue-800/30 opacity-40';
@@ -116,6 +129,27 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
         return 'bg-gray-800/60 border-gray-700/30'; // locked
     };
 
+    // FEAT-10: slot + sprite size is driven by uiSettings.spriteSize (1x / 2x / 4x).
+    // Base = 44px (original w-11). Users with complaints about sprites being too small
+    // can bump this. Text overlays (dex #, shiny sparkle) stay at their intrinsic size
+    // so they remain legible at the corner of the larger slot without dominating it.
+    const slotPx = 44 * uiSettings.spriteSize;
+
+    // UI-01: "Who's That Pokémon?" silhouette. Unguessed/released/hinted slots get a
+    // blacked-out sprite with a gentle indigo (themeable) halo — nod to the anime
+    // reveal segment, tuned down so a 150-slot grid doesn't drown in aura. Pokegeared
+    // slots keep the dimmed-but-colored look so the "I paid to peek" signal stays
+    // distinct from a default silhouette.
+    const isSilhouette = status === 'shadow' || status === 'hint' || isReleased;
+    const silhouetteFilter = isSilhouette
+        ? (isPokegeared
+            ? 'brightness(0.5)'
+            : (uiSettings.silhouetteGlow
+                ? 'brightness(0) drop-shadow(0 0 2px var(--pp-silhouette-glow))'
+                : 'brightness(0)'))
+        : undefined;
+    const silhouetteOpacity = isSilhouette ? (isPokegeared ? 0.8 : 0.85) : 1;
+
     return (
         <div
             onClick={() => setSelectedPokemonId(pokemon.id)}
@@ -123,17 +157,20 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
                 if (!uiSettings.persistentDot && isReadyToGuess && !hasHovered) setHasHovered(true);
             }}
             className={`
-                w-11 h-11 rounded-md flex items-center justify-center transition-all duration-300 relative group cursor-pointer
+                flex items-center justify-center transition-all duration-300 relative group cursor-pointer
                 border
                 ${getBorderClass()}
                 ${isReadyToGuess ? 'hover:scale-110 hover:shadow-[0_0_14px_rgba(34,197,94,0.6)] active:scale-95' : 'hover:scale-105 active:scale-95'}
                 ${isShiny && isChecked ? 'shadow-[0_0_10px_rgba(255,215,0,0.4)]' : ''}
             `}
-            style={order !== undefined ? { order } : undefined}
+            style={{ width: slotPx, height: slotPx, borderRadius: 'var(--pp-slot-radius)', ...(order !== undefined ? { order } : {}) }}
             title={!canGuess ? reason : (isChecked ? cleanName : status === 'hint' ? `${cleanName} (Hinted)` : `#${pokemon.id}`)}
         >
             {isVisible && normalizedPmdUrl && !pmdError && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-visible">
+                <div
+                    className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-visible"
+                    style={silhouetteFilter ? { filter: silhouetteFilter, opacity: silhouetteOpacity } : undefined}
+                >
                     <PmdSpriteCanvas
                         id={pokemon.id}
                         baseUrl={normalizedPmdUrl}
@@ -142,12 +179,7 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
                         onError={() => { setPmdError(true); setPlayingAttack(false); }}
                         onFrameSize={playingAttack ? undefined : setIdleFrameSize}
                         referenceFrameSize={playingAttack && idleFrameSize ? idleFrameSize : undefined}
-                        filterClass={
-                            status === 'shadow' || status === 'hint' || releasedIds.has(pokemon.id)
-                                ? (isPokegeared ? 'brightness-50 opacity-80' : 'brightness-0 contrast-100 opacity-60')
-                                : ''
-                        }
-                        size={44}
+                        size={slotPx}
                     />
                 </div>
             )}
@@ -156,17 +188,16 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
                 <div className="absolute inset-0 flex items-center justify-center overflow-hidden pointer-events-none">
                     <img
                         src={spriteUrl}
-                        alt={pokemon.name}
+                        alt={isChecked ? pokemon.name : `Pokemon #${pokemon.id}`}
                         onLoad={() => setIsLoaded(true)}
                         onError={() => setHasError(true)}
-                        className={`
-                            object-contain z-10 transition-all duration-300
-                            ${isLoaded ? 'opacity-100' : 'opacity-0'}
-                            ${status === 'shadow' || status === 'hint' || releasedIds.has(pokemon.id)
-                                ? (isPokegeared ? 'brightness-50 opacity-80' : 'brightness-0 contrast-100 opacity-60')
-                                : ''}
-                        `}
-                        style={{ imageRendering: 'pixelated', width: '2.75rem', height: '2.75rem' }}
+                        className={`object-contain z-10 transition-all duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+                        style={{
+                            imageRendering: 'pixelated',
+                            width: slotPx,
+                            height: slotPx,
+                            ...(silhouetteFilter ? { filter: silhouetteFilter, opacity: isLoaded ? silhouetteOpacity : 0 } : {}),
+                        }}
                     />
                 </div>
             )}
@@ -175,11 +206,11 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
                 const hasSpriteContent = isVisible && ((uiSettings.enableSprites && spriteUrl && !hasError) || (normalizedPmdUrl && !pmdError));
                 const showLarge = !hasSpriteContent;
                 return showLarge ? (
-                    <span className="text-[11px] text-gray-500/80 font-mono font-bold z-10 pointer-events-none">
+                    <span className="text-gray-500/80 font-mono font-bold z-10 pointer-events-none" style={{ fontSize: 11 * uiSettings.spriteSize }}>
                         #{pokemon.id}
                     </span>
                 ) : (
-                    <span className="absolute bottom-0.5 left-0.5 text-[10px] text-gray-500/60 font-mono z-10 pointer-events-none">
+                    <span className="absolute bottom-0.5 left-0.5 text-gray-500/60 font-mono z-10 pointer-events-none" style={{ fontSize: 10 * uiSettings.spriteSize }}>
                         #{pokemon.id}
                     </span>
                 );
@@ -188,23 +219,23 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
             {/* Shiny sparkle indicator */}
             {isShiny && isChecked && (
                 <div className="absolute top-0.5 right-0.5 z-20 animate-pulse">
-                    <span className="text-[10px] leading-none drop-shadow-[0_0_2px_rgba(255,215,0,0.8)]">✨</span>
+                    <span className="leading-none drop-shadow-[0_0_2px_rgba(255,215,0,0.8)]" style={{ fontSize: 10 * uiSettings.spriteSize }}>✨</span>
                 </div>
             )}
 
             {/* Guessable indicator — type-colored dot; persistent or notification-style */}
             {isReadyToGuess && (uiSettings.persistentDot || !hasHovered) && (
-                <div className="absolute top-0.5 right-0.5 z-20 transition-opacity duration-300">
-                    <span className="block w-1.5 h-1.5 rounded-full" style={typeDotStyle} />
+                <div className="absolute top-0.5 right-0.5 z-20 transition-opacity duration-300" title={rawTypes.map(capitalize).join(' / ')}>
+                    <span className="block rounded-full" style={{ ...typeDotStyle, width: 6 * uiSettings.spriteSize, height: 6 * uiSettings.spriteSize }} />
                 </div>
             )}
 
             {status === 'unlocked' && (
-                <span className="text-yellow-700 text-lg font-bold opacity-40">?</span>
+                <span className="text-yellow-700 font-bold opacity-40" style={{ fontSize: 18 * uiSettings.spriteSize }}>?</span>
             )}
 
             {status === 'locked' && (
-                <span className="text-gray-700 text-[10px]">●</span>
+                <span className="text-gray-700" style={{ fontSize: 10 * uiSettings.spriteSize }}>●</span>
             )}
 
             {/* Tooltip */}
@@ -216,3 +247,13 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
         </div>
     );
 };
+
+// PERF-01 + PERF-02: React.memo with default shallow comparator. PokemonSlot now
+// subscribes ONLY to the narrow PokemonSlotContext (uiSettings, sprite bundle,
+// setSelectedPokemonId) via a memoized value, so unrelated game-state churn
+// (catches, item receives, log appends, traps firing on other slots) no longer
+// invalidates this slot's render. All per-pokemon state flows in as primitive
+// props: `status`, `isShiny`, `order`, `canGuess`, `reason`, `isReleased`,
+// `isPokegeared`, `isDerpified`. `pokemon` is stable via DexGrid's pokemonById
+// memo map. Shallow comparator is correct for every prop here.
+export const PokemonSlot = React.memo(PokemonSlotImpl);
