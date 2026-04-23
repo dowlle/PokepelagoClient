@@ -118,6 +118,7 @@ export interface UISettings {
     theme: 'default' | 'pokemon';
     alwaysShowTypes: boolean;
     spriteSize: 1 | 1.25 | 1.5 | 1.75 | 2;
+    silhouetteGlow: boolean;
 }
 
 interface ConnectionInfo {
@@ -342,6 +343,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             showDexNumbers: true, persistentDot: true, theme: 'default',
             alwaysShowTypes: false,
             spriteSize: 1,
+            silhouetteGlow: true,
         };
         if (saved) {
             try {

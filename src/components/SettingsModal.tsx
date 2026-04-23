@@ -284,6 +284,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                                             </div>
                                             <input type="checkbox" checked={uiSettings.enableShadows} onChange={(e) => updateUiSettings({ enableShadows: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-blue-600 focus:ring-blue-500" />
                                         </label>
+                                        <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
+                                            <div className="flex items-center gap-2">
+                                                <div
+                                                    className="w-4 h-4 rounded-full group-hover:scale-110 transition-transform"
+                                                    style={{ background: 'radial-gradient(circle, rgba(129,140,248,0.9) 0%, rgba(129,140,248,0.3) 55%, transparent 80%)' }}
+                                                />
+                                                <div>
+                                                    <div className="text-xs font-bold text-gray-200">Silhouette Glow</div>
+                                                    <div className="text-[9px] text-gray-500">Subtle halo around unguessed Pokemon silhouettes (&quot;Who&apos;s That Pokémon?&quot;)</div>
+                                                </div>
+                                            </div>
+                                            <input type="checkbox" checked={uiSettings.silhouetteGlow} onChange={(e) => updateUiSettings({ silhouetteGlow: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-indigo-600 focus:ring-indigo-500" />
+                                        </label>
                                     </div>
                                 </div>
 
