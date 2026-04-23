@@ -115,7 +115,6 @@ export interface UISettings {
     showDexNumbers: boolean;
     persistentDot: boolean;
     theme: 'default' | 'pokemon';
-    colorblindMode: 'off' | 'labels';
     alwaysShowTypes: boolean;
 }
 
@@ -338,7 +337,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const defaults: UISettings = {
             widescreen: false, masonry: false, enableSprites: true,
             enableShadows: false, spriteSet: 'normal', typeDot: true,
-            showDexNumbers: true, persistentDot: true, theme: 'default', colorblindMode: 'off',
+            showDexNumbers: true, persistentDot: true, theme: 'default',
             alwaysShowTypes: false,
         };
         if (saved) { try { return { ...defaults, ...JSON.parse(saved) }; } catch { /* corrupted */ } }
