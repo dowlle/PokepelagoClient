@@ -1129,6 +1129,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 routeKeyMapSize: routeKeyIdToName.size,
                 sampleRouteKeyIds: [...routeKeyIdToName.entries()].slice(0, 3),
                 itemOffsets: { ITEM_OFFSET: o.ITEM_OFFSET, ROUTE_KEY_OFFSET: o.ROUTE_KEY_OFFSET, LINE_UNLOCK_OFFSET: o.LINE_UNLOCK_OFFSET },
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 allItemIds: receivedItems.map((i: any) => i.id).sort((a: number, b: number) => a - b),
             });
         }
