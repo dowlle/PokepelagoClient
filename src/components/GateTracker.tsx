@@ -282,9 +282,14 @@ export const GateTracker: React.FC = () => {
                                 const isActiveFilter = categoryFilter === filterName;
                                 const complete = haveCount === total;
 
-                                // Compute per-route clearing data for this region
+                                // Compute per-route clearing data for this region.
+                                // UX-05: filter to entries that actually carry a Route Key item.
+                                // ROUTE_INFO includes both group keys (e.g. "sinnoh-mid") and the
+                                // 50+ individual sub-routes rolled up under them — the sub-routes
+                                // don't have their own Route Key items (b78d2e09) and shouldn't
+                                // render as separate rows in the expanded view.
                                 const regionRoutes = Object.entries(ROUTE_INFO)
-                                    .filter(([, info]) => info.region === region)
+                                    .filter(([rk, info]) => info.region === region && rk in ROUTE_KEY_ITEMS)
                                     .sort(([a], [b]) => a.localeCompare(b));
                                 const routeClearingData = regionRoutes.map(([rk, info]) => {
                                     const itemName = ROUTE_KEY_ITEMS[rk];
