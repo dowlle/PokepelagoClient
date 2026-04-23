@@ -1476,7 +1476,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         let recalculateItems = false;
 
         const typesMap = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
-        const sortedRouteKeys = Object.keys(ROUTE_KEY_ITEMS).sort();
+        // BUG-12: route-key ID ordering must match APWorld's two-phase sort (groups
+        // then ungrouped). See ROUTE_KEY_ORDER in routeData.ts. A flat sort here
+        // decoded Sinnoh/Unova/Roaming keys as the wrong item names.
+        const sortedRouteKeys = ROUTE_KEY_ORDER;
 
         items.forEach(item => {
             if (item.id > o.ITEM_OFFSET && item.id <= o.ITEM_OFFSET + 1025) {
