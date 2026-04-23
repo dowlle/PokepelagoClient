@@ -13,6 +13,100 @@ const changelog: Array<{
     highlights: Array<{ label: string; text: string }>;
 }> = [
         {
+            version: '0.6.0',
+            date: 'April 2026',
+            highlights: [
+                {
+                    label: 'Settings redesign',
+                    text: 'Settings now live in a tabbed modal (Interface / Sprites / Twitch) accessible from the gear icon in the top bar. The sidebar keeps Connection, Generations, and Sprite Set always one click away. Escape closes modals.',
+                },
+                {
+                    label: 'Progression v2',
+                    text: 'New optional locks layered on top of the existing gate system: Route Keys unlock groups of Pokémon by area, Line Unlocks unlock whole evolution families, and Badge Level Gating ties legendary tiers to gym badge count.',
+                },
+                {
+                    label: 'Pokémon theme',
+                    text: 'An alternative colourful, game-inspired skin. Pick it in Settings → Interface → Theme. The default dark theme is still there.',
+                },
+                {
+                    label: 'Smart auto-submit',
+                    text: 'Guesses submit instantly when your input has a single match (most of the time). The 250ms debounce only kicks in when your prefix could still grow into a longer Pokémon name.',
+                },
+                {
+                    label: 'Route Clearing display',
+                    text: 'The Gate Tracker now shows per-route progress so you can see which areas are almost cleared and which still have Pokémon hiding.',
+                },
+                {
+                    label: 'Shiny Charm log entry',
+                    text: 'When a Shiny Charm turns one of your caught Pokémon shiny, the log shows a pink entry naming exactly who got the glow-up.',
+                },
+                {
+                    label: 'Release Trap fix',
+                    text: 'Recaught Pokémon no longer get released again by stale DataStorage updates on reconnect.',
+                },
+                {
+                    label: 'Colorblind-friendly labels',
+                    text: 'Optional type abbreviations on the colored indicator dots, with full type-name tooltips on hover.',
+                },
+                {
+                    label: 'Dependency security hardening',
+                    text: 'All 28 dependencies pinned to exact versions. Patched vite path-traversal + WebSocket file read, picomatch method injection / ReDoS, and brace-expansion zero-step hang.',
+                },
+                {
+                    label: 'Built for Archipelago 0.6.6',
+                    text: 'Updated for the latest AP release. Small bug fixes in the standalone-mode state reset and the confetti CSP.',
+                },
+            ],
+        },
+        {
+            version: '0.5.1',
+            date: 'April 2026',
+            highlights: [
+                {
+                    label: 'Cleaner .apworld bundles',
+                    text: 'Test and dev files are now stripped from released .apworld packages.',
+                },
+                {
+                    label: 'Release workflow stability',
+                    text: 'Internal ap-actions checkout disabled for the public release path so CI no longer flakes on protected branches.',
+                },
+            ],
+        },
+        {
+            version: '0.5.0',
+            date: 'April 2026',
+            highlights: [
+                {
+                    label: 'Guided tour',
+                    text: 'First-time players get an interactive walkthrough covering connection, key settings, and how to guess. Re-run it any time from the Settings footer.',
+                },
+                {
+                    label: 'Master Ball bypass toggle',
+                    text: 'New YAML option master_ball_bypass_gates (default true) lets you decide whether Master Balls bypass lock gates or respect them.',
+                },
+                {
+                    label: 'Trade-evolution lock fixes',
+                    text: 'Foongus, Trevenant, and Gourgeist now correctly require the Link Cable when trade-locks are on.',
+                },
+                {
+                    label: 'Nidoran matching across languages',
+                    text: 'Nidoran♂ and Nidoran♀ now match correctly in all 11 languages regardless of how you type the symbol or abbreviation.',
+                },
+                {
+                    label: 'Automated releases',
+                    text: '.apworld and template YAML are now built and published by a CI workflow, with pre-flight version checks and an npm audit gate.',
+                },
+                {
+                    label: 'Reconnect safety',
+                    text: 'Traps no longer re-fire when you reconnect to an existing slot — processed counts are properly synced from the server.',
+                },
+                {
+                    label: 'Security + accessibility polish',
+                    text: 'Patched a high-severity flatted vulnerability and landed several medium-severity error-handling and accessibility improvements across the app.',
+                },
+            ],
+        },
+        {
             version: '0.4.0',
             date: 'March 2026',
             highlights: [
@@ -131,6 +225,14 @@ const changelog: Array<{
     ];
 
 export const CreditsModal: React.FC<CreditsModalProps> = ({ isOpen, onClose }) => {
+    // Escape-to-close
+    React.useEffect(() => {
+        if (!isOpen) return;
+        const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [isOpen, onClose]);
+
     if (!isOpen) return null;
 
     return createPortal(

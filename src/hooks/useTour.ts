@@ -6,6 +6,7 @@ export interface TourStep {
   title: string;
   description: string;
   panel?: 'settings' | 'tracker';
+  openModal?: 'settings';
   settingsSection?: string;
 }
 
@@ -57,7 +58,7 @@ const ARCHIPELAGO_STEPS: TourStep[] = [
     selector: 'sprite-url',
     title: 'Add Sprites',
     description: 'Paste a GitHub sprite URL to display Pokemon images. Check the splash screen for a quick setup link.',
-    panel: 'settings',
+    openModal: 'settings',
     settingsSection: 'sprites',
   },
   {
@@ -65,7 +66,7 @@ const ARCHIPELAGO_STEPS: TourStep[] = [
     selector: 'shadow-toggle',
     title: 'Shadow Mode',
     description: 'Enable shadows to show silhouettes for unguessed Pokemon, like "Who\'s That Pokemon?" Requires sprites.',
-    panel: 'settings',
+    openModal: 'settings',
     settingsSection: 'interface',
   },
   {

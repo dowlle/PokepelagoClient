@@ -61,74 +61,90 @@ export const PokemonDetails: React.FC = () => {
         [pmdSpriteUrl]
     );
 
+    // Escape-to-close
+    useEffect(() => {
+        if (!selectedPokemonId) return;
+        const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelectedPokemonId(null); };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [selectedPokemonId, setSelectedPokemonId]);
+
     const pokemon = allPokemon.find(p => p.id === selectedPokemonId);
     const isChecked = selectedPokemonId ? checkedIds.has(selectedPokemonId) : false;
     const isHinted = selectedPokemonId ? hintedIds.has(selectedPokemonId) : false;
+    // Only re-runs this effect when the selected pokemon's own derpy state flips,
+    // so opening the detail view does not force a full re-fetch on every Derp trap.
+    const isDerpified = selectedPokemonId ? derpyfiedIds.has(selectedPokemonId) : false;
 
     useEffect(() => {
-        if (selectedPokemonId) {
+        if (!selectedPokemonId) {
             // eslint-disable-next-line react-hooks/set-state-in-effect
-            setLoading(true);
-            setGifLoaded(false);
-            setPendingHint(null);
-            setScoutedItem(null);
-
-            // Fetch PokeAPI metadata
-            fetch(`https://pokeapi.co/api/v2/pokemon/${selectedPokemonId}`)
-                .then(res => res.json())
-                .then(data => {
-                    setDetails(data);
-                    setLoading(false);
-                })
-                .catch(err => {
-                    console.error('Failed to fetch pokemon details', err);
-                    setLoading(false);
-                });
-
-            // Fetch Local Sprite (prefer Derpemon > animated > static)
-            const loadLocalSprites = async () => {
-                const isShiny = shinyIds.has(selectedPokemonId);
-
-                // When Derpémon set is active, try the Derpemon static sprite first.
-                // Only fall back to animated/showdown if no Derpemon sprite exists.
-                if (uiSettings.spriteSet === 'derpemon') {
-                    const derpUrl = await getSpriteUrl(selectedPokemonId, { shiny: isShiny });
-                    if (derpUrl) {
-                        setSpriteUrl(derpUrl);
-                        return;
-                    }
-                }
-
-                // Default path: prefer animated, fall back to static
-                let url = await getSpriteUrl(selectedPokemonId, { shiny: isShiny, animated: true });
-                if (!url) {
-                    url = await getSpriteUrl(selectedPokemonId, { shiny: isShiny });
-                }
-                setSpriteUrl(url);
-                if (!url) setGifLoaded(true); // No sprite to load, mark as loaded to show info
-            };
-            loadLocalSprites();
-
-            // Scout item contents
-            if (isChecked && isConnected) {
-                scoutLocation(selectedPokemonId + locationOffset).then(res => {
-                    if (res) setScoutedItem(res);
-                }).catch(e => console.warn('Failed to scout location', e));
-            }
-        } else {
             setDetails(null);
             setSpriteUrl(prev => {
                 if (prev && prev.startsWith('blob:')) URL.revokeObjectURL(prev);
                 return null;
             });
+            return;
         }
-        return () => {
-            setSpriteUrl(prev => {
-                if (prev && prev.startsWith('blob:')) URL.revokeObjectURL(prev);
-                return null;
+
+        let active = true;
+        let createdUrl: string | null = null;
+
+        setLoading(true);
+        setGifLoaded(false);
+        setPendingHint(null);
+        setScoutedItem(null);
+
+        // Fetch PokeAPI metadata
+        fetch(`https://pokeapi.co/api/v2/pokemon/${selectedPokemonId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (!active) return;
+                setDetails(data);
+                setLoading(false);
+            })
+            .catch(err => {
+                if (!active) return;
+                console.error('Failed to fetch pokemon details', err);
+                setLoading(false);
             });
+
+        // Fetch Local Sprite (prefer Derpemon > animated > static)
+        const loadLocalSprites = async () => {
+            const isShiny = shinyIds.has(selectedPokemonId);
+
+            let url: string | null = null;
+            if (uiSettings.spriteSet === 'derpemon') {
+                url = await getSpriteUrl(selectedPokemonId, { shiny: isShiny });
+            }
+            if (!url) {
+                url = await getSpriteUrl(selectedPokemonId, { shiny: isShiny, animated: true });
+                if (!url) {
+                    url = await getSpriteUrl(selectedPokemonId, { shiny: isShiny });
+                }
+            }
+            if (active) {
+                createdUrl = url;
+                setSpriteUrl(url);
+                if (!url) setGifLoaded(true);
+            } else if (url && url.startsWith('blob:')) {
+                URL.revokeObjectURL(url);
+            }
         };
-    }, [selectedPokemonId, uiSettings.spriteSet, allPokemon, isChecked, isConnected, scoutLocation, shinyIds, getSpriteUrl, spriteRefreshCounter, locationOffset]);
+        loadLocalSprites();
+
+        // Scout item contents
+        if (isChecked && isConnected) {
+            scoutLocation(selectedPokemonId + locationOffset).then(res => {
+                if (active && res) setScoutedItem(res);
+            }).catch(e => console.warn('Failed to scout location', e));
+        }
+
+        return () => {
+            active = false;
+            if (createdUrl && createdUrl.startsWith('blob:')) URL.revokeObjectURL(createdUrl);
+        };
+    }, [selectedPokemonId, uiSettings.spriteSet, allPokemon, isChecked, isConnected, scoutLocation, shinyIds, getSpriteUrl, spriteRefreshCounter, locationOffset, isDerpified]);
 
     if (!selectedPokemonId || !pokemon) return null;
 

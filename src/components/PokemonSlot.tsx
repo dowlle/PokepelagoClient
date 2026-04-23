@@ -16,9 +16,13 @@ interface PokemonSlotProps {
 }
 
 export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShiny = false, order }) => {
-    const { setSelectedPokemonId, isPokemonGuessable, usedPokegears, getSpriteUrl, uiSettings, releasedIds, spriteRefreshCounter, pmdSpriteUrl } = useGame();
+    const { setSelectedPokemonId, isPokemonGuessable, usedPokegears, getSpriteUrl, uiSettings, releasedIds, spriteRefreshCounter, pmdSpriteUrl, derpyfiedIds } = useGame();
     const { canGuess, reason } = isPokemonGuessable(pokemon.id);
     const isPokegeared = usedPokegears.has(pokemon.id);
+    // Only slots whose own derpy state changes re-run the sprite-loading effect.
+    // Previously `getSpriteUrl` was a dep that churned on every Derp trap, tearing
+    // down every tile's sprite at once (BUG-03).
+    const isDerpified = derpyfiedIds.has(pokemon.id);
 
     const [spriteUrl, setSpriteUrl] = React.useState<string | null>(null);
     const [isLoaded, setIsLoaded] = React.useState(false);
@@ -51,9 +55,12 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
         setPlayingAttack(false);
     }, [normalizedPmdUrl]);
 
-    // Load sprite from local storage
+    // Load sprite. Cleanup does NOT null spriteUrl -- the <img> keeps rendering
+    // the old (possibly just-revoked) blob URL until the next effect resolves,
+    // which eliminates the blank flash on every re-run.
     React.useEffect(() => {
         let active = true;
+        let createdUrl: string | null = null;
         const loadSprite = async () => {
             if (!uiSettings.enableSprites) {
                 if (active) {
@@ -65,19 +72,19 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
 
             const url = await getSpriteUrl(pokemon.id, { shiny: isShiny });
             if (active) {
+                createdUrl = url;
                 setSpriteUrl(url);
                 if (!url) setHasError(true);
+            } else if (url && url.startsWith('blob:')) {
+                URL.revokeObjectURL(url);
             }
         };
         loadSprite();
         return () => {
             active = false;
-            setSpriteUrl(prev => {
-                if (prev && prev.startsWith('blob:')) URL.revokeObjectURL(prev);
-                return null;
-            });
+            if (createdUrl && createdUrl.startsWith('blob:')) URL.revokeObjectURL(createdUrl);
         };
-    }, [pokemon.id, isShiny, getSpriteUrl, uiSettings.enableSprites, spriteRefreshCounter]);
+    }, [pokemon.id, isShiny, getSpriteUrl, uiSettings.enableSprites, spriteRefreshCounter, isDerpified]);
 
     // Reset load state when url changes
     React.useEffect(() => {
