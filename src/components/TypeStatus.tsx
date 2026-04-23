@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import pokemonMetadata from '../data/pokemon_metadata.json';
-import { TYPE_COLORS, TYPE_ABBREVIATIONS } from '../utils/typeColors';
+import { TYPE_COLORS } from '../utils/typeColors';
 import { GENERATIONS } from '../types/pokemon';
 
 const TYPES_ORDER = [
@@ -12,7 +12,7 @@ const TYPES_ORDER = [
 ];
 
 export const TypeStatus: React.FC = () => {
-    const { typeUnlocks, typeLocksEnabled, checkedIds, activeRegions, generationFilter, isConnected, typeFilter, setTypeFilter, uiSettings } = useGame();
+    const { typeUnlocks, typeLocksEnabled, checkedIds, activeRegions, generationFilter, isConnected, typeFilter, setTypeFilter } = useGame();
 
     const typeStats = useMemo(() => {
         const stats: Record<string, { guessed: number; total: number }> = {};
@@ -104,7 +104,7 @@ export const TypeStatus: React.FC = () => {
                             `}
                             title={type}
                         >
-                            <span>{type}{uiSettings.colorblindMode === 'labels' ? ` (${TYPE_ABBREVIATIONS[type]})` : ''}</span>
+                            <span>{type}</span>
                             <span className="text-[10px] opacity-70 font-normal normal-case tracking-normal">
                                 ({typeStats[type]?.guessed ?? 0}/{typeStats[type]?.total ?? 0})
                             </span>
