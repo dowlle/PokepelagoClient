@@ -22,6 +22,7 @@ import { useSpriteManager } from '../hooks/useSpriteManager';
 import { useGoalChecker } from '../hooks/useGoalChecker';
 import { useTrapHandler } from '../hooks/useTrapHandler';
 import { applyTheme } from '../utils/themes';
+import { PokemonSlotContext, type PokemonSlotContextValue } from './PokemonSlotContext';
 
 /** localStorage.setItem wrapped in try/catch to handle QuotaExceededError gracefully. */
 function safeSetItem(key: string, value: string): void {
@@ -1770,6 +1771,19 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const gameStarted = !startingLocationsEnabled ||
         Array.from({ length: STARTER_COUNT }, (_, i) => i).some(i => checkedIds.has(STARTER_OFFSET + i));
 
+    // PERF-02: narrow context for the 1025x-rendered PokemonSlot. Only fields that
+    // are stable during gameplay live here; per-pokemon state (canGuess/isReleased/
+    // isPokegeared/isDerpified) flows via props from DexGrid instead. Value is
+    // memoized so React.memo on PokemonSlot can finally skip re-renders caused by
+    // unrelated game state changes.
+    const pokemonSlotContextValue = useMemo<PokemonSlotContextValue>(() => ({
+        uiSettings,
+        getSpriteUrl,
+        spriteRefreshCounter,
+        pmdSpriteUrl,
+        setSelectedPokemonId,
+    }), [uiSettings, getSpriteUrl, spriteRefreshCounter, pmdSpriteUrl]);
+
     return (
         <GameContext.Provider value={{
             allPokemon, unlockedIds, checkedIds, hintedIds, shinyIds, isLoading,
@@ -1821,7 +1835,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             TYPE_MILESTONE_MULTIPLIER: offsetsRef.current.TYPE_MILESTONE_MULTIPLIER,
             recheckMilestones,
         }}>
-            {children}
+            <PokemonSlotContext.Provider value={pokemonSlotContextValue}>
+                {children}
+            </PokemonSlotContext.Provider>
         </GameContext.Provider>
     );
 };
