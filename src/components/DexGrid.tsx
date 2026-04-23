@@ -337,33 +337,41 @@ export const DexGrid: React.FC = () => {
                             />
                         </div>
 
-                        {/* Body — always mounted so sprites stay loaded; hidden via CSS only */}
-                        <div className={`px-2 pb-3 sm:px-4 sm:pb-4 ${isRegionOpen ? '' : 'hidden'}`}>
-                            <div className="flex flex-wrap gap-1 sm:gap-1.5 justify-start">
-                                {pokemonInGen.map(p => {
-                                    // PERF-02: compute per-pokemon state here so PokemonSlot
-                                    // can be a context-free consumer. Pokemon that don't
-                                    // change between renders skip React.memo thanks to
-                                    // primitive-only props + PokemonSlotContext narrowing.
-                                    const { canGuess, reason } = isPokemonGuessable(p.id);
-                                    return (
-                                        <PokemonSlot
-                                            key={p.id}
-                                            pokemon={p}
-                                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                            status={getStatus(p.id) as any}
-                                            isShiny={shinyIds.has(p.id)}
-                                            order={shuffleOrder.get(p.id)}
-                                            canGuess={canGuess}
-                                            reason={reason}
-                                            isReleased={releasedIds.has(p.id)}
-                                            isPokegeared={usedPokegears.has(p.id)}
-                                            isDerpified={derpyfiedIds.has(p.id)}
-                                        />
-                                    );
-                                })}
+                        {/* PERF-03: unmount collapsed region bodies. Sprites re-fetch from
+                            IDB on re-expand (fast, tens of ms per slot). Keeps ~700 of the
+                            1025 DOM nodes out of the tree when users keep most regions
+                            collapsed. Previously always-mounted to preserve sprite state,
+                            but since PERF-02 broke the context-churn chain and useSpriteManager
+                            already caches in IDB, the always-mounted tradeoff is no longer
+                            worth the DOM weight. */}
+                        {isRegionOpen && (
+                            <div className="px-2 pb-3 sm:px-4 sm:pb-4">
+                                <div className="flex flex-wrap gap-1 sm:gap-1.5 justify-start">
+                                    {pokemonInGen.map(p => {
+                                        // PERF-02: compute per-pokemon state here so PokemonSlot
+                                        // can be a context-free consumer. Pokemon that don't
+                                        // change between renders skip React.memo thanks to
+                                        // primitive-only props + PokemonSlotContext narrowing.
+                                        const { canGuess, reason } = isPokemonGuessable(p.id);
+                                        return (
+                                            <PokemonSlot
+                                                key={p.id}
+                                                pokemon={p}
+                                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                                status={getStatus(p.id) as any}
+                                                isShiny={shinyIds.has(p.id)}
+                                                order={shuffleOrder.get(p.id)}
+                                                canGuess={canGuess}
+                                                reason={reason}
+                                                isReleased={releasedIds.has(p.id)}
+                                                isPokegeared={usedPokegears.has(p.id)}
+                                                isDerpified={derpyfiedIds.has(p.id)}
+                                            />
+                                        );
+                                    })}
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 );
             })}
