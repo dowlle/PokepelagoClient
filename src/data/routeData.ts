@@ -39,6 +39,35 @@ export const FAMILY_BASE = data.familyBase;
 export const ROUTE_KEY_ITEMS = data.routeKeyItems;
 
 /**
+ * Canonical ordering of route keys for item-ID assignment, matching
+ * APWorld worlds/pokepelago/Items.py: `sorted(ROUTE_GROUPS.keys()) + sorted(ungrouped)`.
+ *
+ * Why: APWorld assigns route-key item IDs as ITEM_OFFSET + ROUTE_KEY_OFFSET + index.
+ * The index is computed by a TWO-PHASE sort (groups first, then ungrouped). A flat
+ * alphabetical `Object.keys().sort()` on the client misaligns 16 of 80 keys,
+ * causing Sinnoh/Unova/Roaming keys to decode as the wrong item (BUG-12, client
+ * hotfix 2026-04-23 against APWorld v0.6.1).
+ *
+ * Pattern heuristic: ungrouped keys are all and only those prefixed with
+ * "roaming-" or "virtual-" (matches APWorld ROUTE_GROUPS vs ROUTE_DATA split
+ * as of schema B, shipped in v0.6.0+). The dev-time assertion below catches
+ * drift if a future APWorld change adds an ungrouped key outside this pattern.
+ *
+ * Backward compat: pre-0.6 seeds never send items in the ROUTE_KEY_OFFSET range
+ * (route keys didn't exist), so this ordering only affects v0.6+ seeds.
+ */
+const UNGROUPED_ROUTE_KEY_PREFIXES = ['roaming-', 'virtual-'] as const;
+const isUngroupedRouteKey = (k: string): boolean =>
+    UNGROUPED_ROUTE_KEY_PREFIXES.some(p => k.startsWith(p));
+
+export const ROUTE_KEY_ORDER: string[] = (() => {
+    const all = Object.keys(ROUTE_KEY_ITEMS);
+    const groups = all.filter(k => !isUngroupedRouteKey(k)).sort();
+    const ungrouped = all.filter(isUngroupedRouteKey).sort();
+    return [...groups, ...ungrouped];
+})();
+
+/**
  * Route key → list of Pokemon IDs on that route.
  * Derived from pokemonRoutes (pokemon→routes) by inverting.
  */
