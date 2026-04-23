@@ -1434,99 +1434,90 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const onItemsReceived = useCallback((items: Item[], client: Client) => {
         const o = offsetsRef.current;
+
+        // PERF-04: batch AP item updates. Collect every change from the batch into
+        // local accumulators, then apply ONE setter call per affected field. The old
+        // handler called setters inside the forEach — N items caused N renders per
+        // field (gym badges incrementing one at a time, Set re-copies for every
+        // stone, type key, route key, line unlock, region pass, and log entry).
+        const pokemonUnlocks: number[] = [];
+        const stonesAdd: string[] = [];
+        const typesAdd: string[] = [];
+        const regionsAdd: string[] = [];
+        const routeKeysAdd: string[] = [];
+        const lineUnlocksAdd: string[] = [];
+        const newLogs: LogEntry[] = [];
+        let gymBadgeDelta = 0;
+        let daycareDelta = 0;
+        let linkCable = false;
+        let ultraWormhole = false;
+        let timeRift = false;
+        let fossilRestorer = false;
+        let shinyCharmCount = 0;
         let recalculateItems = false;
+
+        const typesMap = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
+        const sortedRouteKeys = Object.keys(ROUTE_KEY_ITEMS).sort();
 
         items.forEach(item => {
             if (item.id > o.ITEM_OFFSET && item.id <= o.ITEM_OFFSET + 1025) {
-                unlockPokemon(item.id - o.ITEM_OFFSET);
+                pokemonUnlocks.push(item.id - o.ITEM_OFFSET);
             } else if (item.id === o.ITEM_OFFSET + 6020) {
-                // Shiny Charm: randomly assign shiny to a caught Pokemon
-                setCheckedIds(checked => {
-                    const caughtPokemon = Array.from(checked).filter(id => id >= 1 && id <= 1025);
-                    setShinyIds(prev => {
-                        const candidates = caughtPokemon.filter(id => !prev.has(id));
-                        if (candidates.length === 0) return prev;
-                        const pick = candidates[Math.floor(Math.random() * candidates.length)];
-                        const next = new Set(prev);
-                        next.add(pick);
-                        // Persist to DataStorage
-                        if (clientRef.current?.authenticated) {
-                            const t = clientRef.current.players.self.team;
-                            const s = clientRef.current.players.self.slot;
-                            clientRef.current.storage.prepare(
-                                `pokepelago_team_${t}_slot_${s}_shiny_pokemon`, []
-                            ).add([pick]).commit();
-                        }
-                        // Log the shiny assignment
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        const pokeName = (pokemonMetadata as any)[pick]?.name ?? `#${pick}`;
-                        setLogs(logs => [{
-                            id: crypto.randomUUID(), timestamp: Date.now(), type: 'system',
-                            text: `Shiny Charm! ${pokeName} is now shiny!`,
-                            parts: [{ text: `Shiny Charm! ${pokeName} is now shiny!`, type: 'color', color: '#EC4899' }],
-                        }, ...logs.slice(0, 99)]);
-                        return next;
-                    });
-                    return checked;
-                });
+                shinyCharmCount++;
             } else if (item.id === o.ITEM_OFFSET + 6000) {
-                setGymBadges(prev => prev + 1);
+                gymBadgeDelta++;
             } else if (item.id === o.ITEM_OFFSET + 6001) {
-                setHasLinkCable(true);
+                linkCable = true;
             } else if (item.id === o.ITEM_OFFSET + 6002) {
-                setDaycareCount(prev => prev + 1);
+                daycareDelta++;
             } else if (item.id === o.ITEM_OFFSET + 6003) {
-                setHasUltraWormhole(true);
+                ultraWormhole = true;
             } else if (item.id === o.ITEM_OFFSET + 6004) {
-                setHasTimeRift(true);
+                timeRift = true;
             } else if (item.id === o.ITEM_OFFSET + 6005) {
-                setHasFossilRestorer(true);
+                fossilRestorer = true;
             } else if (item.id >= o.ITEM_OFFSET + 6010 && item.id <= o.ITEM_OFFSET + 6019) {
                 const stone = STONE_NAMES_ORDERED[item.id - (o.ITEM_OFFSET + 6010)];
-                if (stone) setUnlockedStones(prev => new Set(prev).add(stone));
+                if (stone) stonesAdd.push(stone);
             } else if (item.id >= o.ITEM_OFFSET + o.TYPE_ITEM_OFFSET && item.id <= o.ITEM_OFFSET + o.TYPE_ITEM_OFFSET + 17) {
-                const types = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
-                const typeName = types[item.id - (o.ITEM_OFFSET + o.TYPE_ITEM_OFFSET)];
-                setTypeUnlocks(prev => new Set(prev).add(typeName));
-                setLogs(prev => [{
+                const typeName = typesMap[item.id - (o.ITEM_OFFSET + o.TYPE_ITEM_OFFSET)];
+                typesAdd.push(typeName);
+                newLogs.push({
                     id: crypto.randomUUID(), timestamp: Date.now(), type: 'system',
                     text: `Received Type Unlock: ${typeName}`,
                     parts: [{ text: `Received Type Unlock: ${typeName}`, type: 'color', color: '#10B981' }],
-                }, ...prev.slice(0, 99)]);
+                });
             } else if (item.id >= o.ITEM_OFFSET + o.ROUTE_KEY_OFFSET && item.id < o.ITEM_OFFSET + o.ROUTE_KEY_OFFSET + 1000) {
-                // Route Key received — resolve name from sorted route keys
-                const sortedKeys = Object.keys(ROUTE_KEY_ITEMS).sort();
                 const idx = item.id - (o.ITEM_OFFSET + o.ROUTE_KEY_OFFSET);
-                const rk = sortedKeys[idx];
+                const rk = sortedRouteKeys[idx];
                 if (rk) {
                     const keyName = ROUTE_KEY_ITEMS[rk];
-                    setRouteKeys(prev => new Set(prev).add(keyName));
-                    setLogs(prev => [{
+                    routeKeysAdd.push(keyName);
+                    newLogs.push({
                         id: crypto.randomUUID(), timestamp: Date.now(), type: 'system',
                         text: `Received ${keyName}`,
                         parts: [{ text: `Received ${keyName}`, type: 'color', color: '#F97316' }],
-                    }, ...prev.slice(0, 99)]);
+                    });
                 }
             } else if (item.id >= o.ITEM_OFFSET + o.LINE_UNLOCK_OFFSET && item.id < o.ITEM_OFFSET + o.LINE_UNLOCK_OFFSET + 1026) {
-                // Line Unlock received
                 const baseId = item.id - (o.ITEM_OFFSET + o.LINE_UNLOCK_OFFSET);
                 const lineName = LINE_UNLOCK_ITEMS[String(baseId)];
                 if (lineName) {
-                    setLineUnlocks(prev => new Set(prev).add(lineName));
-                    setLogs(prev => [{
+                    lineUnlocksAdd.push(lineName);
+                    newLogs.push({
                         id: crypto.randomUUID(), timestamp: Date.now(), type: 'system',
                         text: `Received ${lineName}`,
                         parts: [{ text: `Received ${lineName}`, type: 'color', color: '#A855F7' }],
-                    }, ...prev.slice(0, 99)]);
+                    });
                 }
             } else if (item.id >= o.ITEM_OFFSET + o.REGION_PASS_OFFSET && item.id < o.ITEM_OFFSET + o.REGION_PASS_OFFSET + GAME_REGIONS_ORDER.length) {
                 const regionName = GAME_REGIONS_ORDER[item.id - (o.ITEM_OFFSET + o.REGION_PASS_OFFSET)];
-                setRegionPasses(prev => new Set(prev).add(regionName));
-                setLogs(prev => [{
+                regionsAdd.push(regionName);
+                newLogs.push({
                     id: crypto.randomUUID(), timestamp: Date.now(), type: 'system',
                     text: `Received ${regionName} Pass!`,
                     parts: [{ text: `Received ${regionName} Pass!`, type: 'color', color: '#F59E0B' }],
-                }, ...prev.slice(0, 99)]);
+                });
             } else if (
                 item.id === o.ITEM_OFFSET + o.TRAP_ITEM_OFFSET + 1 ||
                 item.id === o.ITEM_OFFSET + o.TRAP_ITEM_OFFSET + 2 ||
@@ -1540,13 +1531,111 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
         });
 
+        // ── Apply batched updates: at most one setter call per affected field ──
+        if (pokemonUnlocks.length > 0) {
+            setUnlockedIds(prev => {
+                const next = new Set(prev);
+                let changed = false;
+                for (const id of pokemonUnlocks) {
+                    if (!next.has(id)) { next.add(id); changed = true; }
+                }
+                return changed ? next : prev;
+            });
+        }
+        if (stonesAdd.length > 0) {
+            setUnlockedStones(prev => {
+                const next = new Set(prev);
+                for (const s of stonesAdd) next.add(s);
+                return next;
+            });
+        }
+        if (typesAdd.length > 0) {
+            setTypeUnlocks(prev => {
+                const next = new Set(prev);
+                for (const t of typesAdd) next.add(t);
+                return next;
+            });
+        }
+        if (regionsAdd.length > 0) {
+            setRegionPasses(prev => {
+                const next = new Set(prev);
+                for (const r of regionsAdd) next.add(r);
+                return next;
+            });
+        }
+        if (routeKeysAdd.length > 0) {
+            setRouteKeys(prev => {
+                const next = new Set(prev);
+                for (const k of routeKeysAdd) next.add(k);
+                return next;
+            });
+        }
+        if (lineUnlocksAdd.length > 0) {
+            setLineUnlocks(prev => {
+                const next = new Set(prev);
+                for (const l of lineUnlocksAdd) next.add(l);
+                return next;
+            });
+        }
+        if (gymBadgeDelta > 0) setGymBadges(prev => prev + gymBadgeDelta);
+        if (daycareDelta > 0) setDaycareCount(prev => prev + daycareDelta);
+        if (linkCable) setHasLinkCable(true);
+        if (ultraWormhole) setHasUltraWormhole(true);
+        if (timeRift) setHasTimeRift(true);
+        if (fossilRestorer) setHasFossilRestorer(true);
+
+        // Shiny Charm: pick N distinct caught Pokemon in one pass. Uses checkedIdsRef
+        // (kept in sync via useEffect at line 393) instead of the old setCheckedIds →
+        // setShinyIds nested-callback hack for peeking at current state.
+        if (shinyCharmCount > 0) {
+            const caught = Array.from(checkedIdsRef.current).filter(id => id >= 1 && id <= 1025);
+            setShinyIds(prev => {
+                const pool = caught.filter(id => !prev.has(id));
+                if (pool.length === 0) return prev;
+                const picks: number[] = [];
+                const toPick = Math.min(shinyCharmCount, pool.length);
+                for (let i = 0; i < toPick; i++) {
+                    const idx = Math.floor(Math.random() * pool.length);
+                    picks.push(pool.splice(idx, 1)[0]);
+                }
+                // Persist all picks in one DataStorage commit
+                if (clientRef.current?.authenticated && picks.length > 0) {
+                    const t = clientRef.current.players.self.team;
+                    const s = clientRef.current.players.self.slot;
+                    clientRef.current.storage.prepare(
+                        `pokepelago_team_${t}_slot_${s}_shiny_pokemon`, []
+                    ).add(picks).commit();
+                }
+                // Push shiny-log entries into the same batched newLogs array so the
+                // single setLogs below covers them too
+                for (const pick of picks) {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const pokeName = (pokemonMetadata as any)[pick]?.name ?? `#${pick}`;
+                    newLogs.push({
+                        id: crypto.randomUUID(), timestamp: Date.now(), type: 'system',
+                        text: `Shiny Charm! ${pokeName} is now shiny!`,
+                        parts: [{ text: `Shiny Charm! ${pokeName} is now shiny!`, type: 'color', color: '#EC4899' }],
+                    });
+                }
+                const next = new Set(prev);
+                picks.forEach(id => next.add(id));
+                return next;
+            });
+        }
+
+        // Batch log entries. Old code prepended each log with prev.slice(0, 99);
+        // matching that: concatenate newLogs (reversed so newest-first) + prev, cap 100.
+        if (newLogs.length > 0) {
+            setLogs(prev => [...newLogs.slice().reverse(), ...prev].slice(0, 100));
+        }
+
         if (recalculateItems) {
             setUsedMasterBalls(used => { setMasterBalls(Math.max(0, client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 1).length - used.size)); return used; });
             setUsedPokegears(used => { setPokegears(Math.max(0, client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 2).length - used.size)); return used; });
             setUsedPokedexes(used => { setPokedexes(Math.max(0, client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 3).length - used.size)); return used; });
             processTrapItems(items, client);
         }
-    }, [unlockPokemon, processTrapItems]);
+    }, [processTrapItems]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const onPrintJSON = useCallback((packet: any, client: Client) => {
