@@ -927,26 +927,41 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (clientRef.current && isConnected) clientRef.current.messages.say(text);
     }, [isConnected]);
 
-    const setGameMode = useCallback((mode: 'archipelago' | 'standalone' | null) => {
-        // Reset all game state when switching modes
+    // Clear every piece of slot-specific state so nothing from a previous game/slot
+    // can leak into the next one. Used by onDisconnected() and setGameMode().
+    // Deliberately preserves: uiSettings, connectionInfo, gameMode, generationFilter,
+    // allPokemon, derpemonIndex, and loading flags.
+    const resetGameState = useCallback(() => {
+        // Per-player collections
         setUnlockedIds(new Set());
         setCheckedIds(new Set());
         setHintedIds(new Set());
         setShinyIds(new Set());
-        setLogs([]);
         setDerpyfiedIds(new Set());
         setReleasedIds(new Set());
-        setSpriteRefreshCounter(0);
+
+        // Logs + UI ephemeral state
+        setLogs([]);
+        setSelectedPokemonId(null);
         setTypeFilter([]);
         setDexFilter(new Set());
         setCategoryFilter(null);
-        setSelectedPokemonId(null);
+        setSpriteRefreshCounter(0);
+
+        // Useful-item counters + used sets
         setMasterBalls(0); setPokegears(0); setPokedexes(0);
         setUsedMasterBalls(new Set()); setUsedPokegears(new Set()); setUsedPokedexes(new Set());
         setShuffleEndTime(0);
+
+        // Slot/session identity
         setConnectedTeamSlot(null);
         setSlotMilestones(undefined);
         setSlotTypeMilestones(undefined);
+        setDetectedApWorldVersion('unknown');
+        setGoal(undefined);
+        setGoalCount(undefined);
+
+        // Gate items / progression
         setGymBadges(0);
         setHasLinkCable(false);
         setDaycareCount(0);
@@ -954,6 +969,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setHasUltraWormhole(false);
         setHasTimeRift(false);
         setUnlockedStones(new Set());
+        setRouteKeys(new Set());
+        setLineUnlocks(new Set());
+        setRegionPasses(new Set());
+        setTypeUnlocks(new Set());
+
+        // Lock-config flags (slot_data)
         setLegendaryLocksEnabled(false);
         setTradeLocksEnabled(false);
         setBabyLocksEnabled(false);
@@ -965,10 +986,23 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setRouteLocksEnabled(false);
         setLineLocksEnabled(false);
         setBadgeLevelGatingEnabled(false);
-        setRouteKeys(new Set());
-        setLineUnlocks(new Set());
+        setTypeLocksEnabled(false);
+        setRegionLocksEnabled(false);
+        setLegendaryGating(0);
+
+        // Slot-data scalars
+        setShadowsEnabled(false);
+        setDexsanityEnabled(true);
         setMasterBallBypassGates(true);
         setStartingStarter(null);
+        setActiveRegions({});
+        setStartingRegion('');
+        setStartingLocationsEnabled(true);
+        setActivePokemonLimit(386);
+    }, []);
+
+    const setGameMode = useCallback((mode: 'archipelago' | 'standalone' | null) => {
+        resetGameState();
 
         // Restore standalone saved data if switching to standalone
         if (mode === 'standalone') {
@@ -985,7 +1019,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setGameModeState(mode);
         if (mode) localStorage.setItem('pokepelago_gamemode', mode);
         else localStorage.removeItem('pokepelago_gamemode');
-    }, []);
+    }, [resetGameState]);
 
     const updateUiSettings = (newSettings: Partial<UISettings>) => {
         setUiSettings(prev => {
@@ -1394,49 +1428,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [currentProfileId, onDataStorageDerpUpdate, onDataStorageReleaseUpdate, onDataStorageRecaughtUpdate, initFromDataStorage]);
 
     const onDisconnected = useCallback(() => {
-        setUnlockedIds(new Set());
-        setCheckedIds(new Set());
-        setHintedIds(new Set());
-        setShinyIds(new Set());
-        setLogs([]);
-        setDerpyfiedIds(new Set());
-        setReleasedIds(new Set());
-        setSpriteRefreshCounter(0);
-        setTypeFilter([]);
-        setDexFilter(new Set());
-        setCategoryFilter(null);
-        setSelectedPokemonId(null);
-        setMasterBalls(0); setPokegears(0); setPokedexes(0);
-        setUsedMasterBalls(new Set()); setUsedPokegears(new Set()); setUsedPokedexes(new Set());
-        setShuffleEndTime(0);
-        setConnectedTeamSlot(null);
-        setSlotMilestones(undefined);
-        setSlotTypeMilestones(undefined);
-        // Reset gate items
-        setGymBadges(0);
-        setHasLinkCable(false);
-        setDaycareCount(0);
-        setHasFossilRestorer(false);
-        setHasUltraWormhole(false);
-        setHasTimeRift(false);
-        setUnlockedStones(new Set());
-        setLegendaryLocksEnabled(false);
-        setTradeLocksEnabled(false);
-        setBabyLocksEnabled(false);
-        setDaycareRequired(1);
-        setFossilLocksEnabled(false);
-        setUltraBeastLocksEnabled(false);
-        setParadoxLocksEnabled(false);
-        setStoneLocksEnabled(false);
-        setRouteLocksEnabled(false);
-        setLineLocksEnabled(false);
-        setBadgeLevelGatingEnabled(false);
-        setRouteKeys(new Set());
-        setLineUnlocks(new Set());
-        setMasterBallBypassGates(true);
-        setStartingStarter(null);
+        resetGameState();
         localStorage.setItem('pokepelago_connected', 'false');
-    }, []);
+    }, [resetGameState]);
 
     const onItemsReceived = useCallback((items: Item[], client: Client) => {
         const o = offsetsRef.current;
