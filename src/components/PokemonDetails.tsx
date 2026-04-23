@@ -69,6 +69,35 @@ export const PokemonDetails: React.FC = () => {
         return () => window.removeEventListener('keydown', handler);
     }, [selectedPokemonId, setSelectedPokemonId]);
 
+    // FEAT-08 sub-3: A/D + ArrowLeft/ArrowRight to navigate between unguessed Pokemon.
+    // Wraps around at the ends. Yields to inputs so global guess bar typing is not hijacked.
+    useEffect(() => {
+        if (!selectedPokemonId) return;
+        const handleKey = (e: KeyboardEvent) => {
+            const target = document.activeElement as HTMLElement | null;
+            if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+                return;
+            }
+            let delta = 0;
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') delta = -1;
+            else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') delta = 1;
+            if (delta === 0) return;
+
+            const sorted = [...allPokemon].sort((a, b) => a.id - b.id);
+            const unguessed = sorted.filter(p => !checkedIds.has(p.id));
+            if (unguessed.length === 0) return;
+
+            e.preventDefault();
+            const currentIdx = unguessed.findIndex(p => p.id === selectedPokemonId);
+            const nextIdx = currentIdx === -1
+                ? (delta > 0 ? 0 : unguessed.length - 1)
+                : (currentIdx + delta + unguessed.length) % unguessed.length;
+            setSelectedPokemonId(unguessed[nextIdx].id);
+        };
+        window.addEventListener('keydown', handleKey);
+        return () => window.removeEventListener('keydown', handleKey);
+    }, [selectedPokemonId, allPokemon, checkedIds, setSelectedPokemonId]);
+
     const pokemon = allPokemon.find(p => p.id === selectedPokemonId);
     const isChecked = selectedPokemonId ? checkedIds.has(selectedPokemonId) : false;
     const isHinted = selectedPokemonId ? hintedIds.has(selectedPokemonId) : false;
@@ -153,7 +182,8 @@ export const PokemonDetails: React.FC = () => {
 
     // Only show name and real info if guessed (checked)
     const showInfo = isChecked;
-    const showShadow = isUnlocked && !isChecked;
+    // FEAT-08 sub-1: also show shadow when global shadows setting is on, regardless of isUnlocked
+    const showShadow = !isChecked && (isUnlocked || uiSettings.enableShadows);
 
     const handleHintClick = (itemName: string) => {
         if (pendingHint === itemName) {
@@ -216,7 +246,7 @@ export const PokemonDetails: React.FC = () => {
                         <div className="w-12 h-12 border-4 border-blue-500 rounded-full animate-spin border-t-transparent opacity-50 absolute z-0"></div>
                     )}
 
-                    {isUnlocked || isChecked ? (
+                    {isUnlocked || isChecked || uiSettings.enableShadows ? (
                         <div className="relative">
                             {isShiny && isChecked && (
                                 <div className="absolute -inset-8 bg-yellow-500/10 blur-3xl animate-pulse rounded-full" />
@@ -489,7 +519,7 @@ export const PokemonDetails: React.FC = () => {
                                                 : 'bg-gray-800/40 border-gray-700/50 hover:bg-gray-700/50 active:scale-95 disabled:opacity-30 disabled:grayscale disabled:hover:bg-gray-800/40'}
                                         `}
                                     >
-                                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 text-gray-200 text-[9px] rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-gray-700 z-50">
+                                        <div className="absolute -top-9 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 text-gray-200 text-[9px] rounded w-max max-w-[180px] text-center leading-tight opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-gray-700 z-50">
                                             Reveals silhouette, types, and generation
                                         </div>
                                         <div className="w-10 h-10 flex items-center justify-center mb-1">
@@ -512,7 +542,7 @@ export const PokemonDetails: React.FC = () => {
                                                 : 'bg-gray-800/40 border-gray-700/50 hover:bg-gray-700/50 active:scale-95 disabled:opacity-30 disabled:grayscale disabled:hover:bg-gray-800/40'}
                                         `}
                                     >
-                                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 text-gray-200 text-[9px] rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-gray-700 z-50">
+                                        <div className="absolute -top-9 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 text-gray-200 text-[9px] rounded w-max max-w-[180px] text-center leading-tight opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-gray-700 z-50">
                                             Reveals the 3 letters of this Pokemon's name
                                         </div>
                                         <div className="w-10 h-10 flex items-center justify-center mb-1">
@@ -530,7 +560,7 @@ export const PokemonDetails: React.FC = () => {
                                         disabled={masterBalls === 0 || !!itemCooldown || (!masterBallBypassGates && !canGuess)}
                                         className="group relative flex flex-col items-center justify-center p-3 rounded-2xl border bg-gray-800/40 border-gray-700/50 hover:bg-red-900/20 hover:border-red-500/40 active:scale-95 disabled:opacity-30 disabled:grayscale disabled:hover:bg-gray-800/40 transition-all"
                                     >
-                                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 text-gray-200 text-[9px] rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-gray-700 z-50">
+                                        <div className="absolute -top-9 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-900 text-gray-200 text-[9px] rounded w-max max-w-[180px] text-center leading-tight opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-gray-700 z-50">
                                             Instantly reveals this Pokemon without guessing
                                         </div>
                                         <div className="w-10 h-10 flex items-center justify-center mb-1">
