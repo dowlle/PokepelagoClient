@@ -146,11 +146,19 @@ export const PokemonDetails: React.FC = () => {
             });
 
         // Fetch Local Sprite (prefer Derpemon > animated > static)
+        //
+        // BUG-10: useSpriteManager.getSpriteUrl() only returns the derpemon sprite when
+        // `!options.animated`. So if this Pokemon is derpyfied (Derp-trap victim), we must
+        // take the non-animated path first — otherwise the animated fetch wins and the
+        // Pokemon shows its normal animated gif in the modal while the grid correctly
+        // shows the derpemon. Applies both to globally-chosen spriteSet === 'derpemon'
+        // AND to per-Pokemon trap-driven derpyfiedIds membership.
         const loadLocalSprites = async () => {
             const isShiny = shinyIds.has(selectedPokemonId);
+            const isDerpified = derpyfiedIds.has(selectedPokemonId);
 
             let url: string | null = null;
-            if (uiSettings.spriteSet === 'derpemon') {
+            if (uiSettings.spriteSet === 'derpemon' || isDerpified) {
                 url = await getSpriteUrl(selectedPokemonId, { shiny: isShiny });
             }
             if (!url) {
