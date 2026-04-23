@@ -328,11 +328,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                                         </div>
                                     </div>
                                     <div className="flex gap-1 bg-gray-900/80 border border-gray-700 rounded-lg p-0.5">
-                                        {([1, 1.5, 2] as const).map(size => (
+                                        {([1, 1.25, 1.5, 1.75, 2] as const).map(size => (
                                             <button
                                                 key={size}
                                                 onClick={() => updateUiSettings({ spriteSize: size })}
-                                                className={`px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded transition-all ${uiSettings.spriteSize === size ? 'bg-yellow-600 text-white shadow-lg' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'}`}
+                                                className={`px-2 py-1 text-[10px] font-black uppercase tracking-wider rounded transition-all ${uiSettings.spriteSize === size ? 'bg-yellow-600 text-white shadow-lg' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'}`}
                                             >
                                                 {size}x
                                             </button>

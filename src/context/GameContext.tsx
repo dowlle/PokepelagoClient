@@ -116,7 +116,7 @@ export interface UISettings {
     persistentDot: boolean;
     theme: 'default' | 'pokemon';
     alwaysShowTypes: boolean;
-    spriteSize: 1 | 1.5 | 2;
+    spriteSize: 1 | 1.25 | 1.5 | 1.75 | 2;
 }
 
 interface ConnectionInfo {
@@ -345,10 +345,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (saved) {
             try {
                 const merged = { ...defaults, ...JSON.parse(saved) };
-                // FEAT-10: spriteSize was temporarily 1 | 2 | 4; it's now 1 | 1.5 | 2.
-                // Sanitize stale localStorage values of 4 (or anything else out of range)
-                // back to 1 so the UI stays consistent with the SettingsModal picker.
-                if (![1, 1.5, 2].includes(merged.spriteSize)) merged.spriteSize = 1;
+                // FEAT-10: spriteSize has gone through two schema changes today —
+                // first 1 | 2 | 4, then 1 | 1.5 | 2, now 1 | 1.25 | 1.5 | 1.75 | 2.
+                // Sanitize any stale localStorage value not in the current set back to 1
+                // so the UI stays consistent with the SettingsModal picker.
+                if (![1, 1.25, 1.5, 1.75, 2].includes(merged.spriteSize)) merged.spriteSize = 1;
                 return merged;
             } catch { /* corrupted */ }
         }
