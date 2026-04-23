@@ -144,7 +144,9 @@ const PokemonSlotImpl: React.FC<PokemonSlotProps> = ({
     const silhouetteFilter = isSilhouette
         ? (isPokegeared
             ? 'brightness(0.5)'
-            : 'brightness(0) drop-shadow(0 0 2px var(--pp-silhouette-glow))')
+            : (uiSettings.silhouetteGlow
+                ? 'brightness(0) drop-shadow(0 0 2px var(--pp-silhouette-glow))'
+                : 'brightness(0)'))
         : undefined;
     const silhouetteOpacity = isSilhouette ? (isPokegeared ? 0.8 : 0.85) : 1;
 
