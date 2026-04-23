@@ -225,6 +225,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                                     </label>
                                     <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
                                         <div className="flex items-center gap-2">
+                                            <div className="flex gap-0.5 group-hover:scale-110 transition-transform">
+                                                <span className="px-1 py-0 rounded text-[8px] font-bold" style={{ backgroundColor: '#EE813033', color: '#EE8130', border: '1px solid #EE813066' }}>FIRE</span>
+                                            </div>
+                                            <div>
+                                                <div className="text-xs font-bold text-gray-200">Always Show Types</div>
+                                                <div className="text-[9px] text-gray-500">Reveal Pokemon types in the details modal without guessing first</div>
+                                            </div>
+                                        </div>
+                                        <input type="checkbox" checked={uiSettings.alwaysShowTypes} onChange={(e) => updateUiSettings({ alwaysShowTypes: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-orange-600 focus:ring-orange-500" />
+                                    </label>
+                                    <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
+                                        <div className="flex items-center gap-2">
                                             <div className="w-4 h-4 flex items-center justify-center text-cyan-400 font-mono text-[10px] font-bold group-hover:scale-110 transition-transform">#</div>
                                             <div>
                                                 <div className="text-xs font-bold text-gray-200">Show Dex Numbers</div>
