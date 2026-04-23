@@ -328,7 +328,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                                         </div>
                                     </div>
                                     <div className="flex gap-1 bg-gray-900/80 border border-gray-700 rounded-lg p-0.5">
-                                        {([1, 2, 4] as const).map(size => (
+                                        {([1, 1.5, 2] as const).map(size => (
                                             <button
                                                 key={size}
                                                 onClick={() => updateUiSettings({ spriteSize: size })}

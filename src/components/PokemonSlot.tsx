@@ -188,11 +188,11 @@ const PokemonSlotImpl: React.FC<PokemonSlotProps> = ({ pokemon, status, isShiny 
                 const hasSpriteContent = isVisible && ((uiSettings.enableSprites && spriteUrl && !hasError) || (normalizedPmdUrl && !pmdError));
                 const showLarge = !hasSpriteContent;
                 return showLarge ? (
-                    <span className="text-[11px] text-gray-500/80 font-mono font-bold z-10 pointer-events-none">
+                    <span className="text-gray-500/80 font-mono font-bold z-10 pointer-events-none" style={{ fontSize: 11 * uiSettings.spriteSize }}>
                         #{pokemon.id}
                     </span>
                 ) : (
-                    <span className="absolute bottom-0.5 left-0.5 text-[10px] text-gray-500/60 font-mono z-10 pointer-events-none">
+                    <span className="absolute bottom-0.5 left-0.5 text-gray-500/60 font-mono z-10 pointer-events-none" style={{ fontSize: 10 * uiSettings.spriteSize }}>
                         #{pokemon.id}
                     </span>
                 );
@@ -201,23 +201,23 @@ const PokemonSlotImpl: React.FC<PokemonSlotProps> = ({ pokemon, status, isShiny 
             {/* Shiny sparkle indicator */}
             {isShiny && isChecked && (
                 <div className="absolute top-0.5 right-0.5 z-20 animate-pulse">
-                    <span className="text-[10px] leading-none drop-shadow-[0_0_2px_rgba(255,215,0,0.8)]">✨</span>
+                    <span className="leading-none drop-shadow-[0_0_2px_rgba(255,215,0,0.8)]" style={{ fontSize: 10 * uiSettings.spriteSize }}>✨</span>
                 </div>
             )}
 
             {/* Guessable indicator — type-colored dot; persistent or notification-style */}
             {isReadyToGuess && (uiSettings.persistentDot || !hasHovered) && (
                 <div className="absolute top-0.5 right-0.5 z-20 transition-opacity duration-300" title={rawTypes.map(capitalize).join(' / ')}>
-                    <span className="block w-1.5 h-1.5 rounded-full" style={typeDotStyle} />
+                    <span className="block rounded-full" style={{ ...typeDotStyle, width: 6 * uiSettings.spriteSize, height: 6 * uiSettings.spriteSize }} />
                 </div>
             )}
 
             {status === 'unlocked' && (
-                <span className="text-yellow-700 text-lg font-bold opacity-40">?</span>
+                <span className="text-yellow-700 font-bold opacity-40" style={{ fontSize: 18 * uiSettings.spriteSize }}>?</span>
             )}
 
             {status === 'locked' && (
-                <span className="text-gray-700 text-[10px]">●</span>
+                <span className="text-gray-700" style={{ fontSize: 10 * uiSettings.spriteSize }}>●</span>
             )}
 
             {/* Tooltip */}
