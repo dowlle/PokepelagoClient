@@ -8,13 +8,13 @@ import pokemonMetadata from '../data/pokemon_metadata.json';
 import { getCleanName } from '../utils/pokemon';
 import { updateProfile } from '../services/connectionManagerService';
 import { loadDerpemonIndex, type DerpemonIndex } from '../services/derpemonService';
-import { GAME_REGIONS_ORDER } from '../hooks/useOffsets';
 import {
     SUB_LEGENDARY_IDS, BOX_LEGENDARY_IDS, MYTHIC_IDS,
     BABY_IDS, TRADE_EVO_IDS, FOSSIL_IDS, ULTRA_BEAST_IDS, PARADOX_IDS,
     STONE_EVO_IDS, STONE_NAMES_ORDERED,
 } from '../data/pokemon_gates';
-import { getRouteKeysForPokemon, getLineUnlockForPokemon, getBadgeRequirement, ROUTE_KEY_ITEMS, ROUTE_KEY_ORDER, LINE_UNLOCK_ITEMS, ROUTE_INFO, ROUTE_POKEMON } from '../data/routeData';
+import { getRouteKeysForPokemon, getLineUnlockForPokemon, getBadgeRequirement, ROUTE_KEY_ITEMS, ROUTE_INFO, ROUTE_POKEMON } from '../data/routeData';
+import { decodeRouteKey, decodeLineUnlock, decodeTypeKey, decodeRegionPass } from '../data/itemDecoding';
 import type { OffsetTable } from '../hooks/useOffsets';
 import type { MutableRefObject } from 'react';
 import { useAPConnection } from '../hooks/useAPConnection';
@@ -1144,66 +1144,44 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         setUnlockedStones(newStones);
 
-        // Reconstruct Type Unlocks
-        const typesMap = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
+        // Reconstruct Type Unlocks / Region Passes / Route Keys / Line Unlocks
+        // via the shared decoders in src/data/itemDecoding.ts. Both this path
+        // (initial replay) and onItemsReceived (streaming updates) use the same
+        // helpers so the ID -> name mapping has one source of truth — see BUG-12
+        // for the class of bug where duplicated inline ID math drifted.
         const newTypeUnlocks = new Set<string>();
+        const newRegionPasses = new Set<string>();
+        const newRouteKeys = new Set<string>();
+        const newLineUnlocks = new Set<string>();
         receivedItems.forEach(item => {
-            if (item.id >= o.ITEM_OFFSET + o.TYPE_ITEM_OFFSET && item.id <= o.ITEM_OFFSET + o.TYPE_ITEM_OFFSET + 17)
-                newTypeUnlocks.add(typesMap[item.id - (o.ITEM_OFFSET + o.TYPE_ITEM_OFFSET)]);
+            const typeName = decodeTypeKey(item.id, o);
+            if (typeName) { newTypeUnlocks.add(typeName); return; }
+            const regionName = decodeRegionPass(item.id, o);
+            if (regionName) { newRegionPasses.add(regionName); return; }
+            const routeKeyName = decodeRouteKey(item.id, o);
+            if (routeKeyName) { newRouteKeys.add(routeKeyName); return; }
+            const lineName = decodeLineUnlock(item.id, o);
+            if (lineName) { newLineUnlocks.add(lineName); return; }
         });
         setTypeUnlocks(newTypeUnlocks);
-
-        // Reconstruct Region Passes
-        const newRegionPasses = new Set<string>();
-        receivedItems.forEach(item => {
-            const idx = item.id - (o.ITEM_OFFSET + o.REGION_PASS_OFFSET);
-            if (idx >= 0 && idx < GAME_REGIONS_ORDER.length) newRegionPasses.add(GAME_REGIONS_ORDER[idx]);
-        });
         setRegionPasses(newRegionPasses);
+        setRouteKeys(newRouteKeys);
+        setLineUnlocks(newLineUnlocks);
 
-        // Reconstruct Route Keys (v2 progression)
-        // Route Key IDs: ITEM_OFFSET + ROUTE_KEY_OFFSET + sequential index
-        // Index ordering matches APWorld Items.py (two-phase: groups then ungrouped);
-        // see ROUTE_KEY_ORDER in routeData.ts. A flat Object.keys().sort() here
-        // previously misaligned 16 of 80 keys (BUG-12, client hotfix 2026-04-23).
-        {
-            const routeKeyIdToName = new Map<number, string>();
-            ROUTE_KEY_ORDER.forEach((rk, i) => {
-                routeKeyIdToName.set(o.ITEM_OFFSET + o.ROUTE_KEY_OFFSET + i, ROUTE_KEY_ITEMS[rk]);
-            });
-            const newRouteKeys = new Set<string>();
-            receivedItems.forEach(item => {
-                const name = routeKeyIdToName.get(item.id);
-                if (name) newRouteKeys.add(name);
-            });
-            setRouteKeys(newRouteKeys);
-
-            // Reconstruct Line Unlocks
-            // Line Unlock IDs: ITEM_OFFSET + LINE_UNLOCK_OFFSET + base_pokemon_id
-            const newLineUnlocks = new Set<string>();
-            receivedItems.forEach(item => {
-                const baseId = item.id - (o.ITEM_OFFSET + o.LINE_UNLOCK_OFFSET);
-                if (baseId > 0 && baseId <= 1025) {
-                    const name = LINE_UNLOCK_ITEMS[String(baseId)];
-                    if (name) newLineUnlocks.add(name);
-                }
-            });
-            setLineUnlocks(newLineUnlocks);
-
-            // DEBUG: log reconstruction results
-            console.log('[DEBUG] Route/Line reconstruction:', {
-                totalReceivedItems: receivedItems.length,
-                routeKeysFound: newRouteKeys.size,
-                lineUnlocksFound: newLineUnlocks.size,
-                routeKeys: [...newRouteKeys],
-                lineUnlocks: [...newLineUnlocks],
-                routeKeyMapSize: routeKeyIdToName.size,
-                sampleRouteKeyIds: [...routeKeyIdToName.entries()].slice(0, 3),
-                itemOffsets: { ITEM_OFFSET: o.ITEM_OFFSET, ROUTE_KEY_OFFSET: o.ROUTE_KEY_OFFSET, LINE_UNLOCK_OFFSET: o.LINE_UNLOCK_OFFSET },
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                allItemIds: receivedItems.map((i: any) => i.id).sort((a: number, b: number) => a - b),
-            });
-        }
+        // DEBUG: log reconstruction results — kept from the BUG-12 diagnostic
+        // session so future decode issues are easy to spot in the console.
+        console.log('[DEBUG] Route/Line reconstruction:', {
+            totalReceivedItems: receivedItems.length,
+            routeKeysFound: newRouteKeys.size,
+            lineUnlocksFound: newLineUnlocks.size,
+            typeUnlocksFound: newTypeUnlocks.size,
+            regionPassesFound: newRegionPasses.size,
+            routeKeys: [...newRouteKeys],
+            lineUnlocks: [...newLineUnlocks],
+            itemOffsets: { ITEM_OFFSET: o.ITEM_OFFSET, ROUTE_KEY_OFFSET: o.ROUTE_KEY_OFFSET, LINE_UNLOCK_OFFSET: o.LINE_UNLOCK_OFFSET, TYPE_ITEM_OFFSET: o.TYPE_ITEM_OFFSET, REGION_PASS_OFFSET: o.REGION_PASS_OFFSET },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            allItemIds: receivedItems.map((i: any) => i.id).sort((a: number, b: number) => a - b),
+        });
 
         // Parse slot data
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1475,72 +1453,67 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         let shinyCharmCount = 0;
         let recalculateItems = false;
 
-        const typesMap = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
-        // BUG-12: route-key ID ordering must match APWorld's two-phase sort (groups
-        // then ungrouped). See ROUTE_KEY_ORDER in routeData.ts. A flat sort here
-        // decoded Sinnoh/Unova/Roaming keys as the wrong item names.
-        const sortedRouteKeys = ROUTE_KEY_ORDER;
-
         items.forEach(item => {
             if (item.id > o.ITEM_OFFSET && item.id <= o.ITEM_OFFSET + 1025) {
                 pokemonUnlocks.push(item.id - o.ITEM_OFFSET);
-            } else if (item.id === o.ITEM_OFFSET + 6020) {
-                shinyCharmCount++;
-            } else if (item.id === o.ITEM_OFFSET + 6000) {
-                gymBadgeDelta++;
-            } else if (item.id === o.ITEM_OFFSET + 6001) {
-                linkCable = true;
-            } else if (item.id === o.ITEM_OFFSET + 6002) {
-                daycareDelta++;
-            } else if (item.id === o.ITEM_OFFSET + 6003) {
-                ultraWormhole = true;
-            } else if (item.id === o.ITEM_OFFSET + 6004) {
-                timeRift = true;
-            } else if (item.id === o.ITEM_OFFSET + 6005) {
-                fossilRestorer = true;
-            } else if (item.id >= o.ITEM_OFFSET + 6010 && item.id <= o.ITEM_OFFSET + 6019) {
+                return;
+            }
+            if (item.id === o.ITEM_OFFSET + 6020) { shinyCharmCount++; return; }
+            if (item.id === o.ITEM_OFFSET + 6000) { gymBadgeDelta++; return; }
+            if (item.id === o.ITEM_OFFSET + 6001) { linkCable = true; return; }
+            if (item.id === o.ITEM_OFFSET + 6002) { daycareDelta++; return; }
+            if (item.id === o.ITEM_OFFSET + 6003) { ultraWormhole = true; return; }
+            if (item.id === o.ITEM_OFFSET + 6004) { timeRift = true; return; }
+            if (item.id === o.ITEM_OFFSET + 6005) { fossilRestorer = true; return; }
+            if (item.id >= o.ITEM_OFFSET + 6010 && item.id <= o.ITEM_OFFSET + 6019) {
                 const stone = STONE_NAMES_ORDERED[item.id - (o.ITEM_OFFSET + 6010)];
                 if (stone) stonesAdd.push(stone);
-            } else if (item.id >= o.ITEM_OFFSET + o.TYPE_ITEM_OFFSET && item.id <= o.ITEM_OFFSET + o.TYPE_ITEM_OFFSET + 17) {
-                const typeName = typesMap[item.id - (o.ITEM_OFFSET + o.TYPE_ITEM_OFFSET)];
+                return;
+            }
+
+            // Decode via shared helpers so this path agrees with onConnected.
+            const typeName = decodeTypeKey(item.id, o);
+            if (typeName) {
                 typesAdd.push(typeName);
                 newLogs.push({
                     id: crypto.randomUUID(), timestamp: Date.now(), type: 'system',
                     text: `Received Type Unlock: ${typeName}`,
                     parts: [{ text: `Received Type Unlock: ${typeName}`, type: 'color', color: '#10B981' }],
                 });
-            } else if (item.id >= o.ITEM_OFFSET + o.ROUTE_KEY_OFFSET && item.id < o.ITEM_OFFSET + o.ROUTE_KEY_OFFSET + 1000) {
-                const idx = item.id - (o.ITEM_OFFSET + o.ROUTE_KEY_OFFSET);
-                const rk = sortedRouteKeys[idx];
-                if (rk) {
-                    const keyName = ROUTE_KEY_ITEMS[rk];
-                    routeKeysAdd.push(keyName);
-                    newLogs.push({
-                        id: crypto.randomUUID(), timestamp: Date.now(), type: 'system',
-                        text: `Received ${keyName}`,
-                        parts: [{ text: `Received ${keyName}`, type: 'color', color: '#F97316' }],
-                    });
-                }
-            } else if (item.id >= o.ITEM_OFFSET + o.LINE_UNLOCK_OFFSET && item.id < o.ITEM_OFFSET + o.LINE_UNLOCK_OFFSET + 1026) {
-                const baseId = item.id - (o.ITEM_OFFSET + o.LINE_UNLOCK_OFFSET);
-                const lineName = LINE_UNLOCK_ITEMS[String(baseId)];
-                if (lineName) {
-                    lineUnlocksAdd.push(lineName);
-                    newLogs.push({
-                        id: crypto.randomUUID(), timestamp: Date.now(), type: 'system',
-                        text: `Received ${lineName}`,
-                        parts: [{ text: `Received ${lineName}`, type: 'color', color: '#A855F7' }],
-                    });
-                }
-            } else if (item.id >= o.ITEM_OFFSET + o.REGION_PASS_OFFSET && item.id < o.ITEM_OFFSET + o.REGION_PASS_OFFSET + GAME_REGIONS_ORDER.length) {
-                const regionName = GAME_REGIONS_ORDER[item.id - (o.ITEM_OFFSET + o.REGION_PASS_OFFSET)];
+                return;
+            }
+            const routeKeyName = decodeRouteKey(item.id, o);
+            if (routeKeyName) {
+                routeKeysAdd.push(routeKeyName);
+                newLogs.push({
+                    id: crypto.randomUUID(), timestamp: Date.now(), type: 'system',
+                    text: `Received ${routeKeyName}`,
+                    parts: [{ text: `Received ${routeKeyName}`, type: 'color', color: '#F97316' }],
+                });
+                return;
+            }
+            const lineName = decodeLineUnlock(item.id, o);
+            if (lineName) {
+                lineUnlocksAdd.push(lineName);
+                newLogs.push({
+                    id: crypto.randomUUID(), timestamp: Date.now(), type: 'system',
+                    text: `Received ${lineName}`,
+                    parts: [{ text: `Received ${lineName}`, type: 'color', color: '#A855F7' }],
+                });
+                return;
+            }
+            const regionName = decodeRegionPass(item.id, o);
+            if (regionName) {
                 regionsAdd.push(regionName);
                 newLogs.push({
                     id: crypto.randomUUID(), timestamp: Date.now(), type: 'system',
                     text: `Received ${regionName} Pass!`,
                     parts: [{ text: `Received ${regionName} Pass!`, type: 'color', color: '#F59E0B' }],
                 });
-            } else if (
+                return;
+            }
+
+            if (
                 item.id === o.ITEM_OFFSET + o.TRAP_ITEM_OFFSET + 1 ||
                 item.id === o.ITEM_OFFSET + o.TRAP_ITEM_OFFSET + 2 ||
                 item.id === o.ITEM_OFFSET + o.TRAP_ITEM_OFFSET + 3 ||
