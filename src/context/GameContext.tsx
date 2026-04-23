@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { PokemonRef } from '../types/pokemon';
 import { GENERATIONS } from '../types/pokemon';
 import { fetchAllPokemon } from '../services/pokeapi';
@@ -754,7 +754,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return result;
     }, [checkedIds, slotMilestones, slotTypeMilestones, routeLocksEnabled, routeKeys, activeRegions]);
 
-    const isPokemonGuessable = useCallback((id: number) => {
+    const isPokemonGuessableImpl = useCallback((id: number) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const data = (pokemonMetadata as any)[id];
         if (!data) return { canGuess: true };
@@ -880,6 +880,20 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         babyLocksEnabled, daycareCount, daycareRequired, fossilLocksEnabled, hasFossilRestorer,
         ultraBeastLocksEnabled, hasUltraWormhole, paradoxLocksEnabled, hasTimeRift,
         stoneLocksEnabled, unlockedStones]);
+
+    // PERF-05: wrap isPokemonGuessable in a per-id memo cache. The inner function has 28 deps
+    // and ran ~1025 times per DexGrid render. Cache invalidates whenever any dep to the inner
+    // function changes (ie. whenever the answer could differ), so correctness is preserved.
+    const isPokemonGuessable = useMemo(() => {
+        const cache = new Map<number, ReturnType<typeof isPokemonGuessableImpl>>();
+        return (id: number) => {
+            const hit = cache.get(id);
+            if (hit !== undefined) return hit;
+            const result = isPokemonGuessableImpl(id);
+            cache.set(id, result);
+            return result;
+        };
+    }, [isPokemonGuessableImpl]);
 
     useEffect(() => { isPokemonGuessableRef.current = isPokemonGuessable; }, [isPokemonGuessable]);
 
@@ -1129,6 +1143,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 routeKeyMapSize: routeKeyIdToName.size,
                 sampleRouteKeyIds: [...routeKeyIdToName.entries()].slice(0, 3),
                 itemOffsets: { ITEM_OFFSET: o.ITEM_OFFSET, ROUTE_KEY_OFFSET: o.ROUTE_KEY_OFFSET, LINE_UNLOCK_OFFSET: o.LINE_UNLOCK_OFFSET },
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 allItemIds: receivedItems.map((i: any) => i.id).sort((a: number, b: number) => a - b),
             });
         }

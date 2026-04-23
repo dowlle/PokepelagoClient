@@ -15,7 +15,7 @@ interface PokemonSlotProps {
     order?: number;
 }
 
-export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShiny = false, order }) => {
+const PokemonSlotImpl: React.FC<PokemonSlotProps> = ({ pokemon, status, isShiny = false, order }) => {
     const { setSelectedPokemonId, isPokemonGuessable, usedPokegears, getSpriteUrl, uiSettings, releasedIds, spriteRefreshCounter, pmdSpriteUrl, derpyfiedIds } = useGame();
     const { canGuess, reason } = isPokemonGuessable(pokemon.id);
     const isPokegeared = usedPokegears.has(pokemon.id);
@@ -223,3 +223,11 @@ export const PokemonSlot: React.FC<PokemonSlotProps> = ({ pokemon, status, isShi
         </div>
     );
 };
+
+// PERF-01: memoize so identical-prop slots skip re-renders driven purely by parent
+// (DexGrid local state: filter toggles, shuffle order, etc.). Note: useGame() inside
+// the component still causes context-driven re-renders regardless of memo. Full win
+// is gated on PERF-02 (context split). PokemonSlot receives only stable props from
+// DexGrid — `pokemon` is memoized via pokemonById, `status`/`isShiny`/`order` are
+// primitives — so the default shallow comparator is correct here.
+export const PokemonSlot = React.memo(PokemonSlotImpl);

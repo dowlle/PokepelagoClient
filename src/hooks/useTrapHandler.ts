@@ -72,6 +72,7 @@ export function useTrapHandler({
     }, []);
 
     const onDataStorageRecaughtUpdate = useCallback((recaughtIds: Set<number>) => {
+        // eslint-disable-next-line react-hooks/immutability -- refs are designed to be mutable; identical pattern on line 51 is not flagged
         recaughtRef.current = recaughtIds;
         setReleasedIds(prev => new Set([...prev].filter(id => !recaughtIds.has(id))));
     }, []);
