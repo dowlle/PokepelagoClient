@@ -153,7 +153,7 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({ tour, onSwitchPanel, o
   }
 
   return (
-    <div className="fixed inset-0 z-[55] tour-overlay">
+    <div className="fixed inset-0 z-[250] tour-overlay">
       {/* SVG overlay with spotlight cutout */}
       <svg className="absolute inset-0 w-full h-full" style={{ pointerEvents: 'none' }}>
         <defs>
