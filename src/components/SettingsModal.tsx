@@ -182,101 +182,140 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                                     </div>
                                 </div>
 
-                                <div className="grid gap-3 grid-cols-2">
-                                    <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
-                                        <div className="flex items-center gap-2">
-                                            <Maximize size={16} className="text-purple-400 group-hover:scale-110 transition-transform" />
-                                            <div>
-                                                <div className="text-xs font-bold text-gray-200">Widescreen</div>
-                                                <div className="text-[9px] text-gray-500">Full page width</div>
-                                            </div>
-                                        </div>
-                                        <input type="checkbox" checked={uiSettings.widescreen} onChange={(e) => updateUiSettings({ widescreen: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-purple-600 focus:ring-purple-500" />
+                                {/* UI-03: toggles grouped under subheadings so related settings cluster
+                                     visually instead of being a flat 7-item 2-column grid. */}
+
+                                {/* Grid Layout */}
+                                <div className="space-y-2 pt-2">
+                                    <label className="flex items-center gap-2 text-xs font-bold text-gray-300">
+                                        <LayoutGrid size={14} className="text-emerald-400" />
+                                        Grid Layout
                                     </label>
-                                    <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
-                                        <div className="flex items-center gap-2">
-                                            <LayoutGrid size={16} className="text-emerald-400 group-hover:scale-110 transition-transform" />
-                                            <div>
-                                                <div className="text-xs font-bold text-gray-200">Fit Regions</div>
-                                                <div className="text-[9px] text-gray-500">Remove gaps</div>
+                                    <div className="grid gap-3 grid-cols-2">
+                                        <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
+                                            <div className="flex items-center gap-2">
+                                                <Maximize size={16} className="text-purple-400 group-hover:scale-110 transition-transform" />
+                                                <div>
+                                                    <div className="text-xs font-bold text-gray-200">Widescreen</div>
+                                                    <div className="text-[9px] text-gray-500">Full page width</div>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <input type="checkbox" checked={uiSettings.masonry} onChange={(e) => updateUiSettings({ masonry: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-emerald-600 focus:ring-emerald-500" />
-                                    </label>
-                                    <label data-tour="shadow-toggle" className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-4 h-4 rounded-full bg-blue-950 border border-blue-800 opacity-40 group-hover:scale-110 transition-transform" />
-                                            <div>
-                                                <div className="text-xs font-bold text-gray-200">Enable Shadows</div>
-                                                <div className="text-[9px] text-gray-500">Show silhouettes for unexplored Pokemon</div>
+                                            <input type="checkbox" checked={uiSettings.widescreen} onChange={(e) => updateUiSettings({ widescreen: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-purple-600 focus:ring-purple-500" />
+                                        </label>
+                                        <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
+                                            <div className="flex items-center gap-2">
+                                                <LayoutGrid size={16} className="text-emerald-400 group-hover:scale-110 transition-transform" />
+                                                <div>
+                                                    <div className="text-xs font-bold text-gray-200">Fit Regions</div>
+                                                    <div className="text-[9px] text-gray-500">Remove gaps</div>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <input type="checkbox" checked={uiSettings.enableShadows} onChange={(e) => updateUiSettings({ enableShadows: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-blue-600 focus:ring-blue-500" />
-                                    </label>
-                                    <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-4 h-4 rounded-full group-hover:scale-110 transition-transform" style={{ background: 'linear-gradient(135deg, #7AC74C 50%, #6390F0 50%)' }} />
-                                            <div>
-                                                <div className="text-xs font-bold text-gray-200">Type-Colored Dot</div>
-                                                <div className="text-[9px] text-gray-500">Use Pokemon type colors for the guessable indicator dot</div>
+                                            <input type="checkbox" checked={uiSettings.masonry} onChange={(e) => updateUiSettings({ masonry: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-emerald-600 focus:ring-emerald-500" />
+                                        </label>
+                                        <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-4 h-4 flex items-center justify-center text-cyan-400 font-mono text-[10px] font-bold group-hover:scale-110 transition-transform">#</div>
+                                                <div>
+                                                    <div className="text-xs font-bold text-gray-200">Show Dex Numbers</div>
+                                                    <div className="text-[9px] text-gray-500">Show Pokemon number on each grid tile</div>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <input type="checkbox" checked={uiSettings.typeDot} onChange={(e) => updateUiSettings({ typeDot: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-emerald-600 focus:ring-emerald-500" />
-                                    </label>
-                                    <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
-                                        <div className="flex items-center gap-2">
-                                            <div className="flex gap-0.5 group-hover:scale-110 transition-transform">
-                                                <span className="px-1 py-0 rounded text-[8px] font-bold" style={{ backgroundColor: '#EE813033', color: '#EE8130', border: '1px solid #EE813066' }}>FIRE</span>
-                                            </div>
-                                            <div>
-                                                <div className="text-xs font-bold text-gray-200">Always Show Types</div>
-                                                <div className="text-[9px] text-gray-500">Reveal Pokemon types in the details modal without guessing first</div>
-                                            </div>
-                                        </div>
-                                        <input type="checkbox" checked={uiSettings.alwaysShowTypes} onChange={(e) => updateUiSettings({ alwaysShowTypes: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-orange-600 focus:ring-orange-500" />
-                                    </label>
-                                    <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-4 h-4 flex items-center justify-center text-cyan-400 font-mono text-[10px] font-bold group-hover:scale-110 transition-transform">#</div>
-                                            <div>
-                                                <div className="text-xs font-bold text-gray-200">Show Dex Numbers</div>
-                                                <div className="text-[9px] text-gray-500">Show Pokemon number on each grid tile</div>
-                                            </div>
-                                        </div>
-                                        <input type="checkbox" checked={uiSettings.showDexNumbers} onChange={(e) => updateUiSettings({ showDexNumbers: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-cyan-600 focus:ring-cyan-500" />
-                                    </label>
-                                    <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-4 h-4 flex items-center justify-center text-orange-400 text-[10px] group-hover:scale-110 transition-transform">📌</div>
-                                            <div>
-                                                <div className="text-xs font-bold text-gray-200">Persistent Type Dot</div>
-                                                <div className="text-[9px] text-gray-500">Keep dot visible until guessed instead of hiding on hover</div>
-                                            </div>
-                                        </div>
-                                        <input type="checkbox" checked={uiSettings.persistentDot} onChange={(e) => updateUiSettings({ persistentDot: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-orange-600 focus:ring-orange-500" />
-                                    </label>
-                                    {__TWITCH_ENABLED__ && (
-                                    <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
-                                        <div className="flex items-center gap-2">
-                                            <Tv size={16} className="text-purple-400 group-hover:scale-110 transition-transform" />
-                                            <div>
-                                                <div className="text-xs font-bold text-gray-200">Enable Twitch Integration</div>
-                                                <div className="text-[9px] text-gray-500">Show Twitch chat guessing and leaderboard features</div>
-                                            </div>
-                                        </div>
-                                        <input
-                                            type="checkbox"
-                                            checked={twitchIntegration}
-                                            onChange={(e) => {
-                                                setTwitchIntegration(e.target.checked);
-                                                localStorage.setItem('pokepelago_twitch_integration', String(e.target.checked));
-                                                window.dispatchEvent(new Event('pokepelago_twitch_integration_changed'));
-                                            }}
-                                            className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-purple-600 focus:ring-purple-500"
-                                        />
-                                    </label>
-                                    )}
+                                            <input type="checkbox" checked={uiSettings.showDexNumbers} onChange={(e) => updateUiSettings({ showDexNumbers: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-cyan-600 focus:ring-cyan-500" />
+                                        </label>
+                                    </div>
                                 </div>
+
+                                {/* Type Display */}
+                                <div className="space-y-2 pt-2">
+                                    <label className="flex items-center gap-2 text-xs font-bold text-gray-300">
+                                        <div className="w-3.5 h-3.5 rounded-full" style={{ background: 'linear-gradient(135deg, #7AC74C 50%, #6390F0 50%)' }} />
+                                        Type Display
+                                    </label>
+                                    <div className="grid gap-3 grid-cols-2">
+                                        <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-4 h-4 rounded-full group-hover:scale-110 transition-transform" style={{ background: 'linear-gradient(135deg, #7AC74C 50%, #6390F0 50%)' }} />
+                                                <div>
+                                                    <div className="text-xs font-bold text-gray-200">Type-Colored Dot</div>
+                                                    <div className="text-[9px] text-gray-500">Use Pokemon type colors for the guessable indicator dot</div>
+                                                </div>
+                                            </div>
+                                            <input type="checkbox" checked={uiSettings.typeDot} onChange={(e) => updateUiSettings({ typeDot: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-emerald-600 focus:ring-emerald-500" />
+                                        </label>
+                                        <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-4 h-4 flex items-center justify-center text-orange-400 text-[10px] group-hover:scale-110 transition-transform">📌</div>
+                                                <div>
+                                                    <div className="text-xs font-bold text-gray-200">Persistent Type Dot</div>
+                                                    <div className="text-[9px] text-gray-500">Keep dot visible until guessed instead of hiding on hover</div>
+                                                </div>
+                                            </div>
+                                            <input type="checkbox" checked={uiSettings.persistentDot} onChange={(e) => updateUiSettings({ persistentDot: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-orange-600 focus:ring-orange-500" />
+                                        </label>
+                                        <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex gap-0.5 group-hover:scale-110 transition-transform">
+                                                    <span className="px-1 py-0 rounded text-[8px] font-bold" style={{ backgroundColor: '#EE813033', color: '#EE8130', border: '1px solid #EE813066' }}>FIRE</span>
+                                                </div>
+                                                <div>
+                                                    <div className="text-xs font-bold text-gray-200">Always Show Types</div>
+                                                    <div className="text-[9px] text-gray-500">Reveal Pokemon types in the details modal without guessing first</div>
+                                                </div>
+                                            </div>
+                                            <input type="checkbox" checked={uiSettings.alwaysShowTypes} onChange={(e) => updateUiSettings({ alwaysShowTypes: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-orange-600 focus:ring-orange-500" />
+                                        </label>
+                                    </div>
+                                </div>
+
+                                {/* Catch Feedback */}
+                                <div className="space-y-2 pt-2">
+                                    <label className="flex items-center gap-2 text-xs font-bold text-gray-300">
+                                        <div className="w-3.5 h-3.5 rounded-full bg-blue-950 border border-blue-800 opacity-70" />
+                                        Catch Feedback
+                                    </label>
+                                    <div className="grid gap-3 grid-cols-2">
+                                        <label data-tour="shadow-toggle" className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-4 h-4 rounded-full bg-blue-950 border border-blue-800 opacity-40 group-hover:scale-110 transition-transform" />
+                                                <div>
+                                                    <div className="text-xs font-bold text-gray-200">Enable Shadows</div>
+                                                    <div className="text-[9px] text-gray-500">Show silhouettes for unexplored Pokemon</div>
+                                                </div>
+                                            </div>
+                                            <input type="checkbox" checked={uiSettings.enableShadows} onChange={(e) => updateUiSettings({ enableShadows: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-blue-600 focus:ring-blue-500" />
+                                        </label>
+                                    </div>
+                                </div>
+
+                                {__TWITCH_ENABLED__ && (
+                                    <div className="space-y-2 pt-2">
+                                        <label className="flex items-center gap-2 text-xs font-bold text-gray-300">
+                                            <Tv size={14} className="text-purple-400" />
+                                            Integrations
+                                        </label>
+                                        <div className="grid gap-3 grid-cols-2">
+                                            <label className="flex items-center justify-between p-3 bg-gray-800/30 border border-gray-700 rounded hover:bg-gray-800/50 transition-colors cursor-pointer group">
+                                                <div className="flex items-center gap-2">
+                                                    <Tv size={16} className="text-purple-400 group-hover:scale-110 transition-transform" />
+                                                    <div>
+                                                        <div className="text-xs font-bold text-gray-200">Enable Twitch Integration</div>
+                                                        <div className="text-[9px] text-gray-500">Show Twitch chat guessing and leaderboard features</div>
+                                                    </div>
+                                                </div>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={twitchIntegration}
+                                                    onChange={(e) => {
+                                                        setTwitchIntegration(e.target.checked);
+                                                        localStorage.setItem('pokepelago_twitch_integration', String(e.target.checked));
+                                                        window.dispatchEvent(new Event('pokepelago_twitch_integration_changed'));
+                                                    }}
+                                                    className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-purple-600 focus:ring-purple-500"
+                                                />
+                                            </label>
+                                        </div>
+                                    </div>
+                                )}
                                 <div className="pt-2 border-t border-gray-800/50">
                                     <button
                                         onClick={() => {

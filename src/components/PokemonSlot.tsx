@@ -135,6 +135,18 @@ const PokemonSlotImpl: React.FC<PokemonSlotProps> = ({
     // so they remain legible at the corner of the larger slot without dominating it.
     const slotPx = 44 * uiSettings.spriteSize;
 
+    // UI-01: "Who's That Pokémon?" silhouette. Unguessed/released/hinted slots get a
+    // blacked-out sprite with an indigo (themeable) halo — a direct nod to the
+    // Saturday-morning reveal segment. Pokegeared slots keep the dimmed-but-colored
+    // look so the "I paid to peek" signal stays distinct from a default silhouette.
+    const isSilhouette = status === 'shadow' || status === 'hint' || isReleased;
+    const silhouetteFilter = isSilhouette
+        ? (isPokegeared
+            ? 'brightness(0.5)'
+            : 'brightness(0) drop-shadow(0 0 4px var(--pp-silhouette-glow)) drop-shadow(0 0 10px var(--pp-silhouette-glow))')
+        : undefined;
+    const silhouetteOpacity = isSilhouette && isPokegeared ? 0.8 : 1;
+
     return (
         <div
             onClick={() => setSelectedPokemonId(pokemon.id)}
@@ -152,7 +164,10 @@ const PokemonSlotImpl: React.FC<PokemonSlotProps> = ({
             title={!canGuess ? reason : (isChecked ? cleanName : status === 'hint' ? `${cleanName} (Hinted)` : `#${pokemon.id}`)}
         >
             {isVisible && normalizedPmdUrl && !pmdError && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-visible">
+                <div
+                    className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-visible"
+                    style={silhouetteFilter ? { filter: silhouetteFilter, opacity: silhouetteOpacity } : undefined}
+                >
                     <PmdSpriteCanvas
                         id={pokemon.id}
                         baseUrl={normalizedPmdUrl}
@@ -161,11 +176,6 @@ const PokemonSlotImpl: React.FC<PokemonSlotProps> = ({
                         onError={() => { setPmdError(true); setPlayingAttack(false); }}
                         onFrameSize={playingAttack ? undefined : setIdleFrameSize}
                         referenceFrameSize={playingAttack && idleFrameSize ? idleFrameSize : undefined}
-                        filterClass={
-                            status === 'shadow' || status === 'hint' || isReleased
-                                ? (isPokegeared ? 'brightness-50 opacity-80' : 'brightness-0 contrast-100 opacity-60')
-                                : ''
-                        }
                         size={slotPx}
                     />
                 </div>
@@ -178,14 +188,13 @@ const PokemonSlotImpl: React.FC<PokemonSlotProps> = ({
                         alt={isChecked ? pokemon.name : `Pokemon #${pokemon.id}`}
                         onLoad={() => setIsLoaded(true)}
                         onError={() => setHasError(true)}
-                        className={`
-                            object-contain z-10 transition-all duration-300
-                            ${isLoaded ? 'opacity-100' : 'opacity-0'}
-                            ${status === 'shadow' || status === 'hint' || isReleased
-                                ? (isPokegeared ? 'brightness-50 opacity-80' : 'brightness-0 contrast-100 opacity-60')
-                                : ''}
-                        `}
-                        style={{ imageRendering: 'pixelated', width: slotPx, height: slotPx }}
+                        className={`object-contain z-10 transition-all duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+                        style={{
+                            imageRendering: 'pixelated',
+                            width: slotPx,
+                            height: slotPx,
+                            ...(silhouetteFilter ? { filter: silhouetteFilter, opacity: isLoaded ? silhouetteOpacity : 0 } : {}),
+                        }}
                     />
                 </div>
             )}
