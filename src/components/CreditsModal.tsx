@@ -330,35 +330,6 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({ isOpen, onClose }) =
                         </div>
                     </section>
 
-                    {/* Upcoming */}
-                    <section>
-                        <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 mb-4">Upcoming</h3>
-                        <div className="bg-indigo-900/10 border border-indigo-500/20 rounded-2xl p-5 space-y-3">
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm font-black text-indigo-300">APWorld v0.4.0</span>
-                                <span className="text-[9px] uppercase tracking-widest text-indigo-400 font-bold bg-indigo-900/40 px-2 py-0.5 rounded-full border border-indigo-700/40">Built for Archipelago 0.6.7</span>
-                            </div>
-                            <div className="space-y-2">
-                                <p className="text-xs leading-relaxed">
-                                    <span className="font-bold text-gray-300">Gate lock system:</span>
-                                    <span className="text-gray-500"> Legendary tiers (sub/box/mythic via Gym Badges), trade evolutions (Link Cable), baby Pokemon (Daycare), fossils (Fossil Restorer), Ultra Beasts (Ultra Wormhole), Paradox Pokemon (Time Rift), and evolution stones. All configurable per-game via YAML options.</span>
-                                </p>
-                                <p className="text-xs leading-relaxed">
-                                    <span className="font-bold text-gray-300">Starter selection:</span>
-                                    <span className="text-gray-500"> Choose which starter Pokemon you begin with, or let the game pick randomly. Fewer pre-collected Type Keys for a less predictable start.</span>
-                                </p>
-                                <p className="text-xs leading-relaxed">
-                                    <span className="font-bold text-gray-300">Accurate goals:</span>
-                                    <span className="text-gray-500"> Percentage and count goals no longer snap to milestones. Set any target count up to the total number of guessable Pokemon.</span>
-                                </p>
-                                <p className="text-xs leading-relaxed">
-                                    <span className="font-bold text-gray-300">Integration tests:</span>
-                                    <span className="text-gray-500"> Full test suite covering all lock combinations, region combos, and edge cases. 59 tests pass across all configurations.</span>
-                                </p>
-                            </div>
-                        </div>
-                    </section>
-
                     {/* Changelog */}
                     <section>
                         <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 mb-4">Changelog</h3>
