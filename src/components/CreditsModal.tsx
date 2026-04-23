@@ -17,6 +17,10 @@ const changelog: Array<{
             date: 'April 2026',
             highlights: [
                 {
+                    label: 'Route Key decoding fix (post-release client patch, 2026-04-23)',
+                    text: 'Received Sinnoh, Unova, and Roaming route keys were being stored as the wrong item name on the client, so 16 of the 80 route keys never registered against your pokedex and seeds could appear hard-locked when they were not. Purely a client-side decoding fix; APWorld and existing seeds unchanged.',
+                },
+                {
                     label: 'Requires Archipelago 0.6.7',
                     text: 'Breaking change: the APWorld now uses the rule_builder module introduced in Archipelago 0.6.7. Hosts on AP 0.6.6 need to upgrade before generating a seed with this version.',
                 },

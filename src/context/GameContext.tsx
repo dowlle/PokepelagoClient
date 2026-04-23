@@ -14,7 +14,7 @@ import {
     BABY_IDS, TRADE_EVO_IDS, FOSSIL_IDS, ULTRA_BEAST_IDS, PARADOX_IDS,
     STONE_EVO_IDS, STONE_NAMES_ORDERED,
 } from '../data/pokemon_gates';
-import { getRouteKeysForPokemon, getLineUnlockForPokemon, getBadgeRequirement, ROUTE_KEY_ITEMS, LINE_UNLOCK_ITEMS, ROUTE_INFO, ROUTE_POKEMON } from '../data/routeData';
+import { getRouteKeysForPokemon, getLineUnlockForPokemon, getBadgeRequirement, ROUTE_KEY_ITEMS, ROUTE_KEY_ORDER, LINE_UNLOCK_ITEMS, ROUTE_INFO, ROUTE_POKEMON } from '../data/routeData';
 import type { OffsetTable } from '../hooks/useOffsets';
 import type { MutableRefObject } from 'react';
 import { useAPConnection } from '../hooks/useAPConnection';
@@ -1163,11 +1163,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // Reconstruct Route Keys (v2 progression)
         // Route Key IDs: ITEM_OFFSET + ROUTE_KEY_OFFSET + sequential index
-        // We store the item NAME (resolved from routeData) since that's what gate checks use
+        // Index ordering matches APWorld Items.py (two-phase: groups then ungrouped);
+        // see ROUTE_KEY_ORDER in routeData.ts. A flat Object.keys().sort() here
+        // previously misaligned 16 of 80 keys (BUG-12, client hotfix 2026-04-23).
         {
             const routeKeyIdToName = new Map<number, string>();
-            const sortedKeys = Object.keys(ROUTE_KEY_ITEMS).sort();
-            sortedKeys.forEach((rk, i) => {
+            ROUTE_KEY_ORDER.forEach((rk, i) => {
                 routeKeyIdToName.set(o.ITEM_OFFSET + o.ROUTE_KEY_OFFSET + i, ROUTE_KEY_ITEMS[rk]);
             });
             const newRouteKeys = new Set<string>();
@@ -1475,7 +1476,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         let recalculateItems = false;
 
         const typesMap = ['Normal', 'Fire', 'Water', 'Grass', 'Electric', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon', 'Fairy', 'Steel', 'Dark'];
-        const sortedRouteKeys = Object.keys(ROUTE_KEY_ITEMS).sort();
+        // BUG-12: route-key ID ordering must match APWorld's two-phase sort (groups
+        // then ungrouped). See ROUTE_KEY_ORDER in routeData.ts. A flat sort here
+        // decoded Sinnoh/Unova/Roaming keys as the wrong item names.
+        const sortedRouteKeys = ROUTE_KEY_ORDER;
 
         items.forEach(item => {
             if (item.id > o.ITEM_OFFSET && item.id <= o.ITEM_OFFSET + 1025) {
