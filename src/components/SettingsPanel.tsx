@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
 import { GENERATIONS } from '../types/pokemon';
-import { Server, Wifi, Image, Filter, BookOpen, Settings } from 'lucide-react';
+import { Server, Wifi, Image, Filter, BookOpen, Settings, ArrowUpCircle } from 'lucide-react';
 import { ConnectionManager } from './ConnectionManager';
 import { getProfiles, saveProfile } from '../services/connectionManagerService';
 import type { GameProfile } from '../services/connectionManagerService';
 import { AccordionHeader } from './settings/AccordionHeader';
+import { useLatestRelease } from '../hooks/useLatestRelease';
+import { compareVersions, formatVersion } from '../utils/version';
 
 interface SettingsPanelProps {
     isOpen: boolean;
@@ -33,7 +35,14 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, isEmbedded
         derpemonSpriteCount,
         currentProfileId,
         setCurrentProfileId,
+        apWorldServerVersion,
     } = useGame();
+
+    // FEAT-11: latest Pokepelago release tag (client repo is the release surface).
+    // Cached for 24h so this is a no-op on most loads.
+    const { version: latestReleaseVersion, url: latestReleaseUrl } = useLatestRelease();
+    const versionComparison = compareVersions(apWorldServerVersion, latestReleaseVersion);
+    const serverIsOutdated = versionComparison === -1;
 
     const [isConnecting, setIsConnecting] = useState(false);
     const [isManagerOpen, setIsManagerOpen] = useState(false);
@@ -338,6 +347,31 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, isEmbedded
                     </div>
                 )}
             </section>
+
+            {/* FEAT-11: APWorld server version + update-available indicator. Only
+                 rendered when connected to an AP server that reported a version in
+                 slot_data (APWorlds >= 2026-04-23). Legacy hosts silently show
+                 nothing — no nag, no false "update needed" claims. */}
+            {isConnected && gameMode === 'archipelago' && apWorldServerVersion && (
+                <div className="px-3 py-2 border-t border-gray-800/50 text-[10px] text-gray-500 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                        <span className="text-gray-600">Server:</span>
+                        <span className="font-mono text-gray-400">{formatVersion(apWorldServerVersion)}</span>
+                    </div>
+                    {serverIsOutdated && latestReleaseUrl && latestReleaseVersion && (
+                        <a
+                            href={latestReleaseUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-amber-400/90 hover:text-amber-300 transition-colors"
+                            title={`Host is running ${formatVersion(apWorldServerVersion)}. Latest is ${formatVersion(latestReleaseVersion)}. Ask your host to update for new seeds.`}
+                        >
+                            <ArrowUpCircle size={11} />
+                            <span>update to {formatVersion(latestReleaseVersion)}</span>
+                        </a>
+                    )}
+                </div>
+            )}
 
             {/* Preferences handoff (UI-02: renamed from "More Settings..." which
                  undersold what's behind the link — theme, shadows, sprite repos,

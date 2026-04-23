@@ -206,6 +206,7 @@ interface GameContextType extends GameState {
     STARTER_OFFSET: number;
     MILESTONE_OFFSET: number;
     detectedApWorldVersion: 'legacy' | 'new' | 'unknown';
+    apWorldServerVersion: string | null;
     currentProfileId: string | null;
     setCurrentProfileId: React.Dispatch<React.SetStateAction<string | null>>;
     typeFilter: string[];
@@ -283,6 +284,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [connectedTeamSlot, setConnectedTeamSlot] = useState<{ team: number; slot: number } | null>(null);
     const [toast, setToast] = useState<ToastMessage | null>(null);
     const [detectedApWorldVersion, setDetectedApWorldVersion] = useState<'legacy' | 'new' | 'unknown'>('unknown');
+    // FEAT-11: exact APWorld semver the server reports in slot_data (e.g. "0.6.0").
+    // Legacy APWorlds pre-dating the APWorld agent's slot_data change report null,
+    // so the UI falls back to "unknown" or hides the version badge.
+    const [apWorldServerVersion, setApWorldServerVersion] = useState<string | null>(null);
     const [currentProfileId, setCurrentProfileId] = useState<string | null>(null);
     const [typeFilter, setTypeFilter] = useState<string[]>([]);
     const [dexFilter, setDexFilter] = useState<Set<'guessable' | 'guessed'>>(new Set());
@@ -961,6 +966,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSlotMilestones(undefined);
         setSlotTypeMilestones(undefined);
         setDetectedApWorldVersion('unknown');
+        setApWorldServerVersion(null);
         setGoal(undefined);
         setGoalCount(undefined);
 
@@ -1316,6 +1322,15 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         setStartingLocationsEnabled(!!slotData.starting_locations);
         setDetectedApWorldVersion(isNewVersion ? 'new' : 'legacy');
+
+        // FEAT-11: read the exact APWorld version string if the server exposes it.
+        // Only APWorlds built after 2026-04-23 include this; pre-FEAT-11 servers
+        // leave it null and the UI simply shows no version line.
+        if (typeof slotData.apworld_version === 'string') {
+            setApWorldServerVersion(slotData.apworld_version);
+        } else {
+            setApWorldServerVersion(null);
+        }
 
         if (!isNewVersion) {
             setLogs(prev => [{
@@ -1821,6 +1836,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             STARTER_OFFSET: offsetsRef.current.STARTER_OFFSET,
             MILESTONE_OFFSET: offsetsRef.current.MILESTONE_OFFSET,
             detectedApWorldVersion,
+            apWorldServerVersion,
             currentProfileId, setCurrentProfileId,
             typeFilter, setTypeFilter,
             dexFilter, setDexFilter,
