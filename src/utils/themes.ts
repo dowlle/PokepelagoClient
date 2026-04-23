@@ -68,8 +68,9 @@ const defaultTheme: ThemeDefinition = {
         '--pp-accent-hover':   '#2563EB',  // blue-700
         '--pp-accent-glow':    'rgba(59,130,246,0.3)',
 
-        /* "Who's That Pokémon?" silhouette halo — indigo/purple, anime-style */
-        '--pp-silhouette-glow': 'rgba(129,140,248,0.75)',  // indigo-400
+        /* "Who's That Pokémon?" silhouette halo — indigo/purple, deliberately
+           subtle so it doesn't wash out a 150-slot region grid. */
+        '--pp-silhouette-glow': 'rgba(129,140,248,0.35)',  // indigo-400 at low alpha
 
         /* Region card */
         '--pp-region-bg':        'rgba(13,17,23,0.7)',
@@ -147,8 +148,8 @@ const pokemonTheme: ThemeDefinition = {
         '--pp-accent-hover':   '#DC2626',
         '--pp-accent-glow':    'rgba(239,68,68,0.3)',
 
-        /* Silhouette halo — warm red to match the Pokemon palette */
-        '--pp-silhouette-glow': 'rgba(248,113,113,0.7)',  // red-400
+        /* Silhouette halo — warm red, matched in subtlety to the default theme */
+        '--pp-silhouette-glow': 'rgba(248,113,113,0.3)',  // red-400 at low alpha
 
         /* Region card — dark with red warmth */
         '--pp-region-bg':        'rgba(36,18,24,0.9)',
