@@ -62,7 +62,7 @@ jobs:
         uses: Eijebong/ap-actions/package-apworld@main
         with:
           path: apworld-repo/worlds/pokepelago
-          ap-version: '0.6.6'
+          ap-version: '0.6.7'
           python-version: '3.12'
           checkout: false
 
@@ -71,7 +71,7 @@ jobs:
         uses: Eijebong/ap-actions/generate-template@main
         with:
           apworld-path: apworld-repo/worlds/pokepelago
-          ap-version: '0.6.6'
+          ap-version: '0.6.7'
           python-version: '3.12'
           checkout: false
 

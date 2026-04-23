@@ -17,6 +17,10 @@ const changelog: Array<{
             date: 'April 2026',
             highlights: [
                 {
+                    label: 'Requires Archipelago 0.6.7',
+                    text: 'Breaking change: the APWorld now uses the rule_builder module introduced in Archipelago 0.6.7. Hosts on AP 0.6.6 need to upgrade before generating a seed with this version.',
+                },
+                {
                     label: 'Who\'s That Pokémon? silhouette',
                     text: 'Unguessed and hinted slots now render as a silhouette with a subtle indigo halo (warm red in the Pokémon theme). Toggleable in Settings if you prefer pure flat silhouettes.',
                 },
