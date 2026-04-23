@@ -116,6 +116,7 @@ export interface UISettings {
     persistentDot: boolean;
     theme: 'default' | 'pokemon';
     alwaysShowTypes: boolean;
+    spriteSize: 1 | 2 | 4;
 }
 
 interface ConnectionInfo {
@@ -339,6 +340,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             enableShadows: false, spriteSet: 'normal', typeDot: true,
             showDexNumbers: true, persistentDot: true, theme: 'default',
             alwaysShowTypes: false,
+            spriteSize: 1,
         };
         if (saved) { try { return { ...defaults, ...JSON.parse(saved) }; } catch { /* corrupted */ } }
         return defaults;
