@@ -5,9 +5,10 @@ interface TourOverlayProps {
   tour: TourState;
   onSwitchPanel: (panel: 'settings' | 'tracker' | null) => void;
   onOpenSettingsModal?: () => void;
+  onCloseSettingsModal?: () => void;
 }
 
-export const TourOverlay: React.FC<TourOverlayProps> = ({ tour, onSwitchPanel, onOpenSettingsModal }) => {
+export const TourOverlay: React.FC<TourOverlayProps> = ({ tour, onSwitchPanel, onOpenSettingsModal, onCloseSettingsModal }) => {
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [tooltipPos, setTooltipPos] = useState<'above' | 'below'>('below');
   const observerRef = useRef<ResizeObserver | null>(null);
@@ -41,13 +42,19 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({ tour, onSwitchPanel, o
       timers.push(id);
     };
 
-    // Switch the panel or open modal
+    // Switch the panel or open modal. Steps that don't need the settings modal
+    // must explicitly close it — the SettingsModal (z-100) sits above the tour's
+    // highlighted targets in the main UI and would obscure the view if left open
+    // from a prior step or from the user opening it before starting the tour.
     if (step.openModal === 'settings') {
       onOpenSettingsModal?.();
-    } else if (step.panel) {
-      onSwitchPanel(step.panel);
     } else {
-      onSwitchPanel(null);
+      onCloseSettingsModal?.();
+      if (step.panel) {
+        onSwitchPanel(step.panel);
+      } else {
+        onSwitchPanel(null);
+      }
     }
 
     // Open settings accordion section if needed (delay so panel renders first)
@@ -83,7 +90,7 @@ export const TourOverlay: React.FC<TourOverlayProps> = ({ tour, onSwitchPanel, o
       cancelled = true;
       timers.forEach(clearTimeout);
     };
-  }, [tour.isActive, tour.currentStep, step, onSwitchPanel, onOpenSettingsModal, measureTarget]);
+  }, [tour.isActive, tour.currentStep, step, onSwitchPanel, onOpenSettingsModal, onCloseSettingsModal, measureTarget]);
 
   // ResizeObserver + scroll/resize listeners
   useEffect(() => {

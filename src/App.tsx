@@ -406,7 +406,7 @@ const GameContent: React.FC = () => {
         <StartGameOverlay onDismiss={() => setAdventureOverlayDismissed(true)} />
       )}
 
-      <TourOverlay tour={tour} onSwitchPanel={handleTourSwitchPanel} onOpenSettingsModal={() => setSettingsModalOpen(true)} />
+      <TourOverlay tour={tour} onSwitchPanel={handleTourSwitchPanel} onOpenSettingsModal={() => setSettingsModalOpen(true)} onCloseSettingsModal={() => setSettingsModalOpen(false)} />
     </div>
   );
 };
