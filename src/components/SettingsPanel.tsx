@@ -339,14 +339,16 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, isEmbedded
                 )}
             </section>
 
-            {/* More Settings */}
+            {/* Preferences handoff (UI-02: renamed from "More Settings..." which
+                 undersold what's behind the link — theme, shadows, sprite repos,
+                 type dots, etc. are appearance choices, not buried advanced flags.) */}
             {onOpenModal && (
                 <button
                     onClick={onOpenModal}
                     className="w-full flex items-center justify-center gap-2 py-3 text-xs text-gray-500 hover:text-gray-300 transition-colors"
                 >
                     <Settings size={14} />
-                    More Settings...
+                    Preferences &amp; Appearance
                 </button>
             )}
 
