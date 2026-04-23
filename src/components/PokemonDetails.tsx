@@ -69,20 +69,34 @@ export const PokemonDetails: React.FC = () => {
         return () => window.removeEventListener('keydown', handler);
     }, [selectedPokemonId, setSelectedPokemonId]);
 
-    // FEAT-08 sub-3: navigation between Pokemon. A/D = prev/next unguessed only (skip caught);
-    // ArrowLeft/ArrowRight = prev/next ANY Pokemon (caught or not). Side arrow buttons mirror
-    // the ← / → (any) behavior. Wraps around at the ends in both modes.
+    // FEAT-08 sub-3: navigation between Pokemon.
+    //   A/D  = prev/next guessable-right-now unchecked Pokemon (scope-aware: honors
+    //          active regions, type locks, region locks, route/line locks, badges —
+    //          whatever isPokemonGuessable.canGuess reports. Skips Pokemon that are
+    //          out of scope or not-yet-unlocked).
+    //          Fallback: if no guessable unchecked Pokemon remain (e.g. player has
+    //          guessed everything they can right now), cycle through the full dex
+    //          so the keys still do something.
+    //   ←/→  = prev/next ANY Pokemon in the full dex (caught or not, in scope or
+    //          not). Side chevron buttons mirror ← / →.
+    // Both modes wrap around at the ends.
     const navigate = React.useCallback((delta: number, mode: 'unguessed' | 'any') => {
         if (!selectedPokemonId) return;
         const sorted = [...allPokemon].sort((a, b) => a.id - b.id);
-        const list = mode === 'any' ? sorted : sorted.filter(p => !checkedIds.has(p.id));
+        let list: typeof sorted;
+        if (mode === 'any') {
+            list = sorted;
+        } else {
+            const ready = sorted.filter(p => !checkedIds.has(p.id) && isPokemonGuessable(p.id).canGuess);
+            list = ready.length > 0 ? ready : sorted;
+        }
         if (list.length === 0) return;
         const currentIdx = list.findIndex(p => p.id === selectedPokemonId);
         const nextIdx = currentIdx === -1
             ? (delta > 0 ? 0 : list.length - 1)
             : (currentIdx + delta + list.length) % list.length;
         setSelectedPokemonId(list[nextIdx].id);
-    }, [selectedPokemonId, allPokemon, checkedIds, setSelectedPokemonId]);
+    }, [selectedPokemonId, allPokemon, checkedIds, isPokemonGuessable, setSelectedPokemonId]);
 
     useEffect(() => {
         if (!selectedPokemonId) return;
