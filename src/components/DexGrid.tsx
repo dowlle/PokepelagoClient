@@ -10,7 +10,7 @@ import { SUB_LEGENDARY_IDS, BOX_LEGENDARY_IDS, MYTHIC_IDS, BABY_IDS, TRADE_EVO_I
 const REGION_LAYOUT_KEY = 'pokepelago_region_layout';
 
 export const DexGrid: React.FC = () => {
-    const { allPokemon, unlockedIds, checkedIds, hintedIds, shinyIds, generationFilter, uiSettings, gameMode, isPokemonGuessable, shuffleEndTime, releasedIds, activeRegions, regionPasses, regionLocksEnabled, startingRegion, typeFilter, dexFilter, setDexFilter, categoryFilter, usedPokegears, usedPokedexes } = useGame();
+    const { allPokemon, unlockedIds, checkedIds, hintedIds, shinyIds, generationFilter, uiSettings, gameMode, isPokemonGuessable, shuffleEndTime, releasedIds, activeRegions, regionPasses, regionLocksEnabled, startingRegion, typeFilter, dexFilter, setDexFilter, categoryFilter, usedPokegears, usedPokedexes, derpyfiedIds } = useGame();
 
     const [now, setNow] = useState(() => Date.now());
 
@@ -340,16 +340,28 @@ export const DexGrid: React.FC = () => {
                         {/* Body — always mounted so sprites stay loaded; hidden via CSS only */}
                         <div className={`px-2 pb-3 sm:px-4 sm:pb-4 ${isRegionOpen ? '' : 'hidden'}`}>
                             <div className="flex flex-wrap gap-1 sm:gap-1.5 justify-start">
-                                {pokemonInGen.map(p => (
-                                    <PokemonSlot
-                                        key={p.id}
-                                        pokemon={p}
-                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                        status={getStatus(p.id) as any}
-                                        isShiny={shinyIds.has(p.id)}
-                                        order={shuffleOrder.get(p.id)}
-                                    />
-                                ))}
+                                {pokemonInGen.map(p => {
+                                    // PERF-02: compute per-pokemon state here so PokemonSlot
+                                    // can be a context-free consumer. Pokemon that don't
+                                    // change between renders skip React.memo thanks to
+                                    // primitive-only props + PokemonSlotContext narrowing.
+                                    const { canGuess, reason } = isPokemonGuessable(p.id);
+                                    return (
+                                        <PokemonSlot
+                                            key={p.id}
+                                            pokemon={p}
+                                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                            status={getStatus(p.id) as any}
+                                            isShiny={shinyIds.has(p.id)}
+                                            order={shuffleOrder.get(p.id)}
+                                            canGuess={canGuess}
+                                            reason={reason}
+                                            isReleased={releasedIds.has(p.id)}
+                                            isPokegeared={usedPokegears.has(p.id)}
+                                            isDerpified={derpyfiedIds.has(p.id)}
+                                        />
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>

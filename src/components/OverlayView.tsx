@@ -203,7 +203,7 @@ export const OverlayView: React.FC = () => {
         STARTER_OFFSET, MILESTONE_OFFSET,
         isPokemonGuessable, hintedIds, shinyIds, unlockedIds,
         gameMode, activeRegions, generationFilter, isConnected,
-        logs,
+        logs, usedPokegears, derpyfiedIds,
     } = useGame();
     const { leaderboard, guessFeed } = useTwitch();
 
@@ -498,14 +498,22 @@ export const OverlayView: React.FC = () => {
                         <AutoScroll active={carouselInterval > 0} speed={40} pauseMs={2000} resetKey={gridFilter}
                             onOverflowDetected={handleOverflowDetected} onScrollComplete={handleScrollComplete}>
                             <div className="flex flex-wrap gap-1">
-                                {filteredPokemon.map(p => (
-                                    <PokemonSlot
-                                        key={p.id}
-                                        pokemon={p}
-                                        status={getStatus(p)}
-                                        isShiny={shinyIds.has(p.id)}
-                                    />
-                                ))}
+                                {filteredPokemon.map(p => {
+                                    const { canGuess, reason } = isPokemonGuessable(p.id);
+                                    return (
+                                        <PokemonSlot
+                                            key={p.id}
+                                            pokemon={p}
+                                            status={getStatus(p)}
+                                            isShiny={shinyIds.has(p.id)}
+                                            canGuess={canGuess}
+                                            reason={reason}
+                                            isReleased={releasedIds.has(p.id)}
+                                            isPokegeared={usedPokegears.has(p.id)}
+                                            isDerpified={derpyfiedIds.has(p.id)}
+                                        />
+                                    );
+                                })}
                             </div>
                         </AutoScroll>
                         {filteredPokemon.length === 0 && (

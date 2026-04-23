@@ -1,6 +1,6 @@
 import React from 'react';
 import type { PokemonRef } from '../types/pokemon';
-import { useGame } from '../context/GameContext';
+import { usePokemonSlotContext } from '../context/PokemonSlotContext';
 import { getCleanName } from '../utils/pokemon';
 import pokemonMetadata from '../data/pokemon_metadata.json';
 import pokemonNamesJson from '../data/pokemon_names.json';
@@ -13,16 +13,22 @@ interface PokemonSlotProps {
     status: 'locked' | 'unlocked' | 'checked' | 'shadow' | 'hint';
     isShiny?: boolean;
     order?: number;
+    // PERF-02: per-pokemon state is computed by DexGrid and passed in as primitives
+    // so PokemonSlot only needs to subscribe to the narrow PokemonSlotContext.
+    // This unblocks React.memo (PERF-01) from skipping renders when unrelated game
+    // state changes.
+    canGuess: boolean;
+    reason?: string;
+    isReleased: boolean;
+    isPokegeared: boolean;
+    isDerpified: boolean;
 }
 
-const PokemonSlotImpl: React.FC<PokemonSlotProps> = ({ pokemon, status, isShiny = false, order }) => {
-    const { setSelectedPokemonId, isPokemonGuessable, usedPokegears, getSpriteUrl, uiSettings, releasedIds, spriteRefreshCounter, pmdSpriteUrl, derpyfiedIds } = useGame();
-    const { canGuess, reason } = isPokemonGuessable(pokemon.id);
-    const isPokegeared = usedPokegears.has(pokemon.id);
-    // Only slots whose own derpy state changes re-run the sprite-loading effect.
-    // Previously `getSpriteUrl` was a dep that churned on every Derp trap, tearing
-    // down every tile's sprite at once (BUG-03).
-    const isDerpified = derpyfiedIds.has(pokemon.id);
+const PokemonSlotImpl: React.FC<PokemonSlotProps> = ({
+    pokemon, status, isShiny = false, order,
+    canGuess, reason, isReleased, isPokegeared, isDerpified,
+}) => {
+    const { setSelectedPokemonId, getSpriteUrl, uiSettings, spriteRefreshCounter, pmdSpriteUrl } = usePokemonSlotContext();
 
     const [spriteUrl, setSpriteUrl] = React.useState<string | null>(null);
     const [isLoaded, setIsLoaded] = React.useState(false);
@@ -114,7 +120,7 @@ const PokemonSlotImpl: React.FC<PokemonSlotProps> = ({ pokemon, status, isShiny 
     })();
 
     const getBorderClass = () => {
-        if (releasedIds.has(pokemon.id)) return 'bg-blue-950/30 border-blue-800/30 opacity-40';
+        if (isReleased) return 'bg-blue-950/30 border-blue-800/30 opacity-40';
         if (isChecked) return 'bg-green-900/40 border-green-700/60';
         if (isReadyToGuess) return 'bg-emerald-950/80 border-green-500/70 shadow-[0_0_8px_rgba(34,197,94,0.35)]';
         if (status === 'shadow') return 'bg-blue-950/30 border-blue-800/30 opacity-40';
@@ -156,7 +162,7 @@ const PokemonSlotImpl: React.FC<PokemonSlotProps> = ({ pokemon, status, isShiny 
                         onFrameSize={playingAttack ? undefined : setIdleFrameSize}
                         referenceFrameSize={playingAttack && idleFrameSize ? idleFrameSize : undefined}
                         filterClass={
-                            status === 'shadow' || status === 'hint' || releasedIds.has(pokemon.id)
+                            status === 'shadow' || status === 'hint' || isReleased
                                 ? (isPokegeared ? 'brightness-50 opacity-80' : 'brightness-0 contrast-100 opacity-60')
                                 : ''
                         }
@@ -175,7 +181,7 @@ const PokemonSlotImpl: React.FC<PokemonSlotProps> = ({ pokemon, status, isShiny 
                         className={`
                             object-contain z-10 transition-all duration-300
                             ${isLoaded ? 'opacity-100' : 'opacity-0'}
-                            ${status === 'shadow' || status === 'hint' || releasedIds.has(pokemon.id)
+                            ${status === 'shadow' || status === 'hint' || isReleased
                                 ? (isPokegeared ? 'brightness-50 opacity-80' : 'brightness-0 contrast-100 opacity-60')
                                 : ''}
                         `}
@@ -230,10 +236,12 @@ const PokemonSlotImpl: React.FC<PokemonSlotProps> = ({ pokemon, status, isShiny 
     );
 };
 
-// PERF-01: memoize so identical-prop slots skip re-renders driven purely by parent
-// (DexGrid local state: filter toggles, shuffle order, etc.). Note: useGame() inside
-// the component still causes context-driven re-renders regardless of memo. Full win
-// is gated on PERF-02 (context split). PokemonSlot receives only stable props from
-// DexGrid — `pokemon` is memoized via pokemonById, `status`/`isShiny`/`order` are
-// primitives — so the default shallow comparator is correct here.
+// PERF-01 + PERF-02: React.memo with default shallow comparator. PokemonSlot now
+// subscribes ONLY to the narrow PokemonSlotContext (uiSettings, sprite bundle,
+// setSelectedPokemonId) via a memoized value, so unrelated game-state churn
+// (catches, item receives, log appends, traps firing on other slots) no longer
+// invalidates this slot's render. All per-pokemon state flows in as primitive
+// props: `status`, `isShiny`, `order`, `canGuess`, `reason`, `isReleased`,
+// `isPokegeared`, `isDerpified`. `pokemon` is stable via DexGrid's pokemonById
+// memo map. Shallow comparator is correct for every prop here.
 export const PokemonSlot = React.memo(PokemonSlotImpl);
