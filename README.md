@@ -63,3 +63,9 @@ The client includes an auto-guesser script designed for testing seed mathematica
 ### Contributing
 
 Feel free to open issues or submit pull requests if you want to improve the client's UI or add new tracking features!
+
+## License
+
+The Pokepelago client is licensed under the **GNU Affero General Public License v3.0 or later** (`AGPL-3.0-or-later`) — see [LICENSE](LICENSE). Copyright (C) 2026 Dowlle.
+
+The Pokepelago APWorld (the Python world, distributed separately) is licensed under the MIT License.
