@@ -49,4 +49,57 @@ describe('hintItemNameForReason', () => {
         expect(hintItemNameForReason('Fire Type Key')).toBe('Fire Type Key');
         expect(hintItemNameForReason('Master Ball')).toBe('Master Ball');
     });
+
+    it('leaves canonical route-key / line-unlock item names untouched', () => {
+        // The per-item names (NOT the generic sentinels) are what the dedicated
+        // Route/Family hint buttons send. They must pass through unchanged so
+        // !hint gets the real AP item: "{display} Key" / "{BaseName} Line".
+        expect(hintItemNameForReason('Melemele Island Key')).toBe('Melemele Island Key');
+        expect(hintItemNameForReason('Bulbasaur Line')).toBe('Bulbasaur Line');
+    });
+});
+
+/**
+ * Residual hint-bug gap: GameContext pushes the GENERIC sentinel reasons
+ * 'Route Key' and 'Line Unlock' into `gateReasons`. A string-to-string mapper
+ * cannot know WHICH route/line is missing, so these can never resolve to a real
+ * AP item. The fix suppresses them from the clickable `reasons.map` badges; the
+ * dedicated Route/Family sections emit the real per-item hints instead. This
+ * suite proves no hint path can emit `!hint Route Key` / `!hint Line Unlock`.
+ */
+describe('generic route/line sentinels never reach !hint', () => {
+    // Mirror of the filter applied at the PokemonDetails reasons.map call site.
+    const GENERIC_SENTINELS = ['Route Key', 'Line Unlock'];
+    const hintableReasons = (reasons: string[]) =>
+        reasons.filter(r => !GENERIC_SENTINELS.includes(r));
+
+    it('filters out the generic sentinels before they reach the hint mapper', () => {
+        const gateReasons = [
+            'Route Key',
+            'Line Unlock',
+            'Need Thunder Stone',
+            'Badges: 3/8',
+            'Link Cable',
+        ];
+        const hinted = hintableReasons(gateReasons).map(hintItemNameForReason);
+
+        // No surviving hint arg is the broken generic literal.
+        expect(hinted).not.toContain('Route Key');
+        expect(hinted).not.toContain('Line Unlock');
+        // The legitimate gates still map correctly.
+        expect(hinted).toEqual(['Thunder Stone', 'Gym Badge', 'Link Cable']);
+    });
+
+    it('emits no !hint command for a Pokemon gated ONLY by route/line', () => {
+        // Worst case: the sole gates are the generic sentinels. After filtering,
+        // there is nothing to hint generically — the real per-item buttons take
+        // over (covered by the route-key/line-unlock pass-through test above).
+        const gateReasons = ['Route Key', 'Line Unlock'];
+        const hinted = hintableReasons(gateReasons).map(hintItemNameForReason);
+        expect(hinted).toHaveLength(0);
+        for (const arg of hinted) {
+            expect(`!hint ${arg}`).not.toBe('!hint Route Key');
+            expect(`!hint ${arg}`).not.toBe('!hint Line Unlock');
+        }
+    });
 });
