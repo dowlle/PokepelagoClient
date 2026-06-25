@@ -3,6 +3,7 @@ import { useGame } from '../context/GameContext';
 import { useTwitch } from '../context/TwitchContext';
 import { X, ExternalLink, HelpCircle, MapPin, Sparkles, CheckCircle2, Lock, Palette, User, Link, Shield, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getCleanName } from '../utils/pokemon';
+import { hintItemNameForReason } from '../utils/hintItemName';
 import { getDerpemonCredit } from '../services/derpemonService';
 import pokemonNamesJson from '../data/pokemon_names.json';
 import { TYPE_COLORS } from '../utils/typeColors';
@@ -444,7 +445,12 @@ export const PokemonDetails: React.FC = () => {
                                     </span>
                                 ))}
                                 {reasons && reasons.map((r: string, i: number) => {
-                                    const itemName = r;
+                                    // The badge shows the human-readable gate reason (r),
+                                    // but the hint must use the canonical AP item name,
+                                    // e.g. "Need Thunder Stone" -> "Thunder Stone",
+                                    // "Badges: 3/8" -> "Gym Badge". Passing r straight to
+                                    // !hint sent garbage like "!hint Need Thunder Stone".
+                                    const itemName = hintItemNameForReason(r);
                                     return (
                                         <span
                                             key={i}
@@ -452,7 +458,7 @@ export const PokemonDetails: React.FC = () => {
                                             className={`px-3 py-1 bg-red-950/60 border rounded-lg text-[10px] text-red-200 uppercase font-black tracking-widest shadow-lg cursor-pointer transition-all hover:bg-red-900/40 ${pendingHint === itemName ? 'border-yellow-500/80 animate-pulse' : 'border-red-500/30'}`}
                                             title={pendingHint === itemName ? 'Click again to hint this item' : `Click to hint ${itemName}`}
                                         >
-                                            {pendingHint === itemName ? `Hint ${r}?` : r}
+                                            {pendingHint === itemName ? `Hint ${itemName}?` : r}
                                         </span>
                                     );
                                 })}
