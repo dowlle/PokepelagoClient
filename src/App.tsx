@@ -2,6 +2,7 @@ import React from 'react';
 import { GameProvider, useGame } from './context/GameContext';
 import { DexGrid } from './components/DexGrid';
 import { GlobalGuessInput } from './components/GlobalGuessInput';
+import { VersionBanner } from './components/VersionBanner';
 import { SettingsPanel } from './components/SettingsPanel';
 import { SettingsModal } from './components/SettingsModal';
 import { Settings, Wifi, WifiOff, PanelRightClose, PanelRightOpen, PanelLeftClose, PanelLeftOpen, MessageSquare, Tv, LayoutGrid } from 'lucide-react';
@@ -160,6 +161,7 @@ const GameContent: React.FC = () => {
 
   return (
     <div className="h-screen flex flex-col text-white font-sans overflow-hidden themed-bg" style={{ backgroundColor: 'var(--pp-bg-base)' }}>
+      <VersionBanner />
       <div className="relative shrink-0">
         <GlobalGuessInput />
         <TourPrompt
