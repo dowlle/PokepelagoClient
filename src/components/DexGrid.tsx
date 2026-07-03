@@ -357,7 +357,12 @@ export const DexGrid: React.FC = () => {
         });
     };
 
-    const guessableCount = allPokemon.filter(p => !checkedIds.has(p.id) && isPokemonGuessable(p.id).canGuess).length;
+    // A "ran away" (released) Pokemon is in checkedIds but must be guessed
+    // again, so it counts as NOT currently guessed. It belongs in the
+    // Guessable bucket if (and only if) its gates are open (isPokemonGuessable),
+    // and must NOT appear in the Guessed bucket. Mirror the same predicate in
+    // the dex filter below so the counts and the filtered grid stay consistent.
+    const guessableCount = allPokemon.filter(p => (!checkedIds.has(p.id) || releasedIds.has(p.id)) && isPokemonGuessable(p.id).canGuess).length;
     const guessedCount = allPokemon.filter(p => checkedIds.has(p.id) && !releasedIds.has(p.id)).length;
 
     // PERF-12: JS-driven absolute slot positioning is the default. The
@@ -423,7 +428,11 @@ export const DexGrid: React.FC = () => {
                 // Dex filter (guessable / guessed)
                 if (dexFilter.size > 0) {
                     pokemonInGen = pokemonInGen.filter(p => {
-                        const isGuessed = checkedIds.has(p.id);
+                        // A released ("ran away") mon is still in checkedIds but
+                        // must be re-caught, so it is NOT currently guessed. Treat
+                        // it as catchable when its gates are open so it shows up in
+                        // the Guessable filter (and stays out of Guessed).
+                        const isGuessed = checkedIds.has(p.id) && !releasedIds.has(p.id);
                         const canGuess = isPokemonGuessable(p.id).canGuess && !isGuessed;
                         if (dexFilter.has('guessable') && dexFilter.has('guessed')) return canGuess || isGuessed;
                         if (dexFilter.has('guessable')) return canGuess;
