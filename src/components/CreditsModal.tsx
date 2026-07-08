@@ -13,6 +13,32 @@ const changelog: Array<{
     highlights: Array<{ label: string; text: string }>;
 }> = [
         {
+            version: '0.6.3',
+            date: 'July 2026',
+            highlights: [
+                {
+                    label: 'Much faster seed generation with locks',
+                    text: 'Seeds with many locks enabled generate far faster. The logic that decides what is reachable now updates incrementally instead of rescanning every location on each check, cutting worst-case generation time by roughly ten times. Route and Line locks also stay exactly as you set them (an old auto-disable was removed).',
+                },
+                {
+                    label: 'Keep your filler out of other games',
+                    text: "New Local Filler Percent option. In a multiworld it forces a share of Pokepelago's own filler (Pokedex, Pokegear, traps and the like) into your own locations instead of flooding everyone else's games. It defaults to auto, which scales with how many regions you enable. Progression items always stay in the multiworld, so seeds remain completable.",
+                },
+                {
+                    label: 'Badge gates respect evolution lines',
+                    text: 'A later evolution could sometimes be guessable before its own mid-line pre-evolution (Dolliv was locked while Arboliva was open). Badge requirements within an evolution line are now monotone, so an evolved form is never available earlier than the stage before it.',
+                },
+                {
+                    label: 'Catchable filter and hints',
+                    text: 'Pokemon that ran away from a Release trap show up again in the catchable filter, and the hint buttons now send the exact item name the server expects (like Thunder Stone). Route and evolution-line gates got working hint buttons for the first time.',
+                },
+                {
+                    label: 'Seed completability check',
+                    text: 'On connect, the client sanity-checks that the seed is actually completable using its own gating logic and warns in the log if it spots an impossible gate.',
+                },
+            ],
+        },
+        {
             version: '0.6.2',
             date: 'May 2026',
             highlights: [

@@ -12,6 +12,7 @@ import { STONE_NAMES_ORDERED } from '../data/pokemon_gates';
 import { buildEffectiveGates, type ServerGateCategories } from '../data/gateCategories';
 import { getRouteKeysForPokemon, getLineUnlockForPokemon, getBadgeRequirement, ROUTE_KEY_ITEMS, ROUTE_INFO, ROUTE_POKEMON } from '../data/routeData';
 import { decodeRouteKey, decodeLineUnlock, decodeTypeKey, decodeRegionPass } from '../data/itemDecoding';
+import { verifySeedCompletable } from '../utils/verifySeedCompletable';
 import type { OffsetTable } from '../hooks/useOffsets';
 import type { MutableRefObject } from 'react';
 import { useAPConnection } from '../hooks/useAPConnection';
@@ -1390,6 +1391,30 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 text: '⚠ Connected to a Legacy APWorld. Some features (region locks, type key system) may not be available.',
                 color: '#F59E0B',
             }, ...prev.slice(0, 99)]);
+        }
+
+        // Seed-completability self-check (BUG-16/17/18 guard). Pure + side-effect-free: verifies
+        // that, given this config's gate toggles + active regions, every in-scope Pokemon can be
+        // guessed once all gate items are collected. A blocked mon means a client/server gating
+        // divergence or an impossible gate. Cheap (one pass over the active dex); warn-only.
+        try {
+            const verdict = verifySeedCompletable(slotData);
+            if (!verdict.completable) {
+                const sample = verdict.blocked.slice(0, 10)
+                    .map(b => `#${b.id} ${b.name} (${b.reason})`).join(', ');
+                console.warn(
+                    `[verifySeedCompletable] ${verdict.blocked.length}/${verdict.inScope} in-scope Pokémon ` +
+                    `can NEVER be guessed under this config (impossible gate / client-server divergence): ${sample}` +
+                    (verdict.blocked.length > 10 ? ' …' : ''),
+                );
+                setLogs(prev => [{
+                    id: crypto.randomUUID(), timestamp: Date.now(), type: 'system',
+                    text: `⚠ Seed gating check: ${verdict.blocked.length} Pokémon appear permanently unguessable under this config. See console.`,
+                    color: '#EF4444',
+                }, ...prev.slice(0, 99)]);
+            }
+        } catch (e) {
+            console.warn('[verifySeedCompletable] check failed (non-fatal):', e);
         }
 
         if (currentProfileId) {

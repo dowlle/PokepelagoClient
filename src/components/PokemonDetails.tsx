@@ -3,6 +3,7 @@ import { useGame } from '../context/GameContext';
 import { useTwitch } from '../context/TwitchContext';
 import { X, ExternalLink, HelpCircle, MapPin, Sparkles, CheckCircle2, Lock, Palette, User, Link, Shield, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getCleanName } from '../utils/pokemon';
+import { hintItemNameForReason } from '../utils/hintItemName';
 import { getDerpemonCredit } from '../services/derpemonService';
 import pokemonNamesJson from '../data/pokemon_names.json';
 import { TYPE_COLORS } from '../utils/typeColors';
@@ -443,8 +444,24 @@ export const PokemonDetails: React.FC = () => {
                                         Pokémon Item
                                     </span>
                                 ))}
-                                {reasons && reasons.map((r: string, i: number) => {
-                                    const itemName = r;
+                                {reasons && reasons
+                                    // 'Route Key' / 'Line Unlock' are generic sentinel
+                                    // reasons (GameContext.tsx). A string mapper cannot
+                                    // know WHICH route/line is missing, so hinting them
+                                    // generically sent garbage like "!hint Route Key"
+                                    // (matches no item). The real per-item hints are
+                                    // emitted by the dedicated Route/Family sections
+                                    // below, which use the canonical missingRouteKeys /
+                                    // missingLineUnlock names. Suppress the duplicate,
+                                    // un-hintable generic badges here.
+                                    .filter((r: string) => r !== 'Route Key' && r !== 'Line Unlock')
+                                    .map((r: string, i: number) => {
+                                    // The badge shows the human-readable gate reason (r),
+                                    // but the hint must use the canonical AP item name,
+                                    // e.g. "Need Thunder Stone" -> "Thunder Stone",
+                                    // "Badges: 3/8" -> "Gym Badge". Passing r straight to
+                                    // !hint sent garbage like "!hint Need Thunder Stone".
+                                    const itemName = hintItemNameForReason(r);
                                     return (
                                         <span
                                             key={i}
@@ -452,7 +469,7 @@ export const PokemonDetails: React.FC = () => {
                                             className={`px-3 py-1 bg-red-950/60 border rounded-lg text-[10px] text-red-200 uppercase font-black tracking-widest shadow-lg cursor-pointer transition-all hover:bg-red-900/40 ${pendingHint === itemName ? 'border-yellow-500/80 animate-pulse' : 'border-red-500/30'}`}
                                             title={pendingHint === itemName ? 'Click again to hint this item' : `Click to hint ${itemName}`}
                                         >
-                                            {pendingHint === itemName ? `Hint ${r}?` : r}
+                                            {pendingHint === itemName ? `Hint ${itemName}?` : r}
                                         </span>
                                     );
                                 })}
@@ -462,24 +479,43 @@ export const PokemonDetails: React.FC = () => {
                                     </span>
                                 )}
                             </div>
-                            {/* Route Lock */}
+                            {/* Route Lock — each route key is a clickable hint.
+                                missingRouteKeys holds canonical "{display} Key" item
+                                names (getRouteKeysForPokemon), so !hint gets a real
+                                item. Need ANY one of them. */}
                             {missingRouteKeys && missingRouteKeys.length > 0 && (
-                                <div className="flex items-center gap-2 text-xs">
-                                    <MapPin size={14} className="text-orange-400 shrink-0" />
-                                    <span className="text-orange-300/90">
-                                        Route: Need one of:{' '}
-                                        {missingRouteKeys.length <= 3
-                                            ? missingRouteKeys.join(', ')
-                                            : `${missingRouteKeys.slice(0, 2).join(', ')} +${missingRouteKeys.length - 2} more`}
-                                    </span>
+                                <div className="flex items-start gap-2 text-xs">
+                                    <MapPin size={14} className="text-orange-400 shrink-0 mt-1" />
+                                    <div className="flex flex-col gap-1">
+                                        <span className="text-orange-300/90">Route: Need one of:</span>
+                                        <div className="flex flex-wrap gap-1">
+                                            {missingRouteKeys.map((rk: string) => (
+                                                <span
+                                                    key={rk}
+                                                    onClick={() => handleHintClick(rk)}
+                                                    className={`px-2 py-0.5 bg-red-950/60 border rounded text-[10px] text-red-200 uppercase font-black tracking-wider shadow cursor-pointer transition-all hover:bg-red-900/40 ${pendingHint === rk ? 'border-yellow-500/80 animate-pulse' : 'border-red-500/30'}`}
+                                                    title={pendingHint === rk ? 'Click again to hint this item' : `Click to hint ${rk}`}
+                                                >
+                                                    {pendingHint === rk ? `Hint ${rk}?` : rk}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
                             )}
-                            {/* Line Lock */}
+                            {/* Line Lock — clickable hint. missingLineUnlock holds the
+                                canonical "{BaseName} Line" item name
+                                (getLineUnlockForPokemon). */}
                             {missingLineUnlock && (
                                 <div className="flex items-center gap-2 text-xs">
                                     <Link size={14} className="text-orange-400 shrink-0" />
-                                    <span className="text-orange-300/90">
-                                        Family: Need {missingLineUnlock}
+                                    <span className="text-orange-300/90">Family:</span>
+                                    <span
+                                        onClick={() => handleHintClick(missingLineUnlock)}
+                                        className={`px-2 py-0.5 bg-red-950/60 border rounded text-[10px] text-red-200 uppercase font-black tracking-wider shadow cursor-pointer transition-all hover:bg-red-900/40 ${pendingHint === missingLineUnlock ? 'border-yellow-500/80 animate-pulse' : 'border-red-500/30'}`}
+                                        title={pendingHint === missingLineUnlock ? 'Click again to hint this item' : `Click to hint ${missingLineUnlock}`}
+                                    >
+                                        {pendingHint === missingLineUnlock ? `Hint ${missingLineUnlock}?` : missingLineUnlock}
                                     </span>
                                 </div>
                             )}
