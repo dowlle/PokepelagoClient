@@ -14,6 +14,13 @@
 // spriteRefreshCounter when the underlying source changes (sprite set,
 // disconnect, manual refresh) and useSpriteManager calls evictAllSpriteUrls
 // in response.
+//
+// Ordering contract (BUG-21): eviction must run BEFORE slots re-acquire for
+// the same counter bump -- useSpriteManager evicts in a layout effect, which
+// React runs before any passive (slot) effect of the same commit. Entries
+// are additionally self-guarding: a factory that resolves after its entry
+// was evicted or replaced never writes into the map and revokes its own
+// blob URL instead of leaking it (counted as `orphaned` in the stats).
 
 interface Entry {
     promise: Promise<string | null>;
@@ -30,6 +37,7 @@ const stats = {
     acquires: 0,
     releases: 0,
     evictions: 0,
+    orphaned: 0,
 };
 
 export interface SpriteUrlCacheStats {
@@ -39,6 +47,7 @@ export interface SpriteUrlCacheStats {
     acquires: number;
     releases: number;
     evictions: number;
+    orphaned: number;
     blobUrlCount: number;
     inFlightCount: number;
     activeRefs: number;
@@ -74,21 +83,42 @@ export function acquireSpriteUrl(
         return existing.promise;
     }
     stats.misses++;
+    // The entry is captured by identity in the resolution handlers (BUG-21):
+    // a bare cache.get(key) here would let a factory that resolves after an
+    // eviction write into -- or a failing one delete -- a NEWER entry created
+    // for the same key by a post-evict re-acquire.
+    let entryRef: Entry | null = null;
     const promise = factory().then((url) => {
-        const entry = cache.get(key);
-        if (entry) entry.url = url;
+        if (entryRef !== null && cache.get(key) === entryRef) {
+            entryRef.url = url;
+        } else {
+            // Evicted (or replaced) while the fetch was in flight: this URL
+            // has no owner. Revoke blobs instead of leaking them (the
+            // PERF-13 silent-leak path). Awaiters of THIS promise still get
+            // the URL, but live slots re-acquire on the refresh counter, so
+            // only already-cleaned-up effects ever see it.
+            stats.orphaned++;
+            if (url && url.startsWith('blob:')) {
+                URL.revokeObjectURL(url);
+            }
+        }
         return url;
     }).catch((err) => {
-        // Drop failed entries so a retry can re-attempt.
-        cache.delete(key);
+        // Drop failed entries so a retry can re-attempt -- but never delete
+        // a successor entry that replaced this one after an eviction.
+        if (entryRef !== null && cache.get(key) === entryRef) {
+            cache.delete(key);
+        }
         throw err;
     });
-    cache.set(key, {
+    const entry: Entry = {
         promise,
         url: null,
         refcount: 1,
         createdAt: Date.now(),
-    });
+    };
+    entryRef = entry;
+    cache.set(key, entry);
     return promise;
 }
 
@@ -142,6 +172,7 @@ export function getSpriteUrlCacheStats(includeKeys = false): SpriteUrlCacheStats
         acquires: stats.acquires,
         releases: stats.releases,
         evictions: stats.evictions,
+        orphaned: stats.orphaned,
         blobUrlCount,
         inFlightCount,
         activeRefs,
@@ -157,4 +188,5 @@ export function _resetSpriteUrlCache(): void {
     stats.acquires = 0;
     stats.releases = 0;
     stats.evictions = 0;
+    stats.orphaned = 0;
 }
