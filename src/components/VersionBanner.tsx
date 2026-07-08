@@ -12,12 +12,14 @@ const DISMISS_KEY = 'pokepelago_banner_v0_6_3_release';
 const SHOW_UNTIL = Date.parse('2026-07-16T00:00:00+02:00');
 
 export const VersionBanner: React.FC = () => {
+    // Hidden when dismissed earlier or past the notice window (checked once at mount).
     const [dismissed, setDismissed] = useState<boolean>(() => {
+        if (Date.now() > SHOW_UNTIL) return true;
         try { return localStorage.getItem(DISMISS_KEY) === '1'; } catch { return false; }
     });
 
-    // Don't show during local development, after dismissal, or past the notice window.
-    if (import.meta.env.DEV || dismissed || Date.now() > SHOW_UNTIL) return null;
+    // Don't show during local development.
+    if (import.meta.env.DEV || dismissed) return null;
 
     const dismiss = () => {
         try { localStorage.setItem(DISMISS_KEY, '1'); } catch { /* ignore */ }
