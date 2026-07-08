@@ -65,6 +65,7 @@ export const SpriteDebugOverlay: React.FC = () => {
             </div>
             <div>hit-rate: {hitRate}</div>
             <div>evictions: {stats.evictions}</div>
+            <div>orphaned: {stats.orphaned}</div>
         </div>
     );
 };
