@@ -375,7 +375,7 @@ export const DexGrid: React.FC = () => {
     return (
         <div className="flex flex-col">
             {/* Dex filter bar */}
-            <div className="flex items-center gap-2 px-2 pt-1 pb-2 sm:px-4 sm:pb-3">
+            <div data-tour="dex-filter" className="flex items-center gap-2 px-2 pt-1 pb-2 sm:px-4 sm:pb-3">
                 <span className="text-[10px] font-black uppercase text-gray-600 tracking-widest">Show:</span>
                 <button
                     onClick={() => toggleDexFilter('guessable')}
