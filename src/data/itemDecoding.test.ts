@@ -138,6 +138,48 @@ describe('decodeRegionPass', () => {
     });
 });
 
+describe('DEVEX-15 explicit ID maps', () => {
+    // The bundled route_data.json now carries explicit routeKeyIds / lineUnlockIds
+    // (item name → absolute AP item ID). The decoders resolve via these directly.
+    // These assertions lock two things: (1) the maps are complete, and (2) every
+    // explicit ID equals the offset-arithmetic ID the fallback would compute — i.e.
+    // DEVEX-15 changed the client's *interpretation*, never the on-the-wire IDs.
+    const raw = rawRouteData as unknown as {
+        routeKeyItems: Record<string, string>;
+        lineUnlockItems: Record<string, string>;
+        routeKeyIds?: Record<string, number>;
+        lineUnlockIds?: Record<string, number>;
+    };
+
+    it('exports explicit maps covering every route key and line unlock', () => {
+        expect(raw.routeKeyIds && Object.keys(raw.routeKeyIds).length).toBe(
+            Object.keys(raw.routeKeyItems).length,
+        );
+        expect(raw.lineUnlockIds && Object.keys(raw.lineUnlockIds).length).toBe(
+            Object.keys(raw.lineUnlockItems).length,
+        );
+    });
+
+    it('explicit route-key IDs equal the two-phase offset formula (wire IDs unchanged)', () => {
+        const apOrder = buildApWorldRouteKeyOrder();
+        apOrder.forEach((rk, i) => {
+            const name = raw.routeKeyItems[rk];
+            const expectedId = OFFSETS.ITEM_OFFSET + OFFSETS.ROUTE_KEY_OFFSET + i;
+            expect(raw.routeKeyIds![name], `${name} @ index ${i}`).toBe(expectedId);
+            // and the decoder round-trips that exact ID back to the name
+            expect(decodeRouteKey(expectedId, OFFSETS)).toBe(name);
+        });
+    });
+
+    it('explicit line-unlock IDs equal the base-id offset formula (wire IDs unchanged)', () => {
+        for (const [baseIdStr, name] of Object.entries(raw.lineUnlockItems)) {
+            const expectedId = OFFSETS.ITEM_OFFSET + OFFSETS.LINE_UNLOCK_OFFSET + Number(baseIdStr);
+            expect(raw.lineUnlockIds![name], `${name} (base ${baseIdStr})`).toBe(expectedId);
+            expect(decodeLineUnlock(expectedId, OFFSETS)).toBe(name);
+        }
+    });
+});
+
 describe('decoder isolation', () => {
     // A Sinnoh Mid Routes Key (item id 8581046) must decode ONLY as a route key,
     // not be accidentally claimed by any other decoder. This guards against a

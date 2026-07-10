@@ -9,13 +9,31 @@
  * the class of drift that produced BUG-12 (two call sites independently
  * re-implementing the same ID → name math, one quietly going wrong).
  *
- * IMPORTANT: any change to APWorld item-ID layout (see
- * `worlds/pokepelago/Items.py`) must be mirrored here AND in the test
- * fixture. Until DEVEX-15 lands (APWorld emits explicit id→name maps),
- * the client reconstructs the ordering from conventions the APWorld
- * happens to follow; the test asserts the reconstruction is correct.
+ * DEVEX-15: when the bundled route_data.json carries explicit
+ * `routeKeyIds` / `lineUnlockIds` maps (APWorld now exports them straight
+ * from `item_data_table`), `decodeRouteKey` / `decodeLineUnlock` resolve by
+ * direct absolute-ID lookup and never touch the ordering / base-id math that
+ * produced BUG-12. The offset-arithmetic path below is retained as a
+ * backward-compatible fallback for pre-DEVEX-15 exports (a new client running
+ * against a route_data.json bundled with an in-flight seed): if any change to
+ * the APWorld item-ID layout (`worlds/pokepelago/Items.py`) happens while
+ * those old exports are still around, the fallback must stay mirrored here and
+ * in the test fixture.
  */
-import { ROUTE_KEY_ITEMS, ROUTE_KEY_ORDER, LINE_UNLOCK_ITEMS } from './routeData';
+import {
+    ROUTE_KEY_ITEMS, ROUTE_KEY_ORDER, LINE_UNLOCK_ITEMS,
+    ROUTE_KEY_IDS, LINE_UNLOCK_IDS,
+} from './routeData';
+
+/** DEVEX-15 fast path: absolute AP item ID → item name, inverted from the
+ *  explicit maps the APWorld exports. Empty when the bundle predates DEVEX-15,
+ *  in which case the decoders fall back to offset arithmetic. */
+const ROUTE_KEY_ID_TO_NAME: Map<number, string> = new Map(
+    Object.entries(ROUTE_KEY_IDS).map(([name, id]) => [id, name] as const),
+);
+const LINE_UNLOCK_ID_TO_NAME: Map<number, string> = new Map(
+    Object.entries(LINE_UNLOCK_IDS).map(([name, id]) => [id, name] as const),
+);
 
 export interface ItemOffsets {
     ITEM_OFFSET: number;
@@ -50,6 +68,11 @@ export const REGION_NAMES_ORDERED: readonly string[] = [
  * the history of why a flat alphabetical sort is wrong here.
  */
 export function decodeRouteKey(itemId: number, offsets: ItemOffsets): string | null {
+    // DEVEX-15 fast path: authoritative explicit map present → direct lookup.
+    // The map covers every route key, so an ID it doesn't contain is simply
+    // not a route key (return null rather than falling through to the guess).
+    if (ROUTE_KEY_ID_TO_NAME.size > 0) return ROUTE_KEY_ID_TO_NAME.get(itemId) ?? null;
+    // Fallback (pre-DEVEX-15 export): two-phase order + offset arithmetic.
     const base = offsets.ITEM_OFFSET + offsets.ROUTE_KEY_OFFSET;
     const idx = itemId - base;
     if (idx < 0 || idx >= ROUTE_KEY_ORDER.length) return null;
@@ -64,6 +87,9 @@ export function decodeRouteKey(itemId: number, offsets: ItemOffsets): string | n
  * is a straight lookup.
  */
 export function decodeLineUnlock(itemId: number, offsets: ItemOffsets): string | null {
+    // DEVEX-15 fast path: authoritative explicit map present → direct lookup.
+    if (LINE_UNLOCK_ID_TO_NAME.size > 0) return LINE_UNLOCK_ID_TO_NAME.get(itemId) ?? null;
+    // Fallback (pre-DEVEX-15 export): base Pokemon ID encoded as the offset.
     const base = offsets.ITEM_OFFSET + offsets.LINE_UNLOCK_OFFSET;
     const baseId = itemId - base;
     if (baseId <= 0 || baseId > 1025) return null;
