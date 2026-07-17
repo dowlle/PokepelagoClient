@@ -28,6 +28,50 @@ function safeSetItem(key: string, value: string): void {
     catch { console.warn(`[localStorage] Failed to write key "${key}" (quota exceeded?)`); }
 }
 
+function buildAudioElement(src: string | null): HTMLAudioElement | null {
+    if (!src) return null;
+    try {
+        const audio = new Audio(src);
+        audio.preload = 'auto';
+        audio.load();
+        audio.onerror = () => {
+            console.warn('[Audio] Failed to load audio source:', src, audio.error?.message || audio.error);
+        };
+        return audio;
+    } catch (error) {
+        console.warn('[Audio] buildAudioElement failed for source:', src, error);
+        return null;
+    }
+}
+
+function playAudioElement(audio: HTMLAudioElement | null): void {
+    if (!audio) {
+        console.warn('[Audio] playAudioElement called with null audio element');
+        return;
+    }
+    const playSource = (element: HTMLAudioElement) => {
+        try {
+            element.currentTime = 0;
+            const promise = element.play();
+            if (promise instanceof Promise) {
+                promise.catch((error) => {
+                    console.warn('[Audio] Playback failed:', error, 'source=', element.src);
+                });
+            }
+        } catch (error) {
+            console.warn('[Audio] Playback exception:', error, 'source=', element.src);
+        }
+    };
+
+    playSource(audio);
+    if (audio.src) {
+        const backup = new Audio(audio.src);
+        backup.preload = 'auto';
+        backup.load();
+        playSource(backup);
+    }
+}
+
 // PERF-07: coalesce high-frequency persistence writes (e.g. the caught set, which used to
 // write on every single guess — 100+ writes/min during rapid play) into at most one write
 // per key per `delay`. The latest value always wins. flushPendingWrites() forces all pending
@@ -150,6 +194,10 @@ export interface UISettings {
     // (existing behavior). A specific number overrides to that count, capped
     // at activeCount so empty cells aren't rendered.
     dexGridColumns: 'auto' | 1 | 2 | 3 | 4 | 5;
+    playGuessableSound: boolean;
+    guessableSoundSource: string;
+    playProgressiveItemSound: boolean;
+    progressiveItemSoundSource: string;
 }
 
 interface ConnectionInfo {
@@ -384,6 +432,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             silhouetteGlow: true,
             stopAutosubmitOnGoal: false,
             dexGridColumns: 'auto',
+            playGuessableSound: false,
+            guessableSoundSource: '',
+            playProgressiveItemSound: false,
+            progressiveItemSoundSource: '',
         };
         if (saved) {
             try {
@@ -568,6 +620,19 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             flushPendingWrites();
         };
     }, []);
+
+    const guessableAudioRef = useRef<HTMLAudioElement | null>(null);
+    const progressiveItemAudioRef = useRef<HTMLAudioElement | null>(null);
+    const previousGuessableIdsRef = useRef<Set<number>>(new Set());
+    const guessableAudioInitializedRef = useRef(false);
+
+    useEffect(() => {
+        guessableAudioRef.current = buildAudioElement(uiSettings.guessableSoundSource || null);
+    }, [uiSettings.guessableSoundSource]);
+
+    useEffect(() => {
+        progressiveItemAudioRef.current = buildAudioElement(uiSettings.progressiveItemSoundSource || null);
+    }, [uiSettings.progressiveItemSoundSource]);
 
     useEffect(() => {
         safeSetItem('pokepelago_ui', JSON.stringify(uiSettings));
@@ -984,6 +1049,30 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [isPokemonGuessableImpl]);
 
     useEffect(() => { isPokemonGuessableRef.current = isPokemonGuessable; }, [isPokemonGuessable]);
+
+    useEffect(() => {
+        if (!uiSettings.playGuessableSound || !uiSettings.guessableSoundSource) {
+            previousGuessableIdsRef.current = new Set();
+            guessableAudioInitializedRef.current = false;
+            return;
+        }
+
+        const nextGuessable = new Set<number>();
+        for (const pokemon of allPokemon) {
+            if (checkedIds.has(pokemon.id) || releasedIds.has(pokemon.id)) continue;
+            if (isPokemonGuessable(pokemon.id).canGuess) nextGuessable.add(pokemon.id);
+        }
+
+        if (guessableAudioInitializedRef.current) {
+            const added = Array.from(nextGuessable).find(id => !previousGuessableIdsRef.current.has(id));
+            if (added !== undefined) {
+                playAudioElement(guessableAudioRef.current);
+            }
+        }
+
+        guessableAudioInitializedRef.current = true;
+        previousGuessableIdsRef.current = nextGuessable;
+    }, [allPokemon, checkedIds, releasedIds, isPokemonGuessable, uiSettings.playGuessableSound, uiSettings.guessableSoundSource]);
 
     const getLocationName = useCallback((locationId: number) => {
         let name: string | undefined;
@@ -1677,6 +1766,29 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (timeRift) setHasTimeRift(true);
         if (fossilRestorer) setHasFossilRestorer(true);
 
+        const shouldPlayProgressiveItemSound = uiSettings.playProgressiveItemSound && uiSettings.progressiveItemSoundSource && (
+            stonesAdd.length > 0 || typesAdd.length > 0 || regionsAdd.length > 0 || routeKeysAdd.length > 0 ||
+            lineUnlocksAdd.length > 0 || gymBadgeDelta > 0 || daycareDelta > 0 || linkCable || ultraWormhole ||
+            timeRift || fossilRestorer
+        );
+        if (shouldPlayProgressiveItemSound) {
+            console.debug('[Audio] Progression sound trigger', {
+                source: uiSettings.progressiveItemSoundSource,
+                stonesAdd,
+                typesAdd,
+                regionsAdd,
+                routeKeysAdd,
+                lineUnlocksAdd,
+                gymBadgeDelta,
+                daycareDelta,
+                linkCable,
+                ultraWormhole,
+                timeRift,
+                fossilRestorer,
+            });
+            playAudioElement(progressiveItemAudioRef.current || buildAudioElement(uiSettings.progressiveItemSoundSource || null));
+        }
+
         // Shiny Charm: pick N distinct caught Pokemon in one pass. Uses checkedIdsRef
         // (kept in sync via useEffect at line 393) instead of the old setCheckedIds →
         // setShinyIds nested-callback hack for peeking at current state.
@@ -1728,7 +1840,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUsedPokedexes(used => { setPokedexes(Math.max(0, client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 3).length - used.size)); return used; });
             processTrapItems(items, client);
         }
-    }, [processTrapItems]);
+    }, [processTrapItems, uiSettings.playProgressiveItemSound, uiSettings.progressiveItemSoundSource]);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const onPrintJSON = useCallback((packet: any, client: Client) => {

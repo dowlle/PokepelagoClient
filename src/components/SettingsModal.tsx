@@ -35,6 +35,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     // Sprite import state
     const [importProgress, setImportProgress] = useState<number | null>(null);
     const [isImporting, setIsImporting] = useState(false);
+    const [guessableSoundStatus, setGuessableSoundStatus] = useState<'idle' | 'loaded' | 'error'>('idle');
+    const [progressiveSoundStatus, setProgressiveSoundStatus] = useState<'idle' | 'loaded' | 'error'>('idle');
 
     // Twitch settings (persisted in localStorage, read by useTwitchChat in GlobalGuessInput)
     const [twitchEnabled, setTwitchEnabled] = useState(() => localStorage.getItem('pokepelago_twitch_enabled') === 'true');
@@ -323,6 +325,137 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                                             </div>
                                             <input type="checkbox" checked={uiSettings.silhouetteGlow} onChange={(e) => updateUiSettings({ silhouetteGlow: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-indigo-600 focus:ring-indigo-500" />
                                         </label>
+                                    </div>
+                                </div>
+
+                                {/* Sound Notifications */}
+                                <div className="space-y-2 pt-2">
+                                    <label className="flex items-center gap-2 text-xs font-bold text-gray-300">
+                                        <div className="w-3.5 h-3.5 rounded-full bg-cyan-950 border border-cyan-800 opacity-70" />
+                                        Sound Notifications
+                                    </label>
+                                    <div className="space-y-3">
+                                        <div className="p-3 bg-gray-800/30 border border-gray-700 rounded-xl">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div>
+                                                    <div className="text-xs font-bold text-gray-200">Guessable Sound</div>
+                                                    <div className="text-[9px] text-gray-500">Play when a new Pokémon becomes guessable again</div>
+                                                </div>
+                                                <input type="checkbox" checked={uiSettings.playGuessableSound} onChange={(e) => updateUiSettings({ playGuessableSound: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-cyan-600 focus:ring-cyan-500" />
+                                            </div>
+                                            <div className="mt-3 space-y-2">
+                                                <input
+                                                    type="text"
+                                                    value={uiSettings.guessableSoundSource}
+                                                    onChange={(e) => {
+                                                        updateUiSettings({ guessableSoundSource: e.target.value });
+                                                        setGuessableSoundStatus('idle');
+                                                    }}
+                                                    placeholder="Sound URL or data URI"
+                                                    className="w-full px-3 py-2 text-xs bg-gray-950 border border-gray-700 rounded text-white outline-none focus:border-cyan-500"
+                                                />
+                                                <div className="flex flex-wrap gap-2 items-center">
+                                                    <label className="inline-flex items-center gap-2 px-3 py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-gray-900 border border-gray-700 text-gray-200 hover:bg-gray-800 cursor-pointer">
+                                                        Upload
+                                                        <input
+                                                            type="file"
+                                                            accept="audio/*"
+                                                            className="hidden"
+                                                            onChange={(e) => {
+                                                                const file = e.target.files?.[0];
+                                                                if (!file) return;
+                                                                const reader = new FileReader();
+                                                                reader.onload = () => {
+                                                                    updateUiSettings({ guessableSoundSource: String(reader.result) });
+                                                                    setGuessableSoundStatus('loaded');
+                                                                };
+                                                                reader.onerror = () => setGuessableSoundStatus('error');
+                                                                reader.readAsDataURL(file);
+                                                            }}
+                                                        />
+                                                    </label>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const audio = new Audio(uiSettings.guessableSoundSource);
+                                                            audio.oncanplaythrough = () => setGuessableSoundStatus('loaded');
+                                                            audio.onerror = () => setGuessableSoundStatus('error');
+                                                            void audio.play().catch(() => {
+                                                                setGuessableSoundStatus('error');
+                                                            });
+                                                        }}
+                                                        disabled={!uiSettings.guessableSoundSource}
+                                                        className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-blue-600 text-white disabled:bg-gray-800 disabled:text-gray-500"
+                                                    >
+                                                        Play
+                                                    </button>
+                                                    <span className={`text-[10px] font-bold ${guessableSoundStatus === 'loaded' ? 'text-emerald-400' : guessableSoundStatus === 'error' ? 'text-red-400' : 'text-gray-500'}`}>
+                                                        {guessableSoundStatus === 'loaded' ? 'Loaded' : guessableSoundStatus === 'error' ? 'Failed to load' : 'Not checked'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-3 bg-gray-800/30 border border-gray-700 rounded-xl">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div>
+                                                    <div className="text-xs font-bold text-gray-200">Progressive Item Sound</div>
+                                                    <div className="text-[9px] text-gray-500">Play when a badge/key/pass/item unlocks progress</div>
+                                                </div>
+                                                <input type="checkbox" checked={uiSettings.playProgressiveItemSound} onChange={(e) => updateUiSettings({ playProgressiveItemSound: e.target.checked })} className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-cyan-600 focus:ring-cyan-500" />
+                                            </div>
+                                            <div className="mt-3 space-y-2">
+                                                <input
+                                                    type="text"
+                                                    value={uiSettings.progressiveItemSoundSource}
+                                                    onChange={(e) => {
+                                                        updateUiSettings({ progressiveItemSoundSource: e.target.value });
+                                                        setProgressiveSoundStatus('idle');
+                                                    }}
+                                                    placeholder="Sound URL or data URI"
+                                                    className="w-full px-3 py-2 text-xs bg-gray-950 border border-gray-700 rounded text-white outline-none focus:border-cyan-500"
+                                                />
+                                                <div className="flex flex-wrap gap-2 items-center">
+                                                    <label className="inline-flex items-center gap-2 px-3 py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-gray-900 border border-gray-700 text-gray-200 hover:bg-gray-800 cursor-pointer">
+                                                        Upload
+                                                        <input
+                                                            type="file"
+                                                            accept="audio/*"
+                                                            className="hidden"
+                                                            onChange={(e) => {
+                                                                const file = e.target.files?.[0];
+                                                                if (!file) return;
+                                                                const reader = new FileReader();
+                                                                reader.onload = () => {
+                                                                    updateUiSettings({ progressiveItemSoundSource: String(reader.result) });
+                                                                    setProgressiveSoundStatus('loaded');
+                                                                };
+                                                                reader.onerror = () => setProgressiveSoundStatus('error');
+                                                                reader.readAsDataURL(file);
+                                                            }}
+                                                        />
+                                                    </label>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const audio = new Audio(uiSettings.progressiveItemSoundSource);
+                                                            audio.oncanplaythrough = () => setProgressiveSoundStatus('loaded');
+                                                            audio.onerror = () => setProgressiveSoundStatus('error');
+                                                            void audio.play().catch(() => {
+                                                                setProgressiveSoundStatus('error');
+                                                            });
+                                                        }}
+                                                        disabled={!uiSettings.progressiveItemSoundSource}
+                                                        className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-blue-600 text-white disabled:bg-gray-800 disabled:text-gray-500"
+                                                    >
+                                                        Play
+                                                    </button>
+                                                    <span className={`text-[10px] font-bold ${progressiveSoundStatus === 'loaded' ? 'text-emerald-400' : progressiveSoundStatus === 'error' ? 'text-red-400' : 'text-gray-500'}`}>
+                                                        {progressiveSoundStatus === 'loaded' ? 'Loaded' : progressiveSoundStatus === 'error' ? 'Failed to load' : 'Not checked'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
