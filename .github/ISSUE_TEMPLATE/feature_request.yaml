@@ -1,0 +1,81 @@
+name: Feature request or idea
+description: A new check, item, option or quality-of-life change.
+title: "[Idea] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ideas are welcome and several shipped features started as one. The questions below
+        are the ones that get asked in the comments every time, so answering them up front
+        gets the idea triaged in one pass instead of three.
+
+        Not knowing an answer is fine. Leave it blank.
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What you would like added or changed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: What would it add to play?
+      description: |
+        What problem it solves, or what it would feel like in a run. This is what decides
+        whether an idea gets adopted, more than the mechanism does.
+    validations:
+      required: true
+
+  - type: textarea
+    id: prior-art
+    attributes:
+      label: Does another randomizer or Archipelago world already do this?
+      description: |
+        Genuinely useful, not a formality. Naming the game that does it well has settled
+        several design questions here in one comment.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: optional
+    attributes:
+      label: Should this be optional?
+      description: |
+        Almost every accepted idea ends up as a YAML option or a client setting, and the
+        default matters. Anything that changes the item or location pool is normally off
+        by default.
+      options:
+        - Not sure
+        - A YAML option, off by default
+        - A YAML option, on by default
+        - A client setting, not a seed option
+        - Always on, no option
+    validations:
+      required: false
+
+  - type: input
+    id: pool-size
+    attributes:
+      label: Roughly how many checks or items would this add?
+      description: |
+        A rough count is enough. Pool size drives whether an idea can ship as a patch or
+        has to wait for a datapackage bump, so an early estimate helps a lot.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which side would this touch, if you know?
+      description: Guessing wrong costs nothing, this just helps route it.
+      options:
+        - Not sure
+        - The client (Pokédex, display, settings, overlay)
+        - The randomization (checks, items, options, logic)
+        - The Twitch or OBS integration
+    validations:
+      required: false

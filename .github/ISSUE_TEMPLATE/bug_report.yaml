@@ -1,0 +1,119 @@
+name: Bug report
+description: Something in the client or the game is broken or behaving wrong.
+title: "[Bug] "
+labels: ["bug", "needs-repro"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Poképelago runs in your browser and talks to an Archipelago
+        server, so a lot of problems come down to which browser, which client build and
+        which apworld version are in play. The fields below are aimed at those.
+
+        If a **seed looks impossible to finish** rather than broken, use the
+        "Stuck or impossible seed" form instead.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What went wrong, and what you expected instead.
+      placeholder: The sprite for a Pokémon I had already caught disappeared after I guessed the next one.
+    validations:
+      required: true
+
+  - type: input
+    id: client-version
+    attributes:
+      label: Client and APWorld version
+      description: |
+        Open Settings in the client: it shows the APWorld version the host is running,
+        and warns you if a newer one exists. Please give that, plus whether you are on
+        the live client or a local build.
+      placeholder: APWorld v0.6.3, live client at dowlle.github.io/PokepelagoClient
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser, version and operating system
+      description: |
+        This is a browser app, so this is the equivalent of "what platform". Please
+        include whether you are on desktop or mobile.
+      placeholder: Firefox 141 on Windows 11, desktop
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: As precise as you can be. A sequence beats a description every time.
+      placeholder: |
+        1. Connect to the room
+        2. Guess Bulbasaur
+        3. Open the details panel for Ivysaur
+        4. The sprite is blank
+    validations:
+      required: true
+
+  - type: textarea
+    id: console
+    attributes:
+      label: Browser console output
+      description: |
+        Press F12, open the Console tab, reproduce the problem, then copy everything that
+        appears. This is the client's log file and it is usually what pins a bug down.
+        Red errors matter most, but the lines just before them matter too.
+      render: shell
+    validations:
+      required: false
+
+  - type: dropdown
+    id: reload
+    attributes:
+      label: Does a page reload fix it?
+      description: |
+        A problem that survives a reload is in the data or the seed. A problem a reload
+        clears is client state, and those are chased very differently.
+      options:
+        - Have not tried
+        - "Yes, a reload fixes it"
+        - "No, it comes back after a reload"
+        - "It never recovers, even in a fresh browser session"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: solo-or-multi
+    attributes:
+      label: Solo or multiworld?
+      options:
+        - Solo (only Poképelago in the room)
+        - Multiworld with other games
+        - Multiworld with more than one Poképelago slot
+    validations:
+      required: false
+
+  - type: textarea
+    id: yaml
+    attributes:
+      label: Your YAML, or the options you changed from the defaults
+      description: |
+        Options interact more than they look like they do, and several past bugs turned
+        out to be one option quietly overriding another.
+      render: yaml
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: |
+        Screenshots and short clips help a lot for visual bugs. If it involves the OBS
+        overlay or the Twitch integration, say so, and please blank out any room password
+        that appears in a URL.
+    validations:
+      required: false

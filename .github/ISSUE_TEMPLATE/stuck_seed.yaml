@@ -1,0 +1,101 @@
+name: Stuck or impossible seed
+description: You cannot progress, or a Pokémon or check looks impossible to unlock.
+title: "[Seed] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when the client works but the **seed** looks wrong: a Pokémon you can
+        never unlock, a check you cannot reach, or a run that cannot be finished.
+
+        These are usually logic or option interactions, so the YAML and the room matter
+        more here than a screenshot does.
+
+  - type: textarea
+    id: stuck-on
+    attributes:
+      label: What are you stuck on?
+      description: What you cannot unlock or guess, and what you have already tried.
+      placeholder: |
+        I have every Type Key the details panel lists for this Pokémon, but the input
+        still refuses the guess.
+    validations:
+      required: true
+
+  - type: input
+    id: versions
+    attributes:
+      label: APWorld version and Archipelago version
+      description: |
+        Settings in the client shows the APWorld version the host is running. Please also
+        give the Archipelago version the room was generated on.
+      placeholder: APWorld v0.6.3 on Archipelago 0.6.7
+    validations:
+      required: true
+
+  - type: textarea
+    id: console
+    attributes:
+      label: Browser console output on connect
+      description: |
+        Press F12, open the Console tab, then reload and reconnect. The client checks the
+        seed when it connects and writes a `[verifySeedCompletable]` line saying how many
+        in-scope Pokémon it considers blocked. That line, whatever it says, is the fastest
+        way to tell a real logic problem from a misunderstanding.
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: yaml
+    attributes:
+      label: Your YAML
+      description: |
+        Required. Almost every seed problem so far has come down to an option or a
+        combination of options, so without this we can only guess.
+      render: yaml
+    validations:
+      required: true
+
+  - type: dropdown
+    id: solo-or-multi
+    attributes:
+      label: Solo or multiworld?
+      description: Some failures only exist in multiworld fills, others only solo.
+      options:
+        - Solo (only Poképelago in the room)
+        - Multiworld with other games
+        - Multiworld with more than one Poképelago slot
+    validations:
+      required: true
+
+  - type: input
+    id: room
+    attributes:
+      label: Room link or seed number
+      description: |
+        An archipelago.gg room link is ideal, since it lets us regenerate the exact seed.
+        If the room is private, say so and we will work from the YAML.
+      placeholder: https://archipelago.gg/room/...
+    validations:
+      required: false
+
+  - type: input
+    id: slot
+    attributes:
+      label: Your slot name
+      placeholder: AshKetchum
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: |
+        A screenshot of the Pokédex or the gate tracker in the stuck state helps. The
+        spoiler log helps most of all, but only attach it if you are happy to have it
+        public: it reveals the whole seed.
+    validations:
+      required: false

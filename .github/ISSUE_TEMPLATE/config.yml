@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: How to set up and play
+    url: https://github.com/dowlle/PokepelagoClient#how-to-connect
+    about: Connecting the browser client to a room, and how a run actually works.
+  - name: The client itself
+    url: https://dowlle.github.io/PokepelagoClient/
+    about: The live Poképelago client. Settings shows which APWorld version your host is running.
+  - name: New to Archipelago itself
+    url: https://archipelago.gg/tutorial/
+    about: Setting up a multiworld, YAMLs and rooms in general, rather than anything Poképelago-specific.
