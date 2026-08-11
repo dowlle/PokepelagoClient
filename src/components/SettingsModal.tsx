@@ -623,16 +623,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
                 {/* Footer */}
                 <div className="px-6 py-3 border-t border-gray-800 bg-gray-950/50 flex items-center justify-between">
-                    <button
-                        onClick={() => {
-                            localStorage.removeItem('pokepelago_tour_completed');
-                            localStorage.removeItem('pokepelago_tour_seen_prompt');
-                            window.dispatchEvent(new Event('pokepelago_tour_restart'));
-                        }}
-                        className="text-[10px] text-gray-600 hover:text-gray-400 transition-colors"
-                    >
-                        Restart guided tour
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => window.dispatchEvent(new Event('pokepelago_intro_open'))}
+                            className="text-[10px] text-gray-600 hover:text-gray-400 transition-colors"
+                        >
+                            What is Pok&eacute;pelago?
+                        </button>
+                        <button
+                            onClick={() => {
+                                localStorage.removeItem('pokepelago_tour_completed');
+                                localStorage.removeItem('pokepelago_tour_seen_prompt');
+                                window.dispatchEvent(new Event('pokepelago_tour_restart'));
+                            }}
+                            className="text-[10px] text-gray-600 hover:text-gray-400 transition-colors"
+                        >
+                            Restart guided tour
+                        </button>
+                    </div>
                     <a
                         href="https://ko-fi.com/dowlle"
                         target="_blank"
