@@ -1592,10 +1592,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const total = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 1).length;
                 setMasterBalls(Math.max(0, total - usedIds.size)); setUsedMasterBalls(usedIds);
             } else if (key === pgKey) {
-                const total = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 2).length;
+                const total = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 3).length;
                 setPokegears(Math.max(0, total - usedIds.size)); setUsedPokegears(usedIds);
             } else if (key === pdKey) {
-                const total = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 3).length;
+                const total = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 2).length;
                 setPokedexes(Math.max(0, total - usedIds.size)); setUsedPokedexes(usedIds);
             } else if (key === derpKey) {
                 onDataStorageDerpUpdate(validIds(value));
@@ -1615,8 +1615,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const pdUsed = new Set(validIds(data[pdKey] ?? []));
 
             const mbTotal = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 1).length;
-            const pgTotal = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 2).length;
-            const pdTotal = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 3).length;
+            const pgTotal = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 3).length;
+            const pdTotal = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 2).length;
 
             setMasterBalls(Math.max(0, mbTotal - mbUsed.size));
             setUsedMasterBalls(mbUsed);
@@ -1867,8 +1867,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (recalculateItems) {
             setUsedMasterBalls(used => { setMasterBalls(Math.max(0, client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 1).length - used.size)); return used; });
-            setUsedPokegears(used => { setPokegears(Math.max(0, client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 2).length - used.size)); return used; });
-            setUsedPokedexes(used => { setPokedexes(Math.max(0, client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 3).length - used.size)); return used; });
+            setUsedPokegears(used => { setPokegears(Math.max(0, client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 3).length - used.size)); return used; });
+            setUsedPokedexes(used => { setPokedexes(Math.max(0, client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 2).length - used.size)); return used; });
             processTrapItems(items, client);
         }
     }, [processTrapItems]);

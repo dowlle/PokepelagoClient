@@ -441,6 +441,10 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ form, setForm, onSave, onCanc
                     />
                 </div>
             </div>
+            <p className="text-[10px] text-gray-500 leading-relaxed">
+                Playing over HTTPS? The server must support <code className="text-gray-400">wss://</code> (secure WebSocket).
+                Plain <code className="text-gray-400">ws://</code> only works for localhost.
+            </p>
             {form.password && (
                 <div className="flex items-start gap-1.5 text-[10px] text-yellow-600 bg-yellow-900/10 border border-yellow-800/30 rounded px-2 py-1.5">
                     <AlertTriangle size={11} className="mt-0.5 shrink-0" />

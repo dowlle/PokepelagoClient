@@ -25,6 +25,20 @@ export interface ItemOffsets {
     LINE_UNLOCK_OFFSET: number;
 }
 
+export interface UsefulItemOffsets {
+    ITEM_OFFSET: number;
+    USEFUL_ITEM_OFFSET: number;
+}
+
+/** Canonical useful-item order used by APWorld's Items.py assignment:
+ *  USEFUL_ITEM_OFFSET + 1 = Master Ball, +2 = Pokedex, +3 = Pokegear.
+ *  See BUG-24: GameContext's inline reimplementation of this mapping had
+ *  +2 and +3 transposed at three call sites. Locked here as the reference
+ *  so a future drift gets caught by the regression test below. */
+export const USEFUL_ITEM_NAMES_ORDERED: readonly string[] = [
+    'Master Ball', 'Pokedex', 'Pokegear',
+] as const;
+
 /** Canonical type order used by APWorld's GEN_1_TYPES; Items.py assigns
  *  TYPE_ITEM_OFFSET + index in this order. Must not be reordered. */
 export const TYPE_NAMES_ORDERED: readonly string[] = [
@@ -90,4 +104,15 @@ export function decodeRegionPass(itemId: number, offsets: ItemOffsets): string |
     const idx = itemId - base;
     if (idx < 0 || idx >= REGION_NAMES_ORDERED.length) return null;
     return REGION_NAMES_ORDERED[idx];
+}
+
+/**
+ * Decode a useful-item (Master Ball / Pokedex / Pokegear) item ID to its
+ * display name, or null if the ID is not in the USEFUL_ITEM_OFFSET range.
+ */
+export function decodeUsefulItem(itemId: number, offsets: UsefulItemOffsets): string | null {
+    const base = offsets.ITEM_OFFSET + offsets.USEFUL_ITEM_OFFSET;
+    const idx = itemId - base - 1;
+    if (idx < 0 || idx >= USEFUL_ITEM_NAMES_ORDERED.length) return null;
+    return USEFUL_ITEM_NAMES_ORDERED[idx];
 }

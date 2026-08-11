@@ -18,6 +18,7 @@ import { OverlayView } from './components/OverlayView';
 import { DebugPanel } from './components/DebugPanel';
 import { TourOverlay } from './components/TourOverlay';
 import { TourPrompt } from './components/TourPrompt';
+import { IntroModal } from './components/IntroModal';
 import { useTour } from './hooks/useTour';
 import type { TourMode } from './hooks/useTour';
 import { TwitchProvider } from './context/TwitchContext';
@@ -440,6 +441,7 @@ const App: React.FC = () => {
       <GameProvider>
         <TwitchProvider>
           {isOverlayMode ? <OverlayView /> : <GameContent />}
+          {!isOverlayMode && <IntroModal />}
         </TwitchProvider>
       </GameProvider>
       <SpriteDebugOverlay />

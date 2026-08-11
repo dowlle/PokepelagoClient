@@ -10,7 +10,7 @@ export interface TourStep {
   settingsSection?: string;
 }
 
-const ARCHIPELAGO_STEPS: TourStep[] = [
+export const ARCHIPELAGO_STEPS: TourStep[] = [
   {
     id: 'guess-input',
     selector: 'guess-input',
@@ -20,8 +20,8 @@ const ARCHIPELAGO_STEPS: TourStep[] = [
   {
     id: 'lang-selector',
     selector: 'lang-selector',
-    title: 'Change Language',
-    description: 'Switch between 11 languages for Pokemon names. English, Japanese, French, and more.',
+    title: 'Guess Language',
+    description: 'This sets the language your guesses are matched in — only names in the selected language count. Switch between 11 languages (English, Japanese, French, and more).',
   },
   {
     id: 'stats-counter',
@@ -34,6 +34,12 @@ const ARCHIPELAGO_STEPS: TourStep[] = [
     selector: 'dex-region',
     title: 'Pokemon Grid',
     description: 'Pokemon are organized by region. Click headers to collapse, drag to reorder. A colored dot means guessable.',
+  },
+  {
+    id: 'dex-filter',
+    selector: 'dex-filter',
+    title: 'Filter the Grid',
+    description: 'Show only Pokemon you can guess right now, or the ones you\'ve already caught. Handy when the full dex feels overwhelming.',
   },
   {
     id: 'log-toggle',
@@ -78,24 +84,32 @@ const ARCHIPELAGO_STEPS: TourStep[] = [
   },
 ];
 
-const STANDALONE_STEPS: TourStep[] = [
-  { ...ARCHIPELAGO_STEPS[0] },
-  { ...ARCHIPELAGO_STEPS[1] },
+// Standalone mode reuses a subset of the Archipelago steps. Referenced by id
+// (not array index) so inserting/reordering Archipelago steps can't silently
+// repoint these at the wrong step.
+const stepById = (id: string): TourStep => {
+  const step = ARCHIPELAGO_STEPS.find(s => s.id === id);
+  if (!step) throw new Error(`Unknown tour step id: ${id}`);
+  return step;
+};
+
+export const STANDALONE_STEPS: TourStep[] = [
+  { ...stepById('guess-input') },
+  { ...stepById('lang-selector') },
   {
-    ...ARCHIPELAGO_STEPS[2],
+    ...stepById('stats-counter'),
     description: 'Track how many Pokemon you\'ve guessed.',
   },
   {
-    ...ARCHIPELAGO_STEPS[3],
+    ...stepById('dex-region'),
     description: 'Pokemon are organized by region. Click headers to collapse, drag to reorder. A colored dot means guessable.',
   },
+  { ...stepById('dex-filter') },
   {
-    ...ARCHIPELAGO_STEPS[7],
+    ...stepById('sprite-url'),
     description: 'Paste a GitHub sprite URL to display Pokemon images.',
   },
-  {
-    ...ARCHIPELAGO_STEPS[8],
-  },
+  { ...stepById('shadow-toggle') },
 ];
 
 const LS_COMPLETED = 'pokepelago_tour_completed';
