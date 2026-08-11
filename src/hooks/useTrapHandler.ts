@@ -6,6 +6,7 @@ import type { DerpemonIndex } from '../services/derpemonService';
 import type { OffsetTable } from './useOffsets';
 import type { ToastMessage, LogEntry } from '../context/GameContext';
 import { getCleanName } from '../utils/pokemon';
+import { decodeUsefulItem } from '../data/itemDecoding';
 
 interface UseTrapHandlerParams {
     offsetsRef: MutableRefObject<OffsetTable>;
@@ -94,9 +95,7 @@ export function useTrapHandler({
             } else if (
                 item.id === ITEM_OFFSET + TRAP_ITEM_OFFSET + 3 ||
                 item.id === ITEM_OFFSET + TRAP_ITEM_OFFSET + 4 ||
-                item.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 1 ||
-                item.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 2 ||
-                item.id === ITEM_OFFSET + USEFUL_ITEM_OFFSET + 3
+                decodeUsefulItem(item.id, { ITEM_OFFSET, USEFUL_ITEM_OFFSET }) !== null
             ) {
                 recalculateItems = true;
             }

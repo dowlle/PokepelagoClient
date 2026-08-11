@@ -167,6 +167,21 @@ describe('decodeUsefulItem', () => {
         expect(decodeUsefulItem(USEFUL_OFFSETS.ITEM_OFFSET + USEFUL_OFFSETS.USEFUL_ITEM_OFFSET, USEFUL_OFFSETS)).toBeNull();
         expect(decodeUsefulItem(USEFUL_OFFSETS.ITEM_OFFSET + USEFUL_OFFSETS.USEFUL_ITEM_OFFSET + 4, USEFUL_OFFSETS)).toBeNull();
     });
+
+    it('supports the shared runtime counting path for mixed received items', () => {
+        const receivedIds = [
+            8574000 + 3001,
+            8574000 + 3002,
+            8574000 + 3002,
+            8574000 + 3003,
+            8574000 + 7000,
+        ];
+        const decoded = receivedIds.map(id => decodeUsefulItem(id, USEFUL_OFFSETS));
+        expect(decoded.filter(name => name === 'Master Ball')).toHaveLength(1);
+        expect(decoded.filter(name => name === 'Pokedex')).toHaveLength(2);
+        expect(decoded.filter(name => name === 'Pokegear')).toHaveLength(1);
+        expect(decoded.filter(name => name === null)).toHaveLength(1);
+    });
 });
 
 describe('decoder isolation', () => {
