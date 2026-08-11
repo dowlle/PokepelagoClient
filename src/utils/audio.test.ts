@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_AUDIO_NOTIFICATION_SETTINGS, getGuessableSoundSourceOrDefault, getProgressiveItemSoundSourceOrDefault, shouldPlaySoundAfterCooldown } from './audio';
 
 describe('audio defaults', () => {
-  it('enables the notification toggles by default', () => {
-    expect(DEFAULT_AUDIO_NOTIFICATION_SETTINGS.playGuessableSound).toBe(true);
-    expect(DEFAULT_AUDIO_NOTIFICATION_SETTINGS.playProgressiveItemSound).toBe(true);
+  it('keeps notification sounds opt-in by default', () => {
+    expect(DEFAULT_AUDIO_NOTIFICATION_SETTINGS.playGuessableSound).toBe(false);
+    expect(DEFAULT_AUDIO_NOTIFICATION_SETTINGS.playProgressiveItemSound).toBe(false);
   });
 
   it('uses the bundled guessable sound when no custom source is set', () => {

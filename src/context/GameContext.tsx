@@ -23,6 +23,7 @@ import { useGoalChecker } from '../hooks/useGoalChecker';
 import { useTrapHandler } from '../hooks/useTrapHandler';
 import { applyTheme } from '../utils/themes';
 import { PokemonSlotContext, type PokemonSlotContextValue } from './PokemonSlotContext';
+import { getCustomSound, isCustomSoundMarker, type CustomSoundKind } from '../services/audioService';
 
 /** localStorage.setItem wrapped in try/catch to handle QuotaExceededError gracefully. */
 function safeSetItem(key: string, value: string): void {
@@ -63,6 +64,12 @@ function playAudioElement(audio: HTMLAudioElement | null): void {
     } catch (error) {
         console.warn('[Audio] Playback exception:', error, 'source=', audio.src);
     }
+}
+
+async function resolveAudioSource(kind: CustomSoundKind, configuredSource: string, fallbackSource: string): Promise<{ src: string; objectUrl: boolean }> {
+    if (!isCustomSoundMarker(configuredSource)) return { src: fallbackSource, objectUrl: false };
+    const blob = await getCustomSound(kind);
+    return blob ? { src: URL.createObjectURL(blob), objectUrl: true } : { src: fallbackSource, objectUrl: false };
 }
 
 // PERF-07: coalesce high-frequency persistence writes (e.g. the caught set, which used to
@@ -627,11 +634,37 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [uiSettings]);
 
     useEffect(() => {
-        guessableAudioRef.current = buildAudioElement(getGuessableSoundSourceOrDefault(uiSettings.guessableSoundSource));
+        let cancelled = false;
+        let objectUrl: string | null = null;
+        void resolveAudioSource('guessable', uiSettings.guessableSoundSource, getGuessableSoundSourceOrDefault('')).then((resolved) => {
+            if (cancelled) {
+                if (resolved.objectUrl) URL.revokeObjectURL(resolved.src);
+                return;
+            }
+            if (resolved.objectUrl) objectUrl = resolved.src;
+            guessableAudioRef.current = buildAudioElement(resolved.src);
+        });
+        return () => {
+            cancelled = true;
+            if (objectUrl) URL.revokeObjectURL(objectUrl);
+        };
     }, [uiSettings.guessableSoundSource]);
 
     useEffect(() => {
-        progressiveItemAudioRef.current = buildAudioElement(getProgressiveItemSoundSourceOrDefault(uiSettings.progressiveItemSoundSource));
+        let cancelled = false;
+        let objectUrl: string | null = null;
+        void resolveAudioSource('progressive', uiSettings.progressiveItemSoundSource, getProgressiveItemSoundSourceOrDefault('')).then((resolved) => {
+            if (cancelled) {
+                if (resolved.objectUrl) URL.revokeObjectURL(resolved.src);
+                return;
+            }
+            if (resolved.objectUrl) objectUrl = resolved.src;
+            progressiveItemAudioRef.current = buildAudioElement(resolved.src);
+        });
+        return () => {
+            cancelled = true;
+            if (objectUrl) URL.revokeObjectURL(objectUrl);
+        };
     }, [uiSettings.progressiveItemSoundSource]);
 
     // Apply theme CSS variables whenever the theme setting changes

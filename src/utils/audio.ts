@@ -5,8 +5,8 @@ const DEFAULT_GUESSABLE_SOUND_URL = guessableSoundUrl;
 const DEFAULT_PROGRESSIVE_ITEM_SOUND_URL = progressiveItemSoundUrl;
 
 export const DEFAULT_AUDIO_NOTIFICATION_SETTINGS = {
-  playGuessableSound: true,
-  playProgressiveItemSound: true,
+  playGuessableSound: false,
+  playProgressiveItemSound: false,
 } as const;
 
 export const AUDIO_NOTIFICATION_COOLDOWN_MS = 3000;
