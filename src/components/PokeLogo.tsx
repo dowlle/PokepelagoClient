@@ -17,17 +17,23 @@ export const PokeLogo: React.FC<{
 
     if (!isPokemonTheme) {
         // Default theme: gradient text (unchanged from original)
+        const className = `font-black tracking-tight bg-clip-text text-transparent cursor-pointer hover:opacity-75 transition-opacity select-none ${
+            size === 'lg' ? 'text-6xl tracking-tighter mb-4' : 'text-xl whitespace-nowrap'
+        }`;
+        const style = { backgroundImage: `linear-gradient(to right, var(--pp-logo-from), var(--pp-logo-to))` };
+
+        if (size === 'lg') {
+            return (
+                <h1 className={className} style={style} onClick={onClick} title="Credits & Changelog">
+                    Poképelago
+                </h1>
+            );
+        }
+
         return (
-            <h1
-                className={`font-black tracking-tight bg-clip-text text-transparent cursor-pointer hover:opacity-75 transition-opacity select-none ${
-                    size === 'lg' ? 'text-6xl tracking-tighter mb-4' : 'text-xl whitespace-nowrap'
-                }`}
-                style={{ backgroundImage: `linear-gradient(to right, var(--pp-logo-from), var(--pp-logo-to))` }}
-                onClick={onClick}
-                title="Credits & Changelog"
-            >
+            <div className={className} style={style} onClick={onClick} title="Credits & Changelog">
                 Poképelago
-            </h1>
+            </div>
         );
     }
 
@@ -37,13 +43,8 @@ export const PokeLogo: React.FC<{
     const h = isLarge ? 80 : 36;
     const fontSize = isLarge ? 52 : 23;
 
-    return (
-        <div
-            className={`cursor-pointer hover:opacity-85 transition-opacity select-none ${isLarge ? 'mb-4' : ''}`}
-            onClick={onClick}
-            title="Credits & Changelog"
-        >
-            <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} xmlns="http://www.w3.org/2000/svg">
+    const logo = (
+        <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} xmlns="http://www.w3.org/2000/svg">
                 <defs>
                     {/* Main gradient: red -> gold */}
                     <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -116,7 +117,20 @@ export const PokeLogo: React.FC<{
                     <line x1={isLarge ? -8 : -4} y1="0" x2={isLarge ? 8 : 4} y2="0" stroke="#FFD700" strokeWidth={isLarge ? 1 : 0.5} />
                     <circle r={isLarge ? 2.5 : 1.2} fill="#FFD700" />
                 </g>
-            </svg>
+        </svg>
+    );
+
+    if (isLarge) {
+        return (
+            <h1 className="cursor-pointer hover:opacity-85 transition-opacity select-none mb-4" onClick={onClick} title="Credits & Changelog" aria-label="Poképelago">
+                {logo}
+            </h1>
+        );
+    }
+
+    return (
+        <div className="cursor-pointer hover:opacity-85 transition-opacity select-none" onClick={onClick} title="Credits & Changelog" aria-label="Poképelago">
+            {logo}
         </div>
     );
 };
