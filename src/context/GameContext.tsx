@@ -11,8 +11,10 @@ import { loadDerpemonIndex, type DerpemonIndex } from '../services/derpemonServi
 import { STONE_NAMES_ORDERED } from '../data/pokemon_gates';
 import { buildEffectiveGates, type ServerGateCategories } from '../data/gateCategories';
 import { getRouteKeysForPokemon, getLineUnlockForPokemon, getBadgeRequirement, ROUTE_KEY_ITEMS, ROUTE_INFO, ROUTE_POKEMON } from '../data/routeData';
-import { decodeRouteKey, decodeLineUnlock, decodeTypeKey, decodeRegionPass } from '../data/itemDecoding';
+import { decodeRouteKey, decodeLineUnlock, decodeTypeKey, decodeRegionPass, decodeUsefulItem } from '../data/itemDecoding';
 import { verifySeedCompletable } from '../utils/verifySeedCompletable';
+import { getNewlyGuessablePokemon, shouldPlayProgressiveItemSound } from '../utils/audioTriggers';
+import { DEFAULT_AUDIO_NOTIFICATION_SETTINGS, getGuessableSoundSourceOrDefault, getProgressiveItemSoundSourceOrDefault, shouldPlaySoundAfterCooldown } from '../utils/audio';
 import type { OffsetTable } from '../hooks/useOffsets';
 import type { MutableRefObject } from 'react';
 import { useAPConnection } from '../hooks/useAPConnection';
@@ -21,11 +23,53 @@ import { useGoalChecker } from '../hooks/useGoalChecker';
 import { useTrapHandler } from '../hooks/useTrapHandler';
 import { applyTheme } from '../utils/themes';
 import { PokemonSlotContext, type PokemonSlotContextValue } from './PokemonSlotContext';
+import { getCustomSound, isCustomSoundMarker, type CustomSoundKind } from '../services/audioService';
 
 /** localStorage.setItem wrapped in try/catch to handle QuotaExceededError gracefully. */
 function safeSetItem(key: string, value: string): void {
     try { localStorage.setItem(key, value); }
     catch { console.warn(`[localStorage] Failed to write key "${key}" (quota exceeded?)`); }
+}
+
+function buildAudioElement(src: string | null): HTMLAudioElement | null {
+    if (!src) return null;
+    try {
+        const audio = new Audio(src);
+        audio.preload = 'auto';
+        audio.load();
+        audio.onerror = () => {
+            console.warn('[Audio] Failed to load audio source:', src, audio.error?.message || audio.error);
+        };
+        return audio;
+    } catch (error) {
+        console.warn('[Audio] buildAudioElement failed for source:', src, error);
+        return null;
+    }
+}
+
+function playAudioElement(audio: HTMLAudioElement | null): void {
+    if (!audio) {
+        console.warn('[Audio] playAudioElement called with null audio element');
+        return;
+    }
+
+    try {
+        audio.currentTime = 0;
+        const promise = audio.play();
+        if (promise instanceof Promise) {
+            promise.catch((error) => {
+                console.warn('[Audio] Playback failed:', error, 'source=', audio.src);
+            });
+        }
+    } catch (error) {
+        console.warn('[Audio] Playback exception:', error, 'source=', audio.src);
+    }
+}
+
+async function resolveAudioSource(kind: CustomSoundKind, configuredSource: string, fallbackSource: string): Promise<{ src: string; objectUrl: boolean }> {
+    if (!isCustomSoundMarker(configuredSource)) return { src: fallbackSource, objectUrl: false };
+    const blob = await getCustomSound(kind);
+    return blob ? { src: URL.createObjectURL(blob), objectUrl: true } : { src: fallbackSource, objectUrl: false };
 }
 
 // PERF-07: coalesce high-frequency persistence writes (e.g. the caught set, which used to
@@ -150,6 +194,10 @@ export interface UISettings {
     // (existing behavior). A specific number overrides to that count, capped
     // at activeCount so empty cells aren't rendered.
     dexGridColumns: 'auto' | 1 | 2 | 3 | 4 | 5;
+    playGuessableSound: boolean;
+    guessableSoundSource: string;
+    playProgressiveItemSound: boolean;
+    progressiveItemSoundSource: string;
 }
 
 interface ConnectionInfo {
@@ -384,6 +432,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             silhouetteGlow: true,
             stopAutosubmitOnGoal: false,
             dexGridColumns: 'auto',
+            playGuessableSound: DEFAULT_AUDIO_NOTIFICATION_SETTINGS.playGuessableSound,
+            guessableSoundSource: '',
+            playProgressiveItemSound: DEFAULT_AUDIO_NOTIFICATION_SETTINGS.playProgressiveItemSound,
+            progressiveItemSoundSource: '',
         };
         if (saved) {
             try {
@@ -433,6 +485,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const isPokemonGuessableRef = useRef<any>(null);
     const connectionInfoRef = useRef(connectionInfo);
     const gameModeRef = useRef(gameMode);
+    const guessableAudioRef = useRef<HTMLAudioElement | null>(null);
+    const progressiveItemAudioRef = useRef<HTMLAudioElement | null>(null);
+    const lastGuessableSoundAtRef = useRef<number | null>(null);
+    const lastProgressiveItemSoundAtRef = useRef<number | null>(null);
+    const previousGuessableIdsRef = useRef<Set<number>>(new Set());
+    const guessableAudioInitializedRef = useRef(false);
+    const uiSettingsRef = useRef<UISettings>(uiSettings);
+    useEffect(() => { uiSettingsRef.current = uiSettings; }, [uiSettings]);
     useEffect(() => { checkedIdsRef.current = checkedIds; }, [checkedIds]);
     useEffect(() => { connectionInfoRef.current = connectionInfo; }, [connectionInfo]);
     useEffect(() => { gameModeRef.current = gameMode; }, [gameMode]);
@@ -572,6 +632,40 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         safeSetItem('pokepelago_ui', JSON.stringify(uiSettings));
     }, [uiSettings]);
+
+    useEffect(() => {
+        let cancelled = false;
+        let objectUrl: string | null = null;
+        void resolveAudioSource('guessable', uiSettings.guessableSoundSource, getGuessableSoundSourceOrDefault('')).then((resolved) => {
+            if (cancelled) {
+                if (resolved.objectUrl) URL.revokeObjectURL(resolved.src);
+                return;
+            }
+            if (resolved.objectUrl) objectUrl = resolved.src;
+            guessableAudioRef.current = buildAudioElement(resolved.src);
+        });
+        return () => {
+            cancelled = true;
+            if (objectUrl) URL.revokeObjectURL(objectUrl);
+        };
+    }, [uiSettings.guessableSoundSource]);
+
+    useEffect(() => {
+        let cancelled = false;
+        let objectUrl: string | null = null;
+        void resolveAudioSource('progressive', uiSettings.progressiveItemSoundSource, getProgressiveItemSoundSourceOrDefault('')).then((resolved) => {
+            if (cancelled) {
+                if (resolved.objectUrl) URL.revokeObjectURL(resolved.src);
+                return;
+            }
+            if (resolved.objectUrl) objectUrl = resolved.src;
+            progressiveItemAudioRef.current = buildAudioElement(resolved.src);
+        });
+        return () => {
+            cancelled = true;
+            if (objectUrl) URL.revokeObjectURL(objectUrl);
+        };
+    }, [uiSettings.progressiveItemSoundSource]);
 
     // Apply theme CSS variables whenever the theme setting changes
     useEffect(() => {
@@ -984,6 +1078,34 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [isPokemonGuessableImpl]);
 
     useEffect(() => { isPokemonGuessableRef.current = isPokemonGuessable; }, [isPokemonGuessable]);
+
+    useEffect(() => {
+        if (!uiSettings.playGuessableSound) {
+            previousGuessableIdsRef.current = new Set();
+            guessableAudioInitializedRef.current = false;
+            return;
+        }
+
+        const nextGuessable = new Set<number>();
+        for (const pokemon of allPokemon) {
+            if (checkedIds.has(pokemon.id) || releasedIds.has(pokemon.id)) continue;
+            if (isPokemonGuessable(pokemon.id).canGuess) nextGuessable.add(pokemon.id);
+        }
+
+        if (guessableAudioInitializedRef.current) {
+            const added = getNewlyGuessablePokemon(previousGuessableIdsRef.current, nextGuessable)[0];
+            if (added !== undefined) {
+                const now = Date.now();
+                if (shouldPlaySoundAfterCooldown(lastGuessableSoundAtRef.current, now)) {
+                    lastGuessableSoundAtRef.current = now;
+                    playAudioElement(guessableAudioRef.current);
+                }
+            }
+        }
+
+        guessableAudioInitializedRef.current = true;
+        previousGuessableIdsRef.current = nextGuessable;
+    }, [allPokemon, checkedIds, releasedIds, isPokemonGuessable, uiSettings.playGuessableSound, uiSettings.guessableSoundSource]);
 
     const getLocationName = useCallback((locationId: number) => {
         let name: string | undefined;
@@ -1467,13 +1589,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (!Array.isArray(value)) return;
             const usedIds = new Set(validIds(value));
             if (key === mbKey) {
-                const total = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 1).length;
+                const total = client.items.received.filter(i => decodeUsefulItem(i.id, o) === 'Master Ball').length;
                 setMasterBalls(Math.max(0, total - usedIds.size)); setUsedMasterBalls(usedIds);
             } else if (key === pgKey) {
-                const total = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 2).length;
+                const total = client.items.received.filter(i => decodeUsefulItem(i.id, o) === 'Pokegear').length;
                 setPokegears(Math.max(0, total - usedIds.size)); setUsedPokegears(usedIds);
             } else if (key === pdKey) {
-                const total = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 3).length;
+                const total = client.items.received.filter(i => decodeUsefulItem(i.id, o) === 'Pokedex').length;
                 setPokedexes(Math.max(0, total - usedIds.size)); setUsedPokedexes(usedIds);
             } else if (key === derpKey) {
                 onDataStorageDerpUpdate(validIds(value));
@@ -1492,9 +1614,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const pgUsed = new Set(validIds(data[pgKey] ?? []));
             const pdUsed = new Set(validIds(data[pdKey] ?? []));
 
-            const mbTotal = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 1).length;
-            const pgTotal = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 2).length;
-            const pdTotal = client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 3).length;
+            const mbTotal = client.items.received.filter(i => decodeUsefulItem(i.id, o) === 'Master Ball').length;
+            const pgTotal = client.items.received.filter(i => decodeUsefulItem(i.id, o) === 'Pokegear').length;
+            const pdTotal = client.items.received.filter(i => decodeUsefulItem(i.id, o) === 'Pokedex').length;
 
             setMasterBalls(Math.max(0, mbTotal - mbUsed.size));
             setUsedMasterBalls(mbUsed);
@@ -1616,9 +1738,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 item.id === o.ITEM_OFFSET + o.TRAP_ITEM_OFFSET + 2 ||
                 item.id === o.ITEM_OFFSET + o.TRAP_ITEM_OFFSET + 3 ||
                 item.id === o.ITEM_OFFSET + o.TRAP_ITEM_OFFSET + 4 ||
-                item.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 1 ||
-                item.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 2 ||
-                item.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 3
+                decodeUsefulItem(item.id, o) !== null
             ) {
                 recalculateItems = true;
             }
@@ -1677,6 +1797,27 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (timeRift) setHasTimeRift(true);
         if (fossilRestorer) setHasFossilRestorer(true);
 
+        const shouldPlayProgressiveItemSoundEffect = uiSettingsRef.current.playProgressiveItemSound && shouldPlayProgressiveItemSound({
+            stonesAdd,
+            typesAdd,
+            regionsAdd,
+            routeKeysAdd,
+            lineUnlocksAdd,
+            gymBadgeDelta,
+            daycareDelta,
+            linkCable,
+            ultraWormhole,
+            timeRift,
+            fossilRestorer,
+        });
+        if (shouldPlayProgressiveItemSoundEffect) {
+            const now = Date.now();
+            if (shouldPlaySoundAfterCooldown(lastProgressiveItemSoundAtRef.current, now)) {
+                lastProgressiveItemSoundAtRef.current = now;
+                playAudioElement(progressiveItemAudioRef.current);
+            }
+        }
+
         // Shiny Charm: pick N distinct caught Pokemon in one pass. Uses checkedIdsRef
         // (kept in sync via useEffect at line 393) instead of the old setCheckedIds →
         // setShinyIds nested-callback hack for peeking at current state.
@@ -1723,9 +1864,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         if (recalculateItems) {
-            setUsedMasterBalls(used => { setMasterBalls(Math.max(0, client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 1).length - used.size)); return used; });
-            setUsedPokegears(used => { setPokegears(Math.max(0, client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 2).length - used.size)); return used; });
-            setUsedPokedexes(used => { setPokedexes(Math.max(0, client.items.received.filter(i => i.id === o.ITEM_OFFSET + o.USEFUL_ITEM_OFFSET + 3).length - used.size)); return used; });
+            setUsedMasterBalls(used => { setMasterBalls(Math.max(0, client.items.received.filter(i => decodeUsefulItem(i.id, o) === 'Master Ball').length - used.size)); return used; });
+            setUsedPokegears(used => { setPokegears(Math.max(0, client.items.received.filter(i => decodeUsefulItem(i.id, o) === 'Pokegear').length - used.size)); return used; });
+            setUsedPokedexes(used => { setPokedexes(Math.max(0, client.items.received.filter(i => decodeUsefulItem(i.id, o) === 'Pokedex').length - used.size)); return used; });
             processTrapItems(items, client);
         }
     }, [processTrapItems]);

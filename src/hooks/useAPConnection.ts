@@ -4,6 +4,28 @@ import type { ConnectedPacket, ConnectionRefusedPacket, Item } from 'archipelago
 import { NEW_OFFSETS, LEGACY_OFFSETS, useOffsets } from './useOffsets';
 import type { OffsetTable } from './useOffsets';
 import type { MutableRefObject } from 'react';
+import { recordTelemetry } from '../services/telemetryService';
+
+/** Reduce a connection error message to a canonical telemetry reason code.
+ *  Codes only — the message itself (which can contain the hostname or slot
+ *  name) is never sent. */
+function connectFailureReason(rawMsg: string): string {
+    if (rawMsg.includes('refused') || rawMsg.includes('ECONNREFUSED') || rawMsg.includes('ENOTFOUND') || rawMsg.includes('timed out'))
+        return 'unreachable';
+    if (rawMsg.includes('SSL') || rawMsg.includes('ERR_SSL') || rawMsg.includes('wss'))
+        return 'ssl';
+    if (rawMsg.includes('insecure'))
+        return 'insecure';
+    if (rawMsg.includes('Invalid Slot') || rawMsg.includes('InvalidSlot'))
+        return 'invalid_slot';
+    if (rawMsg.includes('Invalid Password') || rawMsg.includes('InvalidPassword'))
+        return 'invalid_password';
+    if (rawMsg.includes('Invalid Game') || rawMsg.includes('InvalidGame'))
+        return 'invalid_game';
+    if (rawMsg.includes('Incompatible Version') || rawMsg.includes('IncompatibleVersion'))
+        return 'incompatible_version';
+    return 'other';
+}
 
 interface ConnectionInfo {
     hostname: string;
@@ -213,6 +235,11 @@ export function useAPConnection() {
                 localStorage.setItem('pokepelago_connected', 'true');
                 isConnectingRef.current = false;
 
+                recordTelemetry('pokepelago_connect_result', {
+                    outcome: 'success',
+                    apworld_version: isNewApWorldRef.current ? 'new' : 'legacy',
+                });
+
                 // Start 5-second ping loop for latency tracking
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 if (pingTimeoutRef.current) clearInterval(pingTimeoutRef.current as any);
@@ -260,6 +287,10 @@ export function useAPConnection() {
 
         console.error('All connection attempts failed', lastError);
         const rawMsg = lastError?.message || String(lastError || '');
+        recordTelemetry('pokepelago_connect_result', {
+            outcome: 'failed',
+            reason: connectFailureReason(rawMsg),
+        });
         let friendlyMsg: string;
         if (rawMsg.includes('refused') || rawMsg.includes('ECONNREFUSED') || rawMsg.includes('ENOTFOUND') || rawMsg.includes('timed out'))
             friendlyMsg = 'Server is offline or unreachable. Check the host and port.';

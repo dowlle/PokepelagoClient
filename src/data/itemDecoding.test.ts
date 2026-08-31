@@ -18,9 +18,11 @@ import {
     decodeLineUnlock,
     decodeTypeKey,
     decodeRegionPass,
+    decodeUsefulItem,
     TYPE_NAMES_ORDERED,
     REGION_NAMES_ORDERED,
     type ItemOffsets,
+    type UsefulItemOffsets,
 } from './itemDecoding';
 
 // Mirror of src/hooks/useOffsets.ts:NEW_OFFSETS for the relevant fields.
@@ -31,6 +33,11 @@ const OFFSETS: ItemOffsets = {
     REGION_PASS_OFFSET: 5000,
     ROUTE_KEY_OFFSET: 7000,
     LINE_UNLOCK_OFFSET: 9000,
+};
+
+const USEFUL_OFFSETS: UsefulItemOffsets = {
+    ITEM_OFFSET: 8574000,
+    USEFUL_ITEM_OFFSET: 3000,
 };
 
 /** Replicate the APWorld's two-phase route-key ordering from Items.py:81.
@@ -135,6 +142,45 @@ describe('decodeRegionPass', () => {
     it('returns null for IDs outside the region-pass range', () => {
         expect(decodeRegionPass(OFFSETS.ITEM_OFFSET + OFFSETS.REGION_PASS_OFFSET - 1, OFFSETS)).toBeNull();
         expect(decodeRegionPass(OFFSETS.ITEM_OFFSET + OFFSETS.REGION_PASS_OFFSET + 10, OFFSETS)).toBeNull();
+    });
+});
+
+describe('decodeUsefulItem', () => {
+    it('decodes Master Ball, Pokedex, and Pokegear in APWorld ID order', () => {
+        expect(decodeUsefulItem(USEFUL_OFFSETS.ITEM_OFFSET + USEFUL_OFFSETS.USEFUL_ITEM_OFFSET + 1, USEFUL_OFFSETS)).toBe('Master Ball');
+        expect(decodeUsefulItem(USEFUL_OFFSETS.ITEM_OFFSET + USEFUL_OFFSETS.USEFUL_ITEM_OFFSET + 2, USEFUL_OFFSETS)).toBe('Pokedex');
+        expect(decodeUsefulItem(USEFUL_OFFSETS.ITEM_OFFSET + USEFUL_OFFSETS.USEFUL_ITEM_OFFSET + 3, USEFUL_OFFSETS)).toBe('Pokegear');
+    });
+
+    // BUG-24 explicit regression guard. GameContext independently reimplemented
+    // this mapping at three call sites with +2 (Pokedex) and +3 (Pokegear)
+    // transposed, so a granted Pokedex was counted and displayed as a Pokegear
+    // (and vice versa). Values come from worlds/pokepelago/Items.py, which
+    // assigns USEFUL_ITEM_OFFSET + 3002 = Pokedex, + 3003 = Pokegear (relative
+    // offsets +2 and +3 off USEFUL_ITEM_OFFSET).
+    it('BUG-24 regression: item ID 3002 is Pokedex, 3003 is Pokegear', () => {
+        expect(decodeUsefulItem(8574000 + 3002, USEFUL_OFFSETS)).toBe('Pokedex');
+        expect(decodeUsefulItem(8574000 + 3003, USEFUL_OFFSETS)).toBe('Pokegear');
+    });
+
+    it('returns null for IDs outside the useful-item range', () => {
+        expect(decodeUsefulItem(USEFUL_OFFSETS.ITEM_OFFSET + USEFUL_OFFSETS.USEFUL_ITEM_OFFSET, USEFUL_OFFSETS)).toBeNull();
+        expect(decodeUsefulItem(USEFUL_OFFSETS.ITEM_OFFSET + USEFUL_OFFSETS.USEFUL_ITEM_OFFSET + 4, USEFUL_OFFSETS)).toBeNull();
+    });
+
+    it('supports the shared runtime counting path for mixed received items', () => {
+        const receivedIds = [
+            8574000 + 3001,
+            8574000 + 3002,
+            8574000 + 3002,
+            8574000 + 3003,
+            8574000 + 7000,
+        ];
+        const decoded = receivedIds.map(id => decodeUsefulItem(id, USEFUL_OFFSETS));
+        expect(decoded.filter(name => name === 'Master Ball')).toHaveLength(1);
+        expect(decoded.filter(name => name === 'Pokedex')).toHaveLength(2);
+        expect(decoded.filter(name => name === 'Pokegear')).toHaveLength(1);
+        expect(decoded.filter(name => name === null)).toHaveLength(1);
     });
 });
 

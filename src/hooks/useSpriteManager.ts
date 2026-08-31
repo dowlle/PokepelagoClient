@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import type { UISettings } from '../context/GameContext';
 import { getSprite, countSprites, generateSpriteKey } from '../services/spriteService';
 import { resolveExternalSpriteUrl } from '../utils/pokesprite';
@@ -65,8 +65,19 @@ export function useSpriteManager(params: {
     // bumps on sprite-set/enableSprites toggle, manual debug refresh, shuffle
     // traps, and resets to 0 on disconnect -- all cases where the previously
     // resolved URLs are stale.
+    //
+    // BUG-21: this MUST be a layout effect, not a passive one. React runs all
+    // passive effects children-first, so as a passive effect every mounted
+    // PokemonSlot re-ran its acquire effect against the stale cache before
+    // this hook's owner (GameContext, above the slots) got to evict -- the
+    // eviction then wiped the entries underneath the live slots and orphaned
+    // their in-flight resolutions, blanking sprites until a full page refresh
+    // (field overlay readout, 2026-07-08: size 0 / active refs 0 with
+    // acq-rel pinned at the visible slot count). Layout effects run before
+    // ALL passive effects of the same commit, so slots always re-acquire
+    // against an already-clean cache.
     const lastEvictedCounterRef = useRef<number>(spriteRefreshCounter);
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (lastEvictedCounterRef.current !== spriteRefreshCounter) {
             evictAllSpriteUrls();
             lastEvictedCounterRef.current = spriteRefreshCounter;
