@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useGame } from '../context/GameContext';
-import { Shield, Globe, Laptop, ArrowRight, Download, Github, BookOpen } from 'lucide-react';
+import { Shield, Globe, Laptop, ArrowRight, Download, Github, BookOpen, Network } from 'lucide-react';
 import { ConnectionManager } from './ConnectionManager';
 import { CreditsModal } from './CreditsModal';
 import { PokeLogo } from './PokeLogo';
@@ -140,6 +140,10 @@ export const SplashScreen: React.FC = () => {
 
                 {/* Footer Info */}
                 <div className="flex flex-wrap justify-center gap-8 text-[10px] font-black uppercase tracking-[0.2em] text-gray-600 animate-in fade-in duration-1000 delay-500">
+                    <a href="https://ap-pie.com/" className="flex items-center gap-2 hover:text-white transition-colors">
+                        <Network size={12} />
+                        <span>Part of Archipelago Pie</span>
+                    </a>
                     <a href="https://github.com/dowlle/PokepelagoClient" target="_blank" rel="noreferrer" className="flex items-center gap-2 hover:text-white transition-colors">
                         <Github size={12} />
                         <span>Poképelago Client Repo</span>

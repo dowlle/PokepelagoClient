@@ -220,6 +220,13 @@ const GameContent: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            <a
+              href="https://ap-pie.com/"
+              className="hidden md:inline text-xs font-semibold text-gray-500 hover:text-green-400 transition-colors"
+              title="Open Archipelago Pie"
+            >
+              Part of Archipelago Pie
+            </a>
             <button
               onClick={() => setSettingsModalOpen(true)}
               className="hidden md:block p-1.5 rounded transition-all hover:bg-gray-800 text-gray-400"
@@ -415,6 +422,13 @@ const GameContent: React.FC = () => {
             <span className="text-[10px] font-bold">Twitch</span>
           </button>
         )}
+        <a
+          href="https://ap-pie.com/"
+          className="flex-1 flex flex-col items-center justify-center gap-0.5 text-gray-500 hover:text-green-400 transition-colors"
+        >
+          <span className="text-sm" aria-hidden="true">π</span>
+          <span className="text-[10px] font-bold">AP Pie</span>
+        </a>
       </nav>
 
       <PokemonDetails />
