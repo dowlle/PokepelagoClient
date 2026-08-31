@@ -6,6 +6,7 @@ import type { PokemonRef } from '../types/pokemon';
 import type { OffsetTable } from './useOffsets';
 import pokemonMetadata from '../data/pokemon_metadata.json';
 import { updateProfile } from '../services/connectionManagerService';
+import { recordTelemetry } from '../services/telemetryService';
 import { ROUTE_INFO, ROUTE_KEY_ITEMS, ROUTE_POKEMON } from '../data/routeData';
 
 interface UseGoalCheckerParams {
@@ -191,6 +192,7 @@ export function useGoalChecker({
             }
             if (!celebrationTriggered.current) {
                 celebrationTriggered.current = true;
+                recordTelemetry('pokepelago_goal_reached', { goal_count: goalCount });
                 confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#f87171', '#facc15', '#4ade80', '#60a5fa', '#c084fc'] });
                 setTimeout(() => confetti({ particleCount: 80, angle: 60, spread: 55, origin: { x: 0 } }), 200);
                 setTimeout(() => confetti({ particleCount: 80, angle: 120, spread: 55, origin: { x: 1 } }), 200);
