@@ -20,6 +20,11 @@ interface RouteDataBundle {
     familyBase: Record<string, number>;
     routeKeyItems: Record<string, string>;
     lineUnlockItems: Record<string, string>;
+    /** DEVEX-15: explicit item name → absolute AP item ID. Present in
+     *  route_data.json exported by a DEVEX-15+ APWorld; absent in older
+     *  bundles (the client then falls back to the ID-math heuristic). */
+    routeKeyIds?: Record<string, number>;
+    lineUnlockIds?: Record<string, number>;
     pokemonLevels: Record<string, number>;
     badgeLevelThresholds: number[];
     /** Pokemon ID → authoritative badge tier, computed by the APWorld (BUG-17). */
@@ -87,6 +92,15 @@ export const ROUTE_POKEMON: Record<string, number[]> = (() => {
 
 /** Base Pokemon ID → line unlock item name (e.g., "1" → "Bulbasaur Line") */
 export const LINE_UNLOCK_ITEMS = data.lineUnlockItems;
+
+/**
+ * DEVEX-15: explicit item name → absolute AP item ID maps exported by the
+ * APWorld (empty object if the bundled route_data.json predates DEVEX-15).
+ * The decoders in itemDecoding.ts use these directly so the client never has
+ * to re-derive the two-phase route ordering (BUG-12) or the line base-id math.
+ */
+export const ROUTE_KEY_IDS: Record<string, number> = data.routeKeyIds ?? {};
+export const LINE_UNLOCK_IDS: Record<string, number> = data.lineUnlockIds ?? {};
 
 /** Pokemon ID → minimum encounter level (for badge level display) */
 export const POKEMON_LEVELS = data.pokemonLevels;
