@@ -98,3 +98,13 @@ export function applySeedGuessLanguage(code: string): void {
     if (read(GUESS_LANGUAGE_KEY)) return;
     write(SEED_GUESS_LANGUAGE_KEY, code);
 }
+
+/**
+ * Drop a stored seed default. Called when the loaded slot_data omits
+ * `guess_language`, so a seed generated without the option does not inherit the
+ * default left behind by an earlier seed (finding 4). Never touches an explicit
+ * player choice.
+ */
+export function clearSeedGuessLanguage(): void {
+    try { localStorage.removeItem(SEED_GUESS_LANGUAGE_KEY); } catch { /* ignore */ }
+}

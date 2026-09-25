@@ -6,6 +6,7 @@ import {
     setGuessLanguage,
     setDisplayLanguage,
     applySeedGuessLanguage,
+    clearSeedGuessLanguage,
     GUESS_LANGUAGE_KEY,
     DISPLAY_LANGUAGE_KEY,
     SEED_GUESS_LANGUAGE_KEY,
@@ -61,6 +62,20 @@ describe('language settings (ISSUE-40)', () => {
         setGuessLanguage('en'); // player preference wins afterwards
         applySeedGuessLanguage('de');
         expect(getGuessLanguage()).toBe('en');
+    });
+
+    it('clears a stale seed default when a later seed omits the option', () => {
+        applySeedGuessLanguage('fr');
+        expect(getGuessLanguage()).toBe('fr');
+
+        clearSeedGuessLanguage();
+        expect(getGuessLanguage()).toBe('global');
+    });
+
+    it('keeps an explicit player choice when a seed default is cleared', () => {
+        setGuessLanguage('de');
+        clearSeedGuessLanguage();
+        expect(getGuessLanguage()).toBe('de');
     });
 
     it('ignores invalid stored/seed values', () => {

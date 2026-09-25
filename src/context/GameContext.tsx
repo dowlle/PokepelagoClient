@@ -24,7 +24,7 @@ import { useTrapHandler } from '../hooks/useTrapHandler';
 import { applyTheme } from '../utils/themes';
 import { PokemonSlotContext, type PokemonSlotContextValue } from './PokemonSlotContext';
 import { getCustomSound, isCustomSoundMarker, type CustomSoundKind } from '../services/audioService';
-import { getGuessLanguage, getDisplayLanguage, setGuessLanguage, setDisplayLanguage, applySeedGuessLanguage, type LanguageCode } from '../utils/language';
+import { getGuessLanguage, getDisplayLanguage, setGuessLanguage, setDisplayLanguage, applySeedGuessLanguage, clearSeedGuessLanguage, type LanguageCode } from '../utils/language';
 
 /** localStorage.setItem wrapped in try/catch to handle QuotaExceededError gracefully. */
 function safeSetItem(key: string, value: string): void {
@@ -1428,11 +1428,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUiSettings(s => ({ ...s, stopAutosubmitOnGoal: !!slotData.stop_autosubmit_on_goal }));
         }
         // ISSUE-40: seed the default guess language from the APWorld YAML option.
-        // Only applies when the player has not picked their own guess language.
+        // Only applies when the player has not picked their own guess language. A
+        // seed without the option clears any stale default from a previous seed.
         if (typeof slotData.guess_language === 'string') {
             applySeedGuessLanguage(slotData.guess_language);
-            setGuessLangState(getGuessLanguage());
+        } else {
+            clearSeedGuessLanguage();
         }
+        setGuessLangState(getGuessLanguage());
         // DEVEX-15: gate the way the generating server did. Absent (legacy seed) → fallback.
         setServerGateCategories(slotData.gate_categories ?? null);
         setStartingStarter(slotData.starting_starter ?? null);
