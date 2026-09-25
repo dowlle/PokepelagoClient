@@ -5,6 +5,7 @@ import { ConnectionManager } from './ConnectionManager';
 import { CreditsModal } from './CreditsModal';
 import { PokeLogo } from './PokeLogo';
 import type { GameProfile } from '../services/connectionManagerService';
+import { POKEAPI_SPRITE_BASE } from '../utils/pokesprite';
 
 export const SplashScreen: React.FC = () => {
     const { setGameMode, connect, setConnectionInfo, setCurrentProfileId } = useGame();
@@ -64,7 +65,7 @@ export const SplashScreen: React.FC = () => {
                                         <button
                                             className="text-blue-400 hover:text-blue-300 underline underline-offset-2"
                                             onClick={() => {
-                                                localStorage.setItem('pokepelago_spriteRepoUrl', 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon');
+                                                localStorage.setItem('pokepelago_spriteRepoUrl', POKEAPI_SPRITE_BASE);
                                                 localStorage.setItem('pokepelago_defaultTab', 'settings');
                                                 setGameMode('archipelago');
                                             }}
