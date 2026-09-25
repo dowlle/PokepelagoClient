@@ -7,6 +7,7 @@ import pokemonNamesJson from '../data/pokemon_names.json';
 import { TYPE_DOT_DEFAULT_STYLE, getTypeDotStyleForId, getTypeTitleForId } from '../utils/typeDotStyles';
 import { PmdSpriteCanvas } from './PmdSpriteCanvas';
 import { normalizePmdBaseUrl } from '../services/pmdSpriteService';
+import { getSilhouetteAppearance } from '../utils/spriteSilhouette';
 import { recordSlotMount, recordSlotRender, recordSpriteLoaded } from '../utils/perfHarness';
 
 // Per-status border / shadow utility classes. Lookup table is a tiny but real
@@ -173,14 +174,9 @@ const PokemonSlotImpl: React.FC<PokemonSlotProps> = ({
     // slots keep the dimmed-but-colored look so the "I paid to peek" signal stays
     // distinct from a default silhouette.
     const isSilhouette = status === 'shadow' || status === 'hint' || isReleased;
-    const silhouetteFilter = isSilhouette
-        ? (isPokegeared
-            ? 'brightness(0.5)'
-            : (uiSettings.silhouetteGlow
-                ? 'brightness(0) drop-shadow(0 0 2px var(--pp-silhouette-glow))'
-                : 'brightness(0)'))
-        : undefined;
-    const silhouetteOpacity = isSilhouette ? (isPokegeared ? 0.8 : 0.85) : 1;
+    // Shared with PokemonDetails so the details gif renders the same reveal
+    // treatment as the grid (see utils/spriteSilhouette.ts).
+    const silhouette = getSilhouetteAppearance(isSilhouette, isPokegeared, uiSettings.silhouetteGlow);
 
     return (
         <div
@@ -217,7 +213,7 @@ const PokemonSlotImpl: React.FC<PokemonSlotProps> = ({
             {isVisible && normalizedPmdUrl && !pmdError && (
                 <div
                     className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-visible"
-                    style={silhouetteFilter ? { filter: silhouetteFilter, opacity: silhouetteOpacity } : undefined}
+                    style={silhouette.filter ? silhouette : undefined}
                 >
                     <PmdSpriteCanvas
                         id={pokemon.id}
@@ -252,7 +248,7 @@ const PokemonSlotImpl: React.FC<PokemonSlotProps> = ({
                         imageRendering: 'pixelated',
                         width: slotPx,
                         height: slotPx,
-                        ...(silhouetteFilter ? { filter: silhouetteFilter, opacity: isLoaded ? silhouetteOpacity : 0 } : {}),
+                        ...(silhouette.filter ? { filter: silhouette.filter, opacity: isLoaded ? silhouette.opacity : 0 } : {}),
                     }}
                 />
             )}
