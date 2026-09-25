@@ -2,23 +2,10 @@ import { useCallback } from 'react';
 import { useGame } from '../context/GameContext';
 import { getCleanName } from '../utils/pokemon';
 import pokemonNamesJson from '../data/pokemon_names.json';
+import { POKEMON_LANGUAGES, type LanguageCode } from '../utils/language';
 
-// Language codes match the PokeAPI `language.name` field returned by the pokemon-species endpoint.
-export const POKEMON_LANGUAGES = [
-    { code: 'global',  label: 'Global',    flag: '🌐', langCode: null      },
-    { code: 'en',      label: 'English',   flag: '🇬🇧', langCode: 'en'     },
-    { code: 'fr',      label: 'Français',  flag: '🇫🇷', langCode: 'fr'     },
-    { code: 'de',      label: 'Deutsch',   flag: '🇩🇪', langCode: 'de'     },
-    { code: 'es',      label: 'Español',   flag: '🇪🇸', langCode: 'es'     },
-    { code: 'it',      label: 'Italiano',  flag: '🇮🇹', langCode: 'it'     },
-    { code: 'ja',      label: '日本語',     flag: '🇯🇵', langCode: 'ja'     },
-    { code: 'roomaji', label: 'Romaji',     flag: '🇯🇵', langCode: 'ja-Hrkt'},
-    { code: 'ko',      label: '한국어',     flag: '🇰🇷', langCode: 'ko'     },
-    { code: 'zh-Hant', label: '繁體中文',   flag: '🇹🇼', langCode: 'zh-Hant'},
-    { code: 'zh-Hans', label: '简体中文',   flag: '🇨🇳', langCode: 'zh-Hans'},
-] as const;
-
-export type LanguageCode = typeof POKEMON_LANGUAGES[number]['code'];
+export { POKEMON_LANGUAGES };
+export type { LanguageCode };
 
 const LEGACY_LANG_ORDER = ['ja', 'ja-Hrkt', 'ko', 'zh-Hant', 'fr', 'de', 'en', 'zh-Hans'];
 
@@ -49,7 +36,7 @@ export type GuessResult = {
     pokemonId?: number;
 };
 
-export function useGuessEngine(selectedLanguage: LanguageCode) {
+export function useGuessEngine(guessLanguage: LanguageCode, displayLanguage: LanguageCode = guessLanguage) {
     const {
         allPokemon, checkedIds, checkPokemon, gameMode,
         isPokemonGuessable, releasedIds, recatchPokemon,
@@ -77,24 +64,24 @@ export function useGuessEngine(selectedLanguage: LanguageCode) {
         const langNames: Record<string, string> = pokemonNames[p.id.toString()] ?? {};
         const enSpeciesMatch = langNames['en'] ? strMatches(langNames['en']) : false;
 
-        if (selectedLanguage === 'en') return enSpeciesMatch;
+        if (guessLanguage === 'en') return enSpeciesMatch;
 
-        if (selectedLanguage === 'global') {
+        if (guessLanguage === 'global') {
             if (enSpeciesMatch) return true;
             return Object.values(langNames).some(name => strMatches(name));
         }
 
-        const langDef = POKEMON_LANGUAGES.find(l => l.code === selectedLanguage);
+        const langDef = POKEMON_LANGUAGES.find(l => l.code === guessLanguage);
         if (!langDef || langDef.langCode === null) return false;
         const locName = langNames[langDef.langCode];
         return locName ? strMatches(locName) : false;
-    }, [selectedLanguage]);
+    }, [guessLanguage]);
 
     const displayName = useCallback((p: typeof allPokemon[0]): string => {
         const names = pokemonNames[p.id.toString()];
-        const local = selectedLanguage !== 'global' && names?.[selectedLanguage];
+        const local = displayLanguage !== 'global' && names?.[displayLanguage];
         return local || getCleanName(p.name);
-    }, [selectedLanguage]);
+    }, [displayLanguage]);
 
     const attemptGuess = useCallback((name: string): GuessResult => {
         const normalised = name.toLowerCase().trim();

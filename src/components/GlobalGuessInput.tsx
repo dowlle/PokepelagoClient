@@ -4,23 +4,66 @@ import { useTwitch } from '../context/TwitchContext';
 import { getCleanName } from '../utils/pokemon';
 import { CreditsModal } from './CreditsModal';
 import { useGuessEngine, POKEMON_LANGUAGES, pokemonNames, type LanguageCode } from '../hooks/useGuessEngine';
+import { DISPLAY_LANGUAGES } from '../utils/language';
 import { useTwitchChat } from '../hooks/useTwitchChat';
 import { PokeLogo } from './PokeLogo';
 
+type LanguageEntry = (typeof POKEMON_LANGUAGES)[number];
+
+const LanguageDropdown: React.FC<{
+    current: LanguageEntry;
+    options: readonly LanguageEntry[];
+    menuOpen: boolean;
+    onToggle: () => void;
+    onSelect: (code: LanguageCode) => void;
+    title: string;
+    tourTag?: string;
+}> = ({ current, options, menuOpen, onToggle, onSelect, title, tourTag }) => (
+    <div className="relative" data-tour={tourTag ?? 'lang-selector'}>
+        <button
+            type="button"
+            onClick={onToggle}
+            title={title}
+            className="flex items-center gap-1 px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-sm hover:border-green-500 transition-colors select-none"
+        >
+            <span>{current.flag}</span>
+            <span className="text-gray-400 text-xs hidden sm:inline">{current.label}</span>
+            <span className="text-gray-500 text-[10px]">▾</span>
+        </button>
+
+        {menuOpen && (
+            <div
+                className="absolute right-0 top-full mt-1 bg-gray-900 border border-gray-700 rounded shadow-xl z-50 min-w-max"
+                onMouseDown={(e) => e.stopPropagation()}
+            >
+                {options.map(opt => (
+                    <button
+                        key={opt.code}
+                        type="button"
+                        onClick={() => onSelect(opt.code)}
+                        className={`w-full text-left flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-gray-800 transition-colors ${current.code === opt.code ? 'text-green-400 font-semibold' : 'text-gray-200'}`}
+                    >
+                        <span className="w-5 text-center">{opt.flag}</span>
+                        <span>{opt.label}</span>
+                    </button>
+                ))}
+            </div>
+        )}
+    </div>
+);
+
 export const GlobalGuessInput: React.FC = () => {
-    const { allPokemon, checkedIds, isPokemonGuessable, activePokemonLimit, releasedIds, toast, showToast, STARTER_OFFSET, MILESTONE_OFFSET, goalCount, gameMode, uiSettings } = useGame();
+    const { allPokemon, checkedIds, isPokemonGuessable, activePokemonLimit, releasedIds, toast, showToast, STARTER_OFFSET, MILESTONE_OFFSET, goalCount, gameMode, uiSettings, guessLang, displayLang, setGuessLang, setDisplayLang } = useGame();
     const { addGuess } = useTwitch();
     const [guess, setGuess] = useState('');
     const inputRef = useRef<HTMLInputElement>(null);
     const [isCreditsOpen, setIsCreditsOpen] = useState(false);
 
-    // Language selector state
-    const [selectedLanguage, setSelectedLanguage] = useState<LanguageCode>(() =>
-        (localStorage.getItem('pokepelago_language') as LanguageCode) ?? 'global'
-    );
-    const [langMenuOpen, setLangMenuOpen] = useState(false);
+    // Language selectors (ISSUE-40): guessing and display are independent.
+    const [guessMenuOpen, setGuessMenuOpen] = useState(false);
+    const [displayMenuOpen, setDisplayMenuOpen] = useState(false);
 
-    const { matchesPokemon, displayName, attemptGuess } = useGuessEngine(selectedLanguage);
+    const { matchesPokemon, displayName, attemptGuess } = useGuessEngine(guessLang, displayLang);
 
     // Twitch chat guessing (settings from localStorage, managed in SettingsPanel)
     const [twitchIntegration, setTwitchIntegration] = useState(() => localStorage.getItem('pokepelago_twitch_integration') === 'true');
@@ -41,24 +84,23 @@ export const GlobalGuessInput: React.FC = () => {
             window.removeEventListener('pokepelago_twitch_integration_changed', handler);
         };
     }, []);
-    useTwitchChat({ enabled: __TWITCH_ENABLED__ && twitchIntegration && twitchEnabled, channelName: twitchChannel, selectedLanguage });
+    useTwitchChat({ enabled: __TWITCH_ENABLED__ && twitchIntegration && twitchEnabled, channelName: twitchChannel, selectedLanguage: guessLang });
 
-    // Close language menu when clicking outside
+    // Close language menus when clicking outside
     useEffect(() => {
-        if (!langMenuOpen) return;
-        const close = () => setLangMenuOpen(false);
+        if (!guessMenuOpen && !displayMenuOpen) return;
+        const close = () => { setGuessMenuOpen(false); setDisplayMenuOpen(false); };
         document.addEventListener('mousedown', close);
         return () => document.removeEventListener('mousedown', close);
-    }, [langMenuOpen]);
+    }, [guessMenuOpen, displayMenuOpen]);
 
-    const handleSelectLanguage = (code: LanguageCode) => {
-        setSelectedLanguage(code);
-        localStorage.setItem('pokepelago_language', code);
-        // Notify hoisted-lang consumers (PokemonSlotContext) so the dex grid
-        // re-renders with the new language without each slot polling
-        // localStorage on every render.
-        window.dispatchEvent(new Event('pokepelago_language_changed'));
-        setLangMenuOpen(false);
+    const handleSelectGuessLanguage = (code: LanguageCode) => {
+        setGuessLang(code);
+        setGuessMenuOpen(false);
+    };
+    const handleSelectDisplayLanguage = (code: LanguageCode) => {
+        setDisplayLang(code);
+        setDisplayMenuOpen(false);
     };
 
     // Debug trigger (dev/beta only)
@@ -204,8 +246,6 @@ export const GlobalGuessInput: React.FC = () => {
         handleManualGuess(guess);
     };
 
-    const currentLang = POKEMON_LANGUAGES.find(l => l.code === selectedLanguage) ?? POKEMON_LANGUAGES[0];
-
     return (
         <>
         <div className="relative z-[60] shrink-0 themed-header" style={{ backgroundColor: 'var(--pp-bg-base)', borderBottom: '1px solid var(--pp-border)' }}>
@@ -238,37 +278,25 @@ export const GlobalGuessInput: React.FC = () => {
                     />
                 </form>
 
-                {/* Language Selector */}
-                <div className="relative" data-tour="lang-selector">
-                    <button
-                        type="button"
-                        onClick={() => setLangMenuOpen(prev => !prev)}
-                        title="Guess language"
-                        className="flex items-center gap-1 px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-sm hover:border-green-500 transition-colors select-none"
-                    >
-                        <span>{currentLang.flag}</span>
-                        <span className="text-gray-400 text-xs hidden sm:inline">{currentLang.label}</span>
-                        <span className="text-gray-500 text-[10px]">▾</span>
-                    </button>
-
-                    {langMenuOpen && (
-                        <div
-                            className="absolute right-0 top-full mt-1 bg-gray-900 border border-gray-700 rounded shadow-xl z-50 min-w-max"
-                            onMouseDown={(e) => e.stopPropagation()}
-                        >
-                            {POKEMON_LANGUAGES.map(lang => (
-                                <button
-                                    key={lang.code}
-                                    type="button"
-                                    onClick={() => handleSelectLanguage(lang.code)}
-                                    className={`w-full text-left flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-gray-800 transition-colors ${selectedLanguage === lang.code ? 'text-green-400 font-semibold' : 'text-gray-200'}`}
-                                >
-                                    <span className="w-5 text-center">{lang.flag}</span>
-                                    <span>{lang.label}</span>
-                                </button>
-                            ))}
-                        </div>
-                    )}
+                {/* Language Selectors (ISSUE-40: guess + display independent) */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                    <LanguageDropdown
+                        current={POKEMON_LANGUAGES.find(l => l.code === guessLang) ?? POKEMON_LANGUAGES[0]}
+                        options={POKEMON_LANGUAGES}
+                        menuOpen={guessMenuOpen}
+                        onToggle={() => setGuessMenuOpen(prev => !prev)}
+                        onSelect={handleSelectGuessLanguage}
+                        title="Guess language — what the guess input accepts"
+                    />
+                    <LanguageDropdown
+                        current={POKEMON_LANGUAGES.find(l => l.code === displayLang) ?? POKEMON_LANGUAGES[0]}
+                        options={DISPLAY_LANGUAGES}
+                        menuOpen={displayMenuOpen}
+                        onToggle={() => setDisplayMenuOpen(prev => !prev)}
+                        onSelect={handleSelectDisplayLanguage}
+                        title="Display language — names shown in the dex and log"
+                        tourTag="display-lang-selector"
+                    />
                 </div>
 
                 {/* Stats: guessed pokémon / goal */}
