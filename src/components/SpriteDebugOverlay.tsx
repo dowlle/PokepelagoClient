@@ -58,7 +58,8 @@ export const SpriteDebugOverlay: React.FC = () => {
             </div>
             <div>size: {stats.size}</div>
             <div>blobs: {stats.blobUrlCount}</div>
-            <div>in-flight: {stats.inFlightCount}</div>
+            <div>in-flight: {stats.inFlightCount} (stalled {stats.stalledCount})</div>
+            <div>no source: {stats.emptyCount}</div>
             <div>active refs: {stats.activeRefs}</div>
             <div style={{ marginTop: 4, color: '#84cc16' }}>
                 acq {stats.acquires} / rel {stats.releases}

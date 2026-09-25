@@ -25,9 +25,17 @@
 interface Entry {
     promise: Promise<string | null>;
     url: string | null;
+    // True once the factory resolved. A settled entry with url === null had
+    // no sprite source for that key; before #41 those were indistinguishable
+    // from in-flight entries, so a player with no sprite URL saw 1025 sprites
+    // "in flight" forever.
+    settled: boolean;
     refcount: number;
     createdAt: number;
 }
+
+// An entry still unresolved after this long counts as stalled.
+export const SPRITE_STALL_MS = 15_000;
 
 const cache = new Map<string, Entry>();
 
@@ -50,6 +58,10 @@ export interface SpriteUrlCacheStats {
     orphaned: number;
     blobUrlCount: number;
     inFlightCount: number;
+    // Resolved with no sprite source for that key.
+    emptyCount: number;
+    // In flight for longer than SPRITE_STALL_MS.
+    stalledCount: number;
     activeRefs: number;
     cacheKeys?: Array<{ key: string; refcount: number; isBlob: boolean }>;
 }
@@ -91,6 +103,7 @@ export function acquireSpriteUrl(
     const promise = factory().then((url) => {
         if (entryRef !== null && cache.get(key) === entryRef) {
             entryRef.url = url;
+            entryRef.settled = true;
         } else {
             // Evicted (or replaced) while the fetch was in flight: this URL
             // has no owner. Revoke blobs instead of leaking them (the
@@ -114,6 +127,7 @@ export function acquireSpriteUrl(
     const entry: Entry = {
         promise,
         url: null,
+        settled: false,
         refcount: 1,
         createdAt: Date.now(),
     };
@@ -148,13 +162,18 @@ export function evictAllSpriteUrls(): void {
     cache.clear();
 }
 
-export function getSpriteUrlCacheStats(includeKeys = false): SpriteUrlCacheStats {
+export function getSpriteUrlCacheStats(includeKeys = false, now = Date.now()): SpriteUrlCacheStats {
     let blobUrlCount = 0;
     let inFlightCount = 0;
+    let emptyCount = 0;
+    let stalledCount = 0;
     let activeRefs = 0;
     const cacheKeys: Array<{ key: string; refcount: number; isBlob: boolean }> = [];
     for (const [key, entry] of cache.entries()) {
-        if (entry.url === null) inFlightCount++;
+        if (!entry.settled) {
+            inFlightCount++;
+            if (now - entry.createdAt > SPRITE_STALL_MS) stalledCount++;
+        } else if (entry.url === null) emptyCount++;
         else if (entry.url.startsWith('blob:')) blobUrlCount++;
         activeRefs += entry.refcount;
         if (includeKeys) {
@@ -175,6 +194,8 @@ export function getSpriteUrlCacheStats(includeKeys = false): SpriteUrlCacheStats
         orphaned: stats.orphaned,
         blobUrlCount,
         inFlightCount,
+        emptyCount,
+        stalledCount,
         activeRefs,
         ...(includeKeys ? { cacheKeys } : {}),
     };

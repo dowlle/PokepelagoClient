@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Image, Trash2, Upload, Link2, Monitor, Maximize, LayoutGrid, Tv, LogIn, LogOut, Palette, Settings, Volume2, AlertTriangle } from 'lucide-react';
 import { useGame } from '../context/GameContext';
@@ -8,6 +8,7 @@ import { useTwitchAuthStatus } from '../hooks/useTwitchAuthStatus';
 import { THEMES } from '../utils/themes';
 import type { ThemeId } from '../utils/themes';
 import { ObsOverlayBuilder } from './settings/ObsOverlayBuilder';
+import { SpriteStatus, SpriteRepoUrlHint } from './settings/SpriteStatus';
 import { clearCustomSound, customSoundMarker, saveCustomSound, type CustomSoundKind } from '../services/audioService';
 
 type SettingsTab = 'interface' | 'sprites' | 'audio' | 'twitch';
@@ -33,6 +34,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     } = useGame();
 
     const [activeTab, setActiveTab] = useState<SettingsTab>('interface');
+
+    // #41: the sprite URL field edits a draft that is committed after typing
+    // pauses. Committing clears the sprite cache and makes every visible slot
+    // re-request its sprite, so committing per keystroke would fire a burst of
+    // requests at every half-typed URL. Pastes and the one-click buttons still
+    // apply within the debounce window.
+    const [repoUrlDraft, setRepoUrlDraft] = useState(spriteRepoUrl);
+    const [syncedRepoUrl, setSyncedRepoUrl] = useState(spriteRepoUrl);
+    if (syncedRepoUrl !== spriteRepoUrl) {
+        // External change (button, clear): adopt it into the draft.
+        setSyncedRepoUrl(spriteRepoUrl);
+        setRepoUrlDraft(spriteRepoUrl);
+    }
+    useEffect(() => {
+        if (repoUrlDraft === spriteRepoUrl) return;
+        const timer = setTimeout(() => setSpriteRepoUrl(repoUrlDraft), 500);
+        return () => clearTimeout(timer);
+    }, [repoUrlDraft, spriteRepoUrl, setSpriteRepoUrl]);
 
     // Sprite import state
     const [importProgress, setImportProgress] = useState<number | null>(null);
@@ -463,6 +482,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         {/* Sprites tab */}
                         {activeTab === 'sprites' && (
                             <div className="space-y-4">
+                                <SpriteStatus />
+
                                 <div className="flex justify-between items-center">
                                     <div>
                                         <div className="text-xs font-bold text-gray-200">Local Sprites</div>
@@ -515,13 +536,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                                         Sprite Repo URL
                                     </label>
                                     <div className="flex gap-2">
-                                        <input type="url" value={spriteRepoUrl} onChange={(e) => setSpriteRepoUrl(e.target.value)} placeholder="https://github.com/PokeAPI/sprites/tree/master/sprites" className="flex-1 bg-gray-900/60 border border-gray-700 rounded-lg px-3 py-2 text-[11px] text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors" />
-                                        {spriteRepoUrl && (
-                                            <button onClick={() => setSpriteRepoUrl('')} className="p-2 text-gray-500 hover:text-red-400 hover:bg-gray-800 rounded-lg transition-colors" title="Clear URL">
+                                        <input type="url" value={repoUrlDraft} onChange={(e) => setRepoUrlDraft(e.target.value)} onBlur={() => { if (repoUrlDraft !== spriteRepoUrl) setSpriteRepoUrl(repoUrlDraft); }} placeholder="https://github.com/PokeAPI/sprites/tree/master/sprites" className="flex-1 bg-gray-900/60 border border-gray-700 rounded-lg px-3 py-2 text-[11px] text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors" />
+                                        {repoUrlDraft && (
+                                            <button onClick={() => { setRepoUrlDraft(''); setSpriteRepoUrl(''); }} className="p-2 text-gray-500 hover:text-red-400 hover:bg-gray-800 rounded-lg transition-colors" title="Clear URL">
                                                 <X size={14} />
                                             </button>
                                         )}
                                     </div>
+                                    <SpriteRepoUrlHint repoUrl={spriteRepoUrl} onUse={setSpriteRepoUrl} />
                                     <p className="text-[9px] text-gray-600 italic">
                                         Paste a GitHub sprites tree URL to load sprites directly. Local imports take priority.
                                         Try: <a href="https://github.com/PokeAPI/sprites/tree/master/sprites" target="_blank" rel="noreferrer" className="text-blue-500 hover:underline">PokeAPI sprites</a>

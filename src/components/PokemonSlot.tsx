@@ -8,6 +8,7 @@ import { TYPE_DOT_DEFAULT_STYLE, getTypeDotStyleForId, getTypeTitleForId } from 
 import { PmdSpriteCanvas } from './PmdSpriteCanvas';
 import { normalizePmdBaseUrl } from '../services/pmdSpriteService';
 import { recordSlotMount, recordSlotRender, recordSpriteLoaded } from '../utils/perfHarness';
+import { recordSpriteImageLoaded, recordSpriteImageFailed } from '../services/spriteHealth';
 
 // Per-status border / shadow utility classes. Lookup table is a tiny but real
 // win over the if/else chain that ran for every slot render.
@@ -242,8 +243,8 @@ const PokemonSlotImpl: React.FC<PokemonSlotProps> = ({
                     src={spriteUrl}
                     alt={isChecked ? pokemon.name : `Pokemon #${pokemon.id}`}
                     decoding="async"
-                    onLoad={() => setIsLoaded(true)}
-                    onError={() => setHasError(true)}
+                    onLoad={() => { setIsLoaded(true); recordSpriteImageLoaded(spriteUrl); }}
+                    onError={() => { setHasError(true); recordSpriteImageFailed(spriteUrl); }}
                     className={clsx(
                         'absolute inset-0 object-contain z-10 pointer-events-none transition-opacity duration-300',
                         isLoaded ? 'opacity-100' : 'opacity-0',
