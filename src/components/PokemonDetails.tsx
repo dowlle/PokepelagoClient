@@ -9,6 +9,7 @@ import pokemonNamesJson from '../data/pokemon_names.json';
 import { TYPE_COLORS } from '../utils/typeColors';
 import { PmdSpriteCanvas } from './PmdSpriteCanvas';
 import { normalizePmdBaseUrl } from '../services/pmdSpriteService';
+import { getSilhouetteAppearance } from '../utils/spriteSilhouette';
 
 export const PokemonDetails: React.FC = () => {
     const {
@@ -214,11 +215,20 @@ export const PokemonDetails: React.FC = () => {
 
     const isUnlocked = unlockedIds.has(selectedPokemonId);
     const isShiny = shinyIds.has(selectedPokemonId);
+    const isPokegeared = usedPokegears.has(selectedPokemonId);
+    const isPokedexed = usedPokedexes.has(selectedPokemonId);
 
     // Only show name and real info if guessed (checked) and not currently released
     const showInfo = isCaughtNow;
+    // A spent Pokegear or Pokedex forces the silhouette even when the global
+    // shadows setting is off, mirroring DexGrid.getStatus (BUG-04). Without
+    // this the details gif stayed blank for item-revealed Pokemon.
+    const isRevealedByItem = isPokegeared || isPokedexed;
     // FEAT-08 sub-1: also show shadow when global shadows setting is on, regardless of isUnlocked
-    const showShadow = !showInfo && (isUnlocked || uiSettings.enableShadows || isReleased);
+    const showShadow = !showInfo && (isUnlocked || uiSettings.enableShadows || isReleased || isRevealedByItem);
+    // Same reveal treatment the grid applies, so the gif tracks the gear state
+    // instead of the loading fade clobbering the silhouette opacity.
+    const silhouette = getSilhouetteAppearance(showShadow, isPokegeared, uiSettings.silhouetteGlow);
 
     const handleHintClick = (itemName: string) => {
         if (pendingHint === itemName) {
@@ -238,8 +248,6 @@ export const PokemonDetails: React.FC = () => {
         setTimeout(() => setItemCooldown(null), 2000);
     };
 
-    const isPokegeared = usedPokegears.has(selectedPokemonId);
-    const isPokedexed = usedPokedexes.has(selectedPokemonId);
     const { canGuess, reason, reasons, missingRegion, missingTypes, missingPokemon, missingRouteKeys, missingLineUnlock, badgeLevelRequired } = isPokemonGuessable(selectedPokemonId);
 
     const lang = localStorage.getItem('pokepelago_language') ?? 'en';
@@ -298,7 +306,7 @@ export const PokemonDetails: React.FC = () => {
                         <div className="w-12 h-12 border-4 border-blue-500 rounded-full animate-spin border-t-transparent opacity-50 absolute z-0"></div>
                     )}
 
-                    {isUnlocked || isChecked || isReleased || uiSettings.enableShadows ? (
+                    {isUnlocked || isChecked || isReleased || uiSettings.enableShadows || isRevealedByItem ? (
                         <div className="relative">
                             {isShiny && isCaughtNow && (
                                 <div className="absolute -inset-8 bg-yellow-500/10 blur-3xl animate-pulse rounded-full" />
@@ -320,12 +328,14 @@ export const PokemonDetails: React.FC = () => {
                                     src={spriteUrl}
                                     alt={showInfo ? pokemon.name : `Pokemon #${selectedPokemonId}`}
                                     onLoad={() => setGifLoaded(true)}
-                                    className={`
-                                        w-32 h-32 object-contain relative z-10 transition-opacity duration-300
-                                        ${showShadow && !isPokegeared ? 'brightness-0 opacity-40 contrast-100' : ''}
-                                        ${showShadow && isPokegeared ? 'brightness-50 opacity-80' : ''}
-                                        ${gifLoaded ? 'opacity-100' : 'opacity-0'}
-                                    `}
+                                    className="w-32 h-32 object-contain relative z-10 transition-opacity duration-300"
+                                    style={{
+                                        ...(silhouette.filter ? { filter: silhouette.filter } : {}),
+                                        // Inline opacity so the silhouette dimming is not
+                                        // overridden by the loading fade class (Tailwind emits
+                                        // .opacity-100 after .opacity-40/.opacity-80).
+                                        opacity: gifLoaded ? (silhouette.opacity ?? 1) : 0,
+                                    }}
                                 />
                             ) : (
                                 <div className="w-32 h-32 flex flex-col items-center justify-center border-2 border-dashed border-gray-700 rounded-2xl opacity-40">
