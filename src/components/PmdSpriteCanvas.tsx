@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchAnimData, padPmdId } from '../services/pmdSpriteService';
+import { useInViewport } from '../hooks/useSlotLayout';
 
 interface PmdSpriteCanvasProps {
     id: number;
@@ -41,6 +42,22 @@ export const PmdSpriteCanvas: React.FC<PmdSpriteCanvasProps> = ({
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [ready, setReady] = useState(false);
+
+    // PERF-11: pause the 60fps loop while the canvas is scrolled out of view.
+    // Reuses the same IntersectionObserver shape as DexGrid's region gate. The
+    // hook defaults to in-viewport on mount (render-on-mount), so a canvas that
+    // mounts offscreen still paints its first frame before the observer reports
+    // back, and starts animating only once it is actually visible.
+    const { ref: viewportRef, inViewport } = useInViewport<HTMLCanvasElement>();
+    const inViewportRef = useRef(inViewport);
+    const loopControlRef = useRef<{ start: () => void; stop: () => void } | null>(null);
+
+    // Merge the canvas ref (used by the render loop) and the observer ref onto
+    // the same element, mirroring DexGrid's callback-ref pattern.
+    const setCanvasRef = useCallback((el: HTMLCanvasElement | null) => {
+        canvasRef.current = el;
+        viewportRef.current = el;
+    }, [viewportRef]);
 
     useEffect(() => {
         let active = true;
@@ -130,9 +147,16 @@ export const PmdSpriteCanvas: React.FC<PmdSpriteCanvasProps> = ({
                 );
             };
 
+            // Paint frame 0 unconditionally so the canvas is never blank when
+            // mounted offscreen and later scrolled into view.
             drawFrame(0);
 
-            intervalId = setInterval(() => {
+            const stopLoop = () => {
+                if (intervalId !== null) clearInterval(intervalId);
+                intervalId = null;
+            };
+
+            const tick = () => {
                 if (!active) return;
                 const now = performance.now();
                 const elapsed = now - lastTime;
@@ -147,8 +171,7 @@ export const PmdSpriteCanvas: React.FC<PmdSpriteCanvasProps> = ({
                     if (frameIndex >= totalFrames) {
                         if (anim === 'Attack') {
                             // Play once → done
-                            if (intervalId !== null) clearInterval(intervalId);
-                            intervalId = null;
+                            stopLoop();
                             if (active) onAnimComplete?.();
                             return;
                         }
@@ -156,7 +179,18 @@ export const PmdSpriteCanvas: React.FC<PmdSpriteCanvasProps> = ({
                     }
                     drawFrame(frameIndex);
                 }
-            }, 16); // ~60 fps tick
+            };
+
+            const startLoop = () => {
+                if (intervalId !== null || !active) return;
+                // Drop the time spent paused so the accumulated tick doesn't
+                // fast-forward the animation through many frames on resume.
+                lastTime = performance.now();
+                intervalId = setInterval(tick, 16); // ~60 fps tick
+            };
+
+            loopControlRef.current = { start: startLoop, stop: stopLoop };
+            if (inViewportRef.current) startLoop();
         };
 
         run();
@@ -164,14 +198,26 @@ export const PmdSpriteCanvas: React.FC<PmdSpriteCanvasProps> = ({
         return () => {
             active = false;
             if (intervalId !== null) clearInterval(intervalId);
+            intervalId = null;
+            loopControlRef.current = null;
         };
     // Re-run when anim type changes (Idle ↔ Attack) or the Pokemon/URL changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id, baseUrl, anim, referenceFrameSize]);
 
+    // Start/stop the loop as visibility changes. Kept separate from the load
+    // effect above so toggling in-view does not re-run the frame-data load.
+    useEffect(() => {
+        inViewportRef.current = inViewport;
+        const control = loopControlRef.current;
+        if (!control) return;
+        if (inViewport) control.start();
+        else control.stop();
+    }, [inViewport]);
+
     return (
         <canvas
-            ref={canvasRef}
+            ref={setCanvasRef}
             width={size}
             height={size}
             className={`z-10 transition-all duration-300 ${ready ? 'opacity-100' : 'opacity-0'} ${filterClass}`}
