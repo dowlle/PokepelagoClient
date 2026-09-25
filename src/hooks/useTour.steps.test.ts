@@ -32,4 +32,13 @@ describe('tour steps', () => {
     expect(lang!.description.toLowerCase()).toContain('language');
     expect(lang!.description.toLowerCase()).toContain('matched');
   });
+
+  it('covers the independent display language selector in both modes', () => {
+    for (const steps of [ARCHIPELAGO_STEPS, STANDALONE_STEPS]) {
+      const display = steps.find(s => s.id === 'display-lang-selector');
+      expect(display).toBeDefined();
+      expect(display!.selector).toBe('display-lang-selector');
+      expect(display!.description.toLowerCase()).toContain('display');
+    }
+  });
 });

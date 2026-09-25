@@ -66,4 +66,11 @@ describe('GlobalGuessInput language selectors (ISSUE-40)', () => {
         act(() => { root.render(createElement(GlobalGuessInput)); });
         expect(twitchChatCalls.at(-1)).toMatchObject({ selectedLanguage: 'global' });
     });
+
+    it('labels the two language selectors distinctly so they are not confused', () => {
+        act(() => { root.render(createElement(GlobalGuessInput)); });
+        const buttonText = Array.from(container.querySelectorAll('button')).map(b => b.textContent ?? '');
+        expect(buttonText.some(t => t.includes('Guess'))).toBe(true);
+        expect(buttonText.some(t => t.includes('Show'))).toBe(true);
+    });
 });

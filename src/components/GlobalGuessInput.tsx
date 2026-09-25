@@ -17,15 +17,19 @@ const LanguageDropdown: React.FC<{
     onToggle: () => void;
     onSelect: (code: LanguageCode) => void;
     title: string;
+    name: string;
+    accent: string;
     tourTag?: string;
-}> = ({ current, options, menuOpen, onToggle, onSelect, title, tourTag }) => (
+}> = ({ current, options, menuOpen, onToggle, onSelect, title, name, accent, tourTag }) => (
     <div className="relative" data-tour={tourTag ?? 'lang-selector'}>
         <button
             type="button"
             onClick={onToggle}
             title={title}
+            aria-label={title}
             className="flex items-center gap-1 px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-sm hover:border-green-500 transition-colors select-none"
         >
+            <span className={`text-[10px] font-bold uppercase tracking-wide ${accent}`}>{name}</span>
             <span>{current.flag}</span>
             <span className="text-gray-400 text-xs hidden sm:inline">{current.label}</span>
             <span className="text-gray-500 text-[10px]">▾</span>
@@ -290,6 +294,8 @@ export const GlobalGuessInput: React.FC = () => {
                         onToggle={() => setGuessMenuOpen(prev => !prev)}
                         onSelect={handleSelectGuessLanguage}
                         title="Guess language — what the guess input accepts"
+                        name="Guess"
+                        accent="text-green-400"
                     />
                     <LanguageDropdown
                         current={POKEMON_LANGUAGES.find(l => l.code === displayLang) ?? POKEMON_LANGUAGES[0]}
@@ -298,6 +304,8 @@ export const GlobalGuessInput: React.FC = () => {
                         onToggle={() => setDisplayMenuOpen(prev => !prev)}
                         onSelect={handleSelectDisplayLanguage}
                         title="Display language — names shown in the dex and log"
+                        name="Show"
+                        accent="text-sky-400"
                         tourTag="display-lang-selector"
                     />
                 </div>
