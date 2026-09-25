@@ -36,3 +36,40 @@ jobs:
         # devDependencies, so build-tool advisories (e.g. esbuild via vite) never
         # reach users. Run a full `npm audit` manually when bumping build tooling.
         run: npm audit --omit=dev --audit-level=high
+
+  data-drift:
+    # src/data/route_data.json and src/data/pokemon_gates.ts are generated from the
+    # APWorld. Fail when they no longer match a fresh export from APWorld main, the
+    # same ref the release builds the .apworld from (issue #28).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout APWorld repo
+        uses: actions/checkout@v4
+        with:
+          repository: dowlle/AppieArchipelago
+          path: apworld-repo
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install exporter dependencies
+        # Only the core modules the exporters import, at the APWorld's own pins.
+        run: grep -E '^(PyYAML|pathspec|typing_extensions|schema|bsdiff4|orjson)==' apworld-repo/requirements.txt | pip install -r /dev/stdin
+
+      - name: Regenerate client data from APWorld main
+        working-directory: apworld-repo
+        run: |
+          python worlds/pokepelago/tools/_export_client_data.py "$GITHUB_WORKSPACE/src/data"
+          python worlds/pokepelago/tools/build_classification_data.py --write-gates "$GITHUB_WORKSPACE/src/data/pokemon_gates.ts"
+
+      - name: Fail on drift
+        run: |
+          if ! git diff --quiet -- src/data/route_data.json src/data/pokemon_gates.ts; then
+            git diff --stat -- src/data/route_data.json src/data/pokemon_gates.ts
+            echo "::error::src/data is out of date with APWorld main. In the APWorld repo run 'python worlds/pokepelago/tools/export_to_client.py --client <client checkout>' and commit the two regenerated files here."
+            exit 1
+          fi
+          echo "src/data matches a fresh export from APWorld main"
