@@ -84,7 +84,10 @@ export const GlobalGuessInput: React.FC = () => {
             window.removeEventListener('pokepelago_twitch_integration_changed', handler);
         };
     }, []);
-    useTwitchChat({ enabled: __TWITCH_ENABLED__ && twitchIntegration && twitchEnabled, channelName: twitchChannel, selectedLanguage: guessLang });
+    // Twitch chat accepts every language, regardless of the streamer's guess
+    // language (Stef ruling 2026-09-25, issue #40 finding 3). Chat is shared with
+    // an international audience, so it always matches against Global.
+    useTwitchChat({ enabled: __TWITCH_ENABLED__ && twitchIntegration && twitchEnabled, channelName: twitchChannel, selectedLanguage: 'global' });
 
     // Close language menus when clicking outside
     useEffect(() => {
