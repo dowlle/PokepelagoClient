@@ -10,6 +10,7 @@ import {
     peekSpriteUrl,
     spriteUrlCacheKey,
 } from '../services/spriteUrlCache';
+import { resetSpriteHealth } from '../services/spriteHealth';
 
 export function useSpriteManager(params: {
     uiSettings: UISettings;
@@ -76,13 +77,22 @@ export function useSpriteManager(params: {
     // acq-rel pinned at the visible slot count). Layout effects run before
     // ALL passive effects of the same commit, so slots always re-acquire
     // against an already-clean cache.
+    //
+    // #41: a changed sprite repo URL evicts too. Without it, slots that had
+    // already resolved to "no sprite" kept that cached null after a URL was
+    // pasted in (or set with the one-click PokeAPI button) until a reload.
+    // The sprite health counts describe the evicted URLs, so they reset here.
     const lastEvictedCounterRef = useRef<number>(spriteRefreshCounter);
+    const lastEvictedRepoUrlRef = useRef<string>(spriteRepoUrl);
     useLayoutEffect(() => {
-        if (lastEvictedCounterRef.current !== spriteRefreshCounter) {
+        if (lastEvictedCounterRef.current !== spriteRefreshCounter
+            || lastEvictedRepoUrlRef.current !== spriteRepoUrl) {
             evictAllSpriteUrls();
+            resetSpriteHealth();
             lastEvictedCounterRef.current = spriteRefreshCounter;
+            lastEvictedRepoUrlRef.current = spriteRepoUrl;
         }
-    }, [spriteRefreshCounter]);
+    }, [spriteRefreshCounter, spriteRepoUrl]);
 
     // Pure factory: resolve a sprite URL from configured sources. Captures
     // derpemonIndex / spriteRepoUrl / spriteSet / enableSprites; the cache

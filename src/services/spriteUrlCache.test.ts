@@ -191,3 +191,24 @@ describe('evictAllSpriteUrls', () => {
         expect(getSpriteUrlCacheStats().evictions).toBe(2);
     });
 });
+
+describe('in-flight vs no-source counters (#41)', () => {
+    it('counts an entry resolved to null as empty, not in flight', async () => {
+        const p = acquireSpriteUrl('1', async () => null);
+        await p;
+        const stats = getSpriteUrlCacheStats();
+        expect(stats.inFlightCount).toBe(0);
+        expect(stats.emptyCount).toBe(1);
+    });
+
+    it('counts an unresolved entry as stalled after the stall window', () => {
+        const d = deferred<string | null>();
+        acquireSpriteUrl('2', () => d.promise);
+        const now = Date.now();
+        expect(getSpriteUrlCacheStats(false, now).stalledCount).toBe(0);
+        const later = getSpriteUrlCacheStats(false, now + 60_000);
+        expect(later.inFlightCount).toBe(1);
+        expect(later.stalledCount).toBe(1);
+        d.resolve('https://example.test/2.png');
+    });
+});

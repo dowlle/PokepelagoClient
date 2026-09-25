@@ -8,6 +8,7 @@ import { useTwitchAuthStatus } from '../hooks/useTwitchAuthStatus';
 import { THEMES } from '../utils/themes';
 import type { ThemeId } from '../utils/themes';
 import { ObsOverlayBuilder } from './settings/ObsOverlayBuilder';
+import { SpriteStatus, SpriteRepoUrlHint } from './settings/SpriteStatus';
 import { clearCustomSound, customSoundMarker, saveCustomSound, type CustomSoundKind } from '../services/audioService';
 
 type SettingsTab = 'interface' | 'sprites' | 'audio' | 'twitch';
@@ -463,6 +464,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         {/* Sprites tab */}
                         {activeTab === 'sprites' && (
                             <div className="space-y-4">
+                                <SpriteStatus />
+
                                 <div className="flex justify-between items-center">
                                     <div>
                                         <div className="text-xs font-bold text-gray-200">Local Sprites</div>
@@ -522,6 +525,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                                             </button>
                                         )}
                                     </div>
+                                    <SpriteRepoUrlHint repoUrl={spriteRepoUrl} onUse={setSpriteRepoUrl} />
                                     <p className="text-[9px] text-gray-600 italic">
                                         Paste a GitHub sprites tree URL to load sprites directly. Local imports take priority.
                                         Try: <a href="https://github.com/PokeAPI/sprites/tree/master/sprites" target="_blank" rel="noreferrer" className="text-blue-500 hover:underline">PokeAPI sprites</a>

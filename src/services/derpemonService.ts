@@ -11,7 +11,7 @@ export type DerpemonIndex = Record<number, string>; // { dexId: creatorName }
 
 const API_URL =
     'https://api.github.com/repos/TheShadowOfLight/DerpemonCommunityProject/contents/Derpemon/Sprites';
-const RAW_BASE =
+export const DERPEMON_RAW_BASE =
     'https://raw.githubusercontent.com/TheShadowOfLight/DerpemonCommunityProject/main/Derpemon/Sprites';
 
 const CACHE_KEY = 'pokepelago_derpemon_index_v1';
@@ -106,7 +106,7 @@ export function getDerpemonUrl(index: DerpemonIndex, id: number): string | null 
     if (!creator) return null;
     // Encode the filename properly (spaces → %20)
     const filename = encodeURIComponent(`${id} - ${creator}.png`);
-    return `${RAW_BASE}/${filename}`;
+    return `${DERPEMON_RAW_BASE}/${filename}`;
 }
 
 /**
