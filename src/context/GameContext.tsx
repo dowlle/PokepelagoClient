@@ -24,6 +24,7 @@ import { useTrapHandler } from '../hooks/useTrapHandler';
 import { applyTheme } from '../utils/themes';
 import { PokemonSlotContext, type PokemonSlotContextValue } from './PokemonSlotContext';
 import { getCustomSound, isCustomSoundMarker, type CustomSoundKind } from '../services/audioService';
+import { getGuessLanguage, getDisplayLanguage, setGuessLanguage, setDisplayLanguage, applySeedGuessLanguage, clearSeedGuessLanguage, type LanguageCode } from '../utils/language';
 
 /** localStorage.setItem wrapped in try/catch to handle QuotaExceededError gracefully. */
 function safeSetItem(key: string, value: string): void {
@@ -325,6 +326,11 @@ interface GameContextType extends GameState {
     TYPE_MILESTONE_OFFSET: number;
     TYPE_MILESTONE_MULTIPLIER: number;
     recheckMilestones: () => { globalSent: number; typeSent: number };
+    // ISSUE-40: independent guessing vs display language settings.
+    guessLang: LanguageCode;
+    displayLang: LanguageCode;
+    setGuessLang: (code: LanguageCode) => void;
+    setDisplayLang: (code: LanguageCode) => void;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -559,18 +565,30 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         acquireSlotSpriteUrl, releaseSlotSpriteUrl, peekSlotSpriteUrl,
     } = useSpriteManager({ uiSettings, derpyfiedIds, derpemonIndex, spriteRefreshCounter });
 
-    // Language hoist: read once + listen for the custom event GlobalGuessInput
-    // dispatches when the user changes language. Replaces 1025 per-render
-    // localStorage.getItem calls in PokemonSlot.
-    const [lang, setLang] = useState<string>(() => localStorage.getItem('pokepelago_language') ?? 'en');
+    // ISSUE-40: language hoist (guess + display are independent settings). Read once
+    // + listen for the custom event / storage sync, replacing per-render
+    // localStorage.getItem calls in PokemonSlot and friends.
+    const [guessLang, setGuessLangState] = useState<LanguageCode>(() => getGuessLanguage());
+    const [displayLang, setDisplayLangState] = useState<LanguageCode>(() => getDisplayLanguage());
     useEffect(() => {
-        const handler = () => setLang(localStorage.getItem('pokepelago_language') ?? 'en');
+        const handler = () => {
+            setGuessLangState(getGuessLanguage());
+            setDisplayLangState(getDisplayLanguage());
+        };
         window.addEventListener('pokepelago_language_changed', handler);
         window.addEventListener('storage', handler);
         return () => {
             window.removeEventListener('pokepelago_language_changed', handler);
             window.removeEventListener('storage', handler);
         };
+    }, []);
+    const setGuessLang = useCallback((code: LanguageCode) => {
+        setGuessLanguage(code);
+        setGuessLangState(code);
+    }, []);
+    const setDisplayLang = useCallback((code: LanguageCode) => {
+        setDisplayLanguage(code);
+        setDisplayLangState(code);
     }, []);
 
     // ── Goal Checker Hook ────────────────────────────────────────────────────────
@@ -1409,6 +1427,15 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (slotData.stop_autosubmit_on_goal !== undefined) {
             setUiSettings(s => ({ ...s, stopAutosubmitOnGoal: !!slotData.stop_autosubmit_on_goal }));
         }
+        // ISSUE-40: seed the default guess language from the APWorld YAML option.
+        // Only applies when the player has not picked their own guess language. A
+        // seed without the option clears any stale default from a previous seed.
+        if (typeof slotData.guess_language === 'string') {
+            applySeedGuessLanguage(slotData.guess_language);
+        } else {
+            clearSeedGuessLanguage();
+        }
+        setGuessLangState(getGuessLanguage());
         // DEVEX-15: gate the way the generating server did. Absent (legacy seed) → fallback.
         setServerGateCategories(slotData.gate_categories ?? null);
         setStartingStarter(slotData.starting_starter ?? null);
@@ -2035,8 +2062,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         spriteRefreshCounter,
         pmdSpriteUrl,
         setSelectedPokemonId,
-        lang,
-    }), [uiSettings, getSpriteUrl, acquireSlotSpriteUrl, releaseSlotSpriteUrl, peekSlotSpriteUrl, spriteRefreshCounter, pmdSpriteUrl, lang]);
+        displayLang,
+    }), [uiSettings, getSpriteUrl, acquireSlotSpriteUrl, releaseSlotSpriteUrl, peekSlotSpriteUrl, spriteRefreshCounter, pmdSpriteUrl, displayLang]);
 
     return (
         <GameContext.Provider value={{
@@ -2089,6 +2116,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             TYPE_MILESTONE_OFFSET: offsetsRef.current.TYPE_MILESTONE_OFFSET,
             TYPE_MILESTONE_MULTIPLIER: offsetsRef.current.TYPE_MILESTONE_MULTIPLIER,
             recheckMilestones,
+            guessLang, displayLang, setGuessLang, setDisplayLang,
         }}>
             <PokemonSlotContext.Provider value={pokemonSlotContextValue}>
                 {children}

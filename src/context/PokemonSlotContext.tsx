@@ -42,9 +42,10 @@ export interface PokemonSlotContextValue {
     spriteRefreshCounter: number;
     pmdSpriteUrl: string;
     setSelectedPokemonId: (id: number | null) => void;
-    // Language code, hoisted from per-render localStorage reads. Updated when
-    // GlobalGuessInput dispatches `pokepelago_language_changed`.
-    lang: string;
+    // Display language code, hoisted from per-render localStorage reads. Updated
+    // when the display language changes (ISSUE-40: independent of the guessing
+    // language).
+    displayLang: string;
 }
 
 export const PokemonSlotContext = createContext<PokemonSlotContextValue | undefined>(undefined);

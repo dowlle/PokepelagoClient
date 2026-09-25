@@ -41,7 +41,8 @@ export const PokemonDetails: React.FC = () => {
         spriteRefreshCounter,
         locationOffset,
         pmdSpriteUrl,
-        gymBadges
+        gymBadges,
+        displayLang
     } = useGame();
     const { getCredit } = useTwitch();
 
@@ -242,7 +243,7 @@ export const PokemonDetails: React.FC = () => {
     const isPokedexed = usedPokedexes.has(selectedPokemonId);
     const { canGuess, reason, reasons, missingRegion, missingTypes, missingPokemon, missingRouteKeys, missingLineUnlock, badgeLevelRequired } = isPokemonGuessable(selectedPokemonId);
 
-    const lang = localStorage.getItem('pokepelago_language') ?? 'en';
+    const lang = displayLang; // ISSUE-40: display language (independent of guess language)
     const langNames = (pokemonNamesJson as Record<string, Record<string, string>>)[selectedPokemonId.toString()];
     const localName = lang !== 'global' && langNames?.[lang];
 

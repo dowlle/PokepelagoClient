@@ -39,7 +39,7 @@ const PokemonSlotImpl: React.FC<PokemonSlotProps> = ({
     pokemon, status, isShiny = false, order,
     canGuess, reason, isReleased, isPokegeared, isDerpified,
 }) => {
-    const { setSelectedPokemonId, acquireSlotSpriteUrl, releaseSlotSpriteUrl, peekSlotSpriteUrl, uiSettings, spriteRefreshCounter, pmdSpriteUrl, lang } = usePokemonSlotContext();
+    const { setSelectedPokemonId, acquireSlotSpriteUrl, releaseSlotSpriteUrl, peekSlotSpriteUrl, uiSettings, spriteRefreshCounter, pmdSpriteUrl, displayLang } = usePokemonSlotContext();
 
     // Perf harness counters (no-op when ?perf=1 is not set).
     recordSlotRender();
@@ -139,7 +139,7 @@ const PokemonSlotImpl: React.FC<PokemonSlotProps> = ({
     const isChecked = status === 'checked';
     const isVisible = isChecked || status === 'shadow' || status === 'hint';
     const langNames = (pokemonNamesJson as Record<string, Record<string, string>>)[pokemon.id.toString()];
-    const localName = lang !== 'global' && langNames?.[lang];
+    const localName = displayLang !== 'global' && langNames?.[displayLang];
     const cleanName = localName || getCleanName(pokemon.name);
 
     const isReadyToGuess = !isChecked && canGuess;

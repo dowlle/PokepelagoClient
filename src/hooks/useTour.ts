@@ -24,6 +24,12 @@ export const ARCHIPELAGO_STEPS: TourStep[] = [
     description: 'This sets the language your guesses are matched in — only names in the selected language count. Switch between 11 languages (English, Japanese, French, and more).',
   },
   {
+    id: 'display-lang-selector',
+    selector: 'display-lang-selector',
+    title: 'Display Language',
+    description: 'Separately pick the display language for names shown across the dex, details and log. Guessing keeps using the language set next to it, so you can guess in one language and read in another.',
+  },
+  {
     id: 'stats-counter',
     selector: 'stats-counter',
     title: 'Your Progress',
@@ -96,6 +102,7 @@ const stepById = (id: string): TourStep => {
 export const STANDALONE_STEPS: TourStep[] = [
   { ...stepById('guess-input') },
   { ...stepById('lang-selector') },
+  { ...stepById('display-lang-selector') },
   {
     ...stepById('stats-counter'),
     description: 'Track how many Pokemon you\'ve guessed.',
